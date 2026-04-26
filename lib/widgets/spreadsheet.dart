@@ -106,28 +106,131 @@ class _PlutoGridExamplePageState extends State<PlutoGridExamplePage> {
 
   /// [PlutoGridStateManager] has many methods and properties to dynamically manipulate the grid.
   /// You can manipulate the grid dynamically at runtime by passing this through the [onLoaded] callback.
-  late final PlutoGridStateManager stateManager;
+  PlutoGridStateManager? stateManager;
+
+  void autoFitAllColumnsToContents(BuildContext context, PlutoGridStateManager stateManager) {
+    for (var column in stateManager.columns) {
+      stateManager.autoFitColumn(context, column);
+    }
+  }
+
+  void _addRoundColumn() {
+    if (stateManager == null) return;
+
+    // Find the highest numbered "Round" column
+    final roundColumns = stateManager!.columns
+        .where((column) => column.title.startsWith('Round '))
+        .toList();
+
+    int maxRound = 0;
+    for (var col in roundColumns) {
+      final match = RegExp(r'Round (\d+)').firstMatch(col.title);
+      if (match != null) {
+        int num = int.parse(match.group(1)!);
+        if (num > maxRound) maxRound = num;
+      }
+    }
+
+    int nextRound = maxRound + 1;
+    String newTitle = 'Round $nextRound';
+    String newField = 'round_$nextRound';
+
+    stateManager!.insertColumns(
+      stateManager!.columns.length,
+      [
+        PlutoColumn(
+          title: newTitle,
+          field: newField,
+          type: PlutoColumnType.number(),
+        ),
+      ],
+    );
+
+    // Add cells for the new column to all existing rows
+    for (var row in stateManager!.rows) {
+      row.cells[newField] = PlutoCell(value: null);
+    }
+
+    autoFitAllColumnsToContents(context, stateManager!);
+
+    stateManager!.notifyListeners();
+  }
+
+  void _removeHighestRoundColumn() {
+    if (stateManager == null) return;
+
+    final roundColumns = stateManager!.columns
+        .where((column) => column.title.startsWith('Round '))
+        .toList();
+
+    if (roundColumns.isEmpty) return;
+
+    // Find the column with the highest "Round" number
+    PlutoColumn? highestRoundColumn;
+    int maxRound = -1;
+
+    for (var col in roundColumns) {
+      final match = RegExp(r'Round (\d+)').firstMatch(col.title);
+      if (match != null) {
+        int num = int.parse(match.group(1)!);
+        if (num > maxRound) {
+          maxRound = num;
+          highestRoundColumn = col;
+        }
+      }
+    }
+
+    if (highestRoundColumn != null) {
+      stateManager!.removeColumns([highestRoundColumn]);
+
+      // Optional: Clean up cells in rows
+      for (var row in stateManager!.rows) {
+        row.cells.remove(highestRoundColumn.field);
+      }
+
+      stateManager!.notifyListeners();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(15),
-      child: PlutoGrid(
-        columns: columns,
-        rows: rows,
-        onLoaded: (PlutoGridOnLoadedEvent event) {
-          stateManager = event.stateManager;
-          stateManager.setShowColumnFilter(true);
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _addRoundColumn,
+                icon: const Icon(Icons.add),
+                label: const Text('Add Column'),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton.icon(
+                onPressed: _removeHighestRoundColumn,
+                icon: const Icon(Icons.remove),
+                label: const Text('Remove Column'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: PlutoGrid(
+              columns: columns,
+              rows: rows,
+              onLoaded: (PlutoGridOnLoadedEvent event) {
+                stateManager = event.stateManager;
+                stateManager!.setShowColumnFilter(true);
 
-          // Autofit column width to contents
-          for (var column in event.stateManager.columns) {
-            event.stateManager.autoFitColumn(context, column);
-          }
-        },
-        onChanged: (PlutoGridOnChangedEvent event) {
-          print(event);
-        },
-        configuration: const PlutoGridConfiguration(),
+                autoFitAllColumnsToContents(context, stateManager!);
+              },
+              onChanged: (PlutoGridOnChangedEvent event) {
+                print(event);
+              },
+              configuration: const PlutoGridConfiguration(),
+            ),
+          ),
+        ],
       ),
     );
   }

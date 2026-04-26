@@ -36,7 +36,8 @@ class _SpreadsheetSetupAlertDialogState
         return AlertDialog(
           title: const Text('Warning'),
           content: const Text(
-              'Warning: If you already have data in the spreadsheet, deleting a variable may result in data loss. Do you wish to proceed?'),
+            'Warning: If you already have data in the spreadsheet, deleting a variable may result in data loss. Do you wish to proceed?',
+          ),
           actions: [
             TextButton(
               onPressed: () {
@@ -89,40 +90,54 @@ class _SpreadsheetSetupAlertDialogState
                 ),
 
                 // Map existing rows to UI
-                ..._rows.asMap().entries.map(
-                  (entry) {
-                    final index = entry.key;
-                    final row = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: row['name'],
-                              decoration: const InputDecoration(
-                                labelText: 'Variable Name',
+                ..._rows.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final row = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: row['name'],
+                                      decoration: const InputDecoration(
+                                        labelText: 'Name',
+                                      ),
+                                    ),
+                                  ),
+                                ]
                               ),
-                            ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: row['categories'],
+                                      decoration: const InputDecoration(
+                                        label: Text(
+                                          'Categories (separated by commas)',
+                                          softWrap: true,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            ]
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextFormField(
-                              controller: row['categories'],
-                              decoration: const InputDecoration(
-                                labelText: 'Variable Categories',
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _removeRow(index),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _removeRow(index),
+                        ),
+                      ],
+                    )
+                  );
+                }),
 
                 // The "Plus" button row
                 // This row is displayed even when _rows has at least 3 items to allow triggering the toast.

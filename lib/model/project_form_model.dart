@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 enum ExperimentStructure {
   simpleABComparison(
-    label: 'Text How One Factor (two states) Influence A',
+    label: 'Test How One Factor (two states) Influences A',
     factorCount: 1,
     usesFactorialSamplePlan: false,
   ),
@@ -19,6 +19,13 @@ enum ExperimentStructure {
   final String label;
   final int factorCount;
   final bool usesFactorialSamplePlan;
+
+  static ExperimentStructure fromName(String? name) {
+    return ExperimentStructure.values.firstWhere(
+      (structure) => structure.name == name,
+      orElse: () => ExperimentStructure.simpleABComparison,
+    );
+  }
 }
 
 enum RiskLevel {
@@ -29,9 +36,26 @@ enum RiskLevel {
   const RiskLevel(this.label);
 
   final String label;
+
+  static RiskLevel fromName(String? name) {
+    return RiskLevel.values.firstWhere(
+      (riskLevel) => riskLevel.name == name,
+      orElse: () => RiskLevel.tenPercent,
+    );
+  }
 }
 
-enum SampleSizeFamily { simpleComparison, factorial }
+enum SampleSizeFamily {
+  simpleComparison,
+  factorial;
+
+  static SampleSizeFamily fromName(String? name) {
+    return SampleSizeFamily.values.firstWhere(
+      (family) => family.name == name,
+      orElse: () => SampleSizeFamily.simpleComparison,
+    );
+  }
+}
 
 @immutable
 class FactorDefinition {
@@ -45,16 +69,16 @@ class FactorDefinition {
   final String firstState;
   final String secondState;
 
-  FactorDefinition copyWith({
-    String? name,
-    String? firstState,
-    String? secondState,
-  }) {
+  factory FactorDefinition.fromJson(Map<String, dynamic> json) {
     return FactorDefinition(
-      name: name ?? this.name,
-      firstState: firstState ?? this.firstState,
-      secondState: secondState ?? this.secondState,
+      name: json['name'] as String? ?? '',
+      firstState: json['firstState'] as String? ?? '',
+      secondState: json['secondState'] as String? ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'name': name, 'firstState': firstState, 'secondState': secondState};
   }
 }
 
@@ -73,37 +97,37 @@ class SampleSizeOption {
   static const simpleEight = SampleSizeOption(
     totalSamples: 8,
     family: SampleSizeFamily.simpleComparison,
-    detectableDifferences: ['+-45%', '+-52%', '+-66%'],
+    detectableDifferences: ['±45%', '±52%', '±66%'],
   );
 
   static const simpleFourteen = SampleSizeOption(
     totalSamples: 14,
     family: SampleSizeFamily.simpleComparison,
-    detectableDifferences: ['+-34%', '+-40%', '+-52%'],
+    detectableDifferences: ['±34%', '±40%', '±52%'],
   );
 
   static const simpleFiftySix = SampleSizeOption(
     totalSamples: 56,
     family: SampleSizeFamily.simpleComparison,
-    detectableDifferences: ['+-17%', '+-20%', '+-26%'],
+    detectableDifferences: ['±17%', '±20%', '±26%'],
   );
 
   static const factorialSixteen = SampleSizeOption(
     totalSamples: 16,
     family: SampleSizeFamily.factorial,
-    detectableDifferences: ['+-31%', '+-37%', '+-48%'],
+    detectableDifferences: ['±31%', '±37%', '±48%'],
   );
 
   static const factorialTwentyFour = SampleSizeOption(
     totalSamples: 24,
     family: SampleSizeFamily.factorial,
-    detectableDifferences: ['+-25%', '+-30%', '+-40%'],
+    detectableDifferences: ['±25%', '±30%', '±40%'],
   );
 
   static const factorialFortyEight = SampleSizeOption(
     totalSamples: 48,
     family: SampleSizeFamily.factorial,
-    detectableDifferences: ['+-18%', '+-21%', '+-28%'],
+    detectableDifferences: ['±18%', '±21%', '±28%'],
   );
 
   static const simpleOptions = [simpleEight, simpleFourteen, simpleFiftySix];
@@ -118,12 +142,37 @@ class SampleSizeOption {
     return structure.usesFactorialSamplePlan ? factorialOptions : simpleOptions;
   }
 
+  static SampleSizeOption fromJson(
+    Map<String, dynamic>? json,
+    ExperimentStructure structure,
+  ) {
+    if (json == null) return optionsFor(structure).first;
+
+    final family = SampleSizeFamily.fromName(json['family'] as String?);
+    final totalSamples = json['totalSamples'] as int?;
+    final options = optionsFor(structure);
+
+    return options.firstWhere(
+      (option) =>
+          option.family == family && option.totalSamples == totalSamples,
+      orElse: () => options.first,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'totalSamples': totalSamples, 'family': family.name};
+  }
+
   int groupCountFor(ExperimentStructure structure) {
     return structure.usesFactorialSamplePlan ? 1 << structure.factorCount : 2;
   }
 
   double rangesPerGroupFor(ExperimentStructure structure) {
     return totalSamples / groupCountFor(structure);
+  }
+
+  String detectableDifferenceFor(RiskLevel riskLevel) {
+    return detectableDifferences[RiskLevel.values.indexOf(riskLevel)];
   }
 
   String labelFor(ExperimentStructure structure) {
@@ -142,22 +191,64 @@ class SampleSizeOption {
 }
 
 class ProjectFormModel extends ChangeNotifier {
-  String projectTitle = '';
-  ExperimentStructure experimentStructure =
-      ExperimentStructure.simpleABComparison;
-  RiskLevel riskLevel = RiskLevel.tenPercent;
-  SampleSizeOption sampleSizeOption = SampleSizeOption.simpleEight;
-  bool imputeMissingData = false;
+  ProjectFormModel({
+    this.projectTitle = '',
+    this.experimentStructure = ExperimentStructure.simpleABComparison,
+    this.riskLevel = RiskLevel.tenPercent,
+    SampleSizeOption? sampleSizeOption,
+    List<FactorDefinition>? factorDefinitions,
+    this.imputeMissingData = false,
+  }) : sampleSizeOption =
+           sampleSizeOption ??
+           SampleSizeOption.optionsFor(experimentStructure).first,
+       _factorDefinitions = _normalizedFactorDefinitions(
+         experimentStructure,
+         factorDefinitions,
+       ) {
+    _ensureSampleSizeOptionIsValid();
+  }
 
-  final List<FactorDefinition> _factorDefinitions = List.generate(
-    ExperimentStructure.simpleABComparison.factorCount,
-    (_) => const FactorDefinition(),
-  );
+  String projectTitle;
+  ExperimentStructure experimentStructure;
+  RiskLevel riskLevel;
+  SampleSizeOption sampleSizeOption;
+  bool imputeMissingData;
 
-  ProjectFormModel();
+  final List<FactorDefinition> _factorDefinitions;
+
+  factory ProjectFormModel.fromJson(Map<String, dynamic> json) {
+    final structure = ExperimentStructure.fromName(
+      json['experimentStructure'] as String?,
+    );
+    final sampleSizeJson = json['sampleSizeOption'] is Map<String, dynamic>
+        ? json['sampleSizeOption'] as Map<String, dynamic>
+        : null;
+
+    return ProjectFormModel(
+      projectTitle: json['projectTitle'] as String? ?? '',
+      experimentStructure: structure,
+      riskLevel: RiskLevel.fromName(json['riskLevel'] as String?),
+      sampleSizeOption: SampleSizeOption.fromJson(sampleSizeJson, structure),
+      factorDefinitions: _factorDefinitionsFromJson(json['factorDefinitions']),
+      imputeMissingData: json['imputeMissingData'] as bool? ?? false,
+    );
+  }
 
   List<FactorDefinition> get factorDefinitions {
     return List.unmodifiable(_factorDefinitions);
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'projectTitle': projectTitle,
+      'experimentStructure': experimentStructure.name,
+      'riskLevel': riskLevel.name,
+      'sampleSizeOption': sampleSizeOption.toJson(),
+      'factorDefinitions': _factorDefinitions
+          .map((definition) => definition.toJson())
+          .toList(),
+      'imputeMissingData': imputeMissingData,
+    };
   }
 
   void setProjectTitle(String title) {
@@ -236,5 +327,25 @@ class ProjectFormModel extends ChangeNotifier {
     if (!validOptions.contains(sampleSizeOption)) {
       sampleSizeOption = validOptions.first;
     }
+  }
+
+  static List<FactorDefinition> _factorDefinitionsFromJson(Object? value) {
+    if (value is! List) return const [];
+
+    return value.whereType<Map>().map((item) {
+      return FactorDefinition.fromJson(Map<String, dynamic>.from(item));
+    }).toList();
+  }
+
+  static List<FactorDefinition> _normalizedFactorDefinitions(
+    ExperimentStructure structure,
+    List<FactorDefinition>? definitions,
+  ) {
+    return List.generate(
+      structure.factorCount,
+      (index) => index < (definitions?.length ?? 0)
+          ? definitions![index]
+          : const FactorDefinition(),
+    );
   }
 }

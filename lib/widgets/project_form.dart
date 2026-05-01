@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:shooters_precision_toolkit/widgets/anomr_matrix.dart';
 import 'package:shooters_precision_toolkit/widgets/form_text_input.dart';
 
 import '../model/project_form_model.dart';
 
 class ProjectForm extends StatefulWidget {
   final ProjectFormModel formModel;
+  final Future<void> Function()? onSubmit;
 
-  const ProjectForm({super.key, required this.formModel});
+  const ProjectForm({super.key, required this.formModel, this.onSubmit});
 
   @override
   State<ProjectForm> createState() => _ProjectFormState();
@@ -18,6 +17,7 @@ class _ProjectFormState extends State<ProjectForm> {
   final _formKey = GlobalKey<FormState>();
   final projectTitleController = TextEditingController();
   late final List<_FactorInputControllers> _factorControllers;
+  bool _isHydratingControllers = false;
 
   @override
   void initState() {
@@ -46,7 +46,18 @@ class _ProjectFormState extends State<ProjectForm> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(ProjectForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.formModel != widget.formModel) {
+      projectTitleController.text = widget.formModel.projectTitle;
+      _hydrateFactorControllers();
+    }
+  }
+
   void _hydrateFactorControllers() {
+    _isHydratingControllers = true;
     final definitions = widget.formModel.factorDefinitions;
 
     for (var index = 0; index < _factorControllers.length; index++) {
@@ -55,6 +66,7 @@ class _ProjectFormState extends State<ProjectForm> {
           : const FactorDefinition();
       _factorControllers[index].setValues(definition);
     }
+    _isHydratingControllers = false;
   }
 
   void _syncProjectTitle() {
@@ -62,6 +74,7 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   void _syncFactorDefinition(int index, {bool trimValues = false}) {
+    if (_isHydratingControllers) return;
     if (index >= widget.formModel.experimentStructure.factorCount) return;
 
     final controllers = _factorControllers[index];
@@ -91,22 +104,12 @@ class _ProjectFormState extends State<ProjectForm> {
     }
   }
 
-  void _onSubmitClicked() {
+  Future<void> _onSubmitClicked() async {
     _syncFormModel(trimValues: true);
 
     if (!_formKey.currentState!.validate()) return;
 
-    final projectFormModel = widget.formModel;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider.value(
-          value: projectFormModel,
-          child: const AnomrMatrix(),
-        ),
-      ),
-    );
+    await widget.onSubmit?.call();
   }
 
   @override
@@ -330,11 +333,10 @@ class _ProjectFormState extends State<ProjectForm> {
           'Detects Difference of',
           textStyle: headerStyle,
         ),
-        for (var index = 0; index < RiskLevel.values.length; index++)
-          _buildTableRow(
-            RiskLevel.values[index].label,
-            option.detectableDifferences[index],
-          ),
+        _buildTableRow(
+          widget.formModel.riskLevel.label,
+          option.detectableDifferenceFor(widget.formModel.riskLevel),
+        ),
       ],
     );
   }

@@ -7,6 +7,7 @@ import 'model/project_store.dart';
 import 'navigation/app_routes.dart';
 import 'storage/project_storage.dart';
 import 'widgets/anomr_matrix.dart';
+import 'widgets/anomr_results_page.dart';
 import 'widgets/project_form_page.dart';
 import 'widgets/project_home_page.dart';
 
@@ -62,6 +63,7 @@ class _MyAppState extends State<MyApp> {
           AppRoutes.projects: (_) => const ProjectHomePage(),
           AppRoutes.projectForm: (_) => const ProjectFormPage(),
           AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),
+          AppRoutes.anomrResults: (_) => const AnomrResultsPage(),
         },
       ),
     );

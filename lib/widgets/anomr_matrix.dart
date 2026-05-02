@@ -269,10 +269,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             onChanged: _handleOnChanged,
             onLoaded: (PlutoGridOnLoadedEvent event) {
               _stateManager = event.stateManager;
-              // // Initial autofit for all columns to ensure data is visible and not wrapped
-              // for (var column in _stateManager!.columns) {
-              //   _stateManager!.autoFitColumn(context, column);
-              // }
             },
             configuration: PlutoGridConfiguration(
               style: PlutoGridStyleConfig(
@@ -298,8 +294,14 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              ElevatedButton.icon(
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.anomrResults),
+                icon: const Icon(Icons.analytics),
+                label: const Text('Show Results'),
+              ),
               OutlinedButton.icon(
                 onPressed: _clearRanges,
                 icon: const Icon(Icons.clear_all),

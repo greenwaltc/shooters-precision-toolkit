@@ -126,7 +126,7 @@ class _ProjectFormState extends State<ProjectForm> {
           children: <Widget>[
             Center(
               child: Text(
-                'New ANOMR Project',
+                'Analysis of Mean Ranges Project Setup',
                 style: theme.textTheme.titleLarge,
               ),
             ),

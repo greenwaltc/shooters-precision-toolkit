@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 enum ExperimentStructure {
   simpleABComparison(
-    label: 'Test How One Factor (two states) Influences A',
+    label: 'Test How One Factor (two states) Influences Precision',
     factorCount: 1,
     usesFactorialSamplePlan: false,
   ),
-  twoFactors(label: 'Test How Two Factors Influence A', factorCount: 2),
-  threeFactors(label: 'Test How Three Factors Influence A', factorCount: 3),
-  fourFactors(label: 'Test How Four Factors Influence A', factorCount: 4);
+  twoFactors(label: 'Test How Two Factors Influence Precision', factorCount: 2),
+  threeFactors(label: 'Test How Three Factors Influence Precision', factorCount: 3),
+  fourFactors(label: 'Test How Four Factors Influence Precision', factorCount: 4);
 
   const ExperimentStructure({
     required this.label,

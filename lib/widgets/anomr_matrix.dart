@@ -58,7 +58,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Analysis of Mean Ranges (ANOMR) Matrix',
+                  Text('Analysis of Mean Ranges (ANOMR)',
                       style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 8.0),
                   Text(formModel.experimentStructure.label),
@@ -147,8 +147,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                   color: Colors.black87,
                 ),
                 softWrap: false,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                overflow: TextOverflow.fade,
               ),
             );
           },
@@ -269,10 +269,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             onChanged: _handleOnChanged,
             onLoaded: (PlutoGridOnLoadedEvent event) {
               _stateManager = event.stateManager;
-              // Initial autofit for all columns to ensure data is visible and not wrapped
-              for (var column in _stateManager!.columns) {
-                _stateManager!.autoFitColumn(context, column);
-              }
+              // // Initial autofit for all columns to ensure data is visible and not wrapped
+              // for (var column in _stateManager!.columns) {
+              //   _stateManager!.autoFitColumn(context, column);
+              // }
             },
             configuration: PlutoGridConfiguration(
               style: PlutoGridStyleConfig(

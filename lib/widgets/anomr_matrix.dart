@@ -59,8 +59,10 @@ class _AnomrMatrixScaffold extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Analysis of Mean Ranges (ANOMR)',
-                      style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Analysis of Mean Ranges (ANOMR)',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const SizedBox(height: 8.0),
                   Text(formModel.experimentStructure.label),
                 ],
@@ -69,7 +71,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             Expanded(
               child: AnomrMatrixGrid(
                 key: ValueKey(
-                    '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}'),
+                  '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
+                ),
                 project: project,
               ),
             ),
@@ -80,9 +83,9 @@ class _AnomrMatrixScaffold extends StatelessWidget {
   }
 
   Future<void> _goToProjectSetup(
-      BuildContext context,
-      ProjectStore store,
-      ) async {
+    BuildContext context,
+    ProjectStore store,
+  ) async {
     final navigator = Navigator.of(context);
     await store.persistSelectedProject();
     navigator.pushReplacementNamed(AppRoutes.projectForm);
@@ -158,7 +161,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       PlutoColumn(
         title: 'Ranges',
         field: 'range',
-        type: PlutoColumnType.number(),
+        type: PlutoColumnType.number(
+          format: '#.##########', // Support high precision decimals
+        ),
         enableColumnDrag: false,
         enableContextMenu: false,
         width: 150,
@@ -166,12 +171,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     ];
 
     // 2. Define Column Groups for Factors
-    _columnGroups = [
-      PlutoColumnGroup(
-        title: 'Factors',
-        fields: factorFields,
-      ),
-    ];
+    _columnGroups = [PlutoColumnGroup(title: 'Factors', fields: factorFields)];
 
     // 3. Generate Rows (Cartesian product repeated n times)
     _rows = [];
@@ -231,7 +231,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       builder: (BuildContext context) => AlertDialog(
         title: const Text('Clear All Ranges?'),
         content: const Text(
-            'Are you sure you want to clear all entered range values? This action cannot be undone.'),
+          'Are you sure you want to clear all entered range values? This action cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -245,9 +246,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                   widget.project.matrixState.remove('range_$i');
                 }
                 _stateManager!.notifyListeners();
-                context
-                    .read<ProjectStore>()
-                    .persistSelectedProject(markModified: true);
+                context.read<ProjectStore>().persistSelectedProject(
+                  markModified: true,
+                );
               });
               Navigator.pop(context);
             },
@@ -296,10 +297,14 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                 actions: {
                   ...PlutoGridShortcut.defaultActions,
                   // Add Command shortcuts for macOS support
-                  LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyC):
-                  const PlutoGridActionCopyValues(),
-                  LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyV):
-                  const PlutoGridActionPasteValues(),
+                  LogicalKeySet(
+                    LogicalKeyboardKey.meta,
+                    LogicalKeyboardKey.keyC,
+                  ): const PlutoGridActionCopyValues(),
+                  LogicalKeySet(
+                    LogicalKeyboardKey.meta,
+                    LogicalKeyboardKey.keyV,
+                  ): const PlutoGridActionPasteValues(),
                 },
               ),
               enterKeyAction: PlutoGridEnterKeyAction.editingAndMoveDown,
@@ -313,8 +318,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ElevatedButton.icon(
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.anomrResults),
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.anomrResults,
+                  arguments: _stateManager,
+                ),
                 icon: const Icon(Icons.analytics),
                 label: const Text('Show Results'),
               ),

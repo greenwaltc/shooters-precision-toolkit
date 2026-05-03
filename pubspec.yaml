@@ -41,6 +41,7 @@ dependencies:
   flutter_svg: ^2.2.4
   provider:
   shared_preferences: ^2.5.5
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:

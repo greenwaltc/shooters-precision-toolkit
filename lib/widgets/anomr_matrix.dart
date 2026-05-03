@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import 'package:provider/provider.dart';
 
@@ -79,9 +80,9 @@ class _AnomrMatrixScaffold extends StatelessWidget {
   }
 
   Future<void> _goToProjectSetup(
-    BuildContext context,
-    ProjectStore store,
-  ) async {
+      BuildContext context,
+      ProjectStore store,
+      ) async {
     final navigator = Navigator.of(context);
     await store.persistSelectedProject();
     navigator.pushReplacementNamed(AppRoutes.projectForm);
@@ -269,6 +270,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             onChanged: _handleOnChanged,
             onLoaded: (PlutoGridOnLoadedEvent event) {
               _stateManager = event.stateManager;
+              // Enable cell selection mode to support range copy/paste
+              _stateManager?.setSelectingMode(PlutoGridSelectingMode.cell);
             },
             configuration: PlutoGridConfiguration(
               style: PlutoGridStyleConfig(
@@ -288,6 +291,19 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               columnSize: const PlutoGridColumnSizeConfig(
                 autoSizeMode: PlutoAutoSizeMode.none,
               ),
+              // Excel-like navigation and selection
+              shortcut: PlutoGridShortcut(
+                actions: {
+                  ...PlutoGridShortcut.defaultActions,
+                  // Add Command shortcuts for macOS support
+                  LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyC):
+                  const PlutoGridActionCopyValues(),
+                  LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyV):
+                  const PlutoGridActionPasteValues(),
+                },
+              ),
+              enterKeyAction: PlutoGridEnterKeyAction.editingAndMoveDown,
+              tabKeyAction: PlutoGridTabKeyAction.moveToNextOnEdge,
             ),
           ),
         ),

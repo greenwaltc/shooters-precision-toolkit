@@ -5,6 +5,7 @@ import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import 'no_selected_project_page.dart';
 import 'project_drawer.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class AnomrResultsPage extends StatelessWidget {
   const AnomrResultsPage({super.key});

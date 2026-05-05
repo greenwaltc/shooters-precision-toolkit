@@ -1,12 +1,12 @@
 import 'package:pluto_grid/pluto_grid.dart';
 
 import '../../../model/project_form_model.dart';
+import '../../../styles/chart/chart_layout.dart';
+import '../../../styles/tokens/app_colors.dart';
 import '../models/anomr_summary.dart';
 import '../models/effect_status.dart';
 import '../models/factor_row.dart';
 import '../models/factor_stats.dart';
-import '../theme/chart_layout.dart';
-import '../theme/factor_palette.dart';
 
 /// Pure (no `BuildContext`) computations used to derive the values the
 /// results view renders.
@@ -111,7 +111,7 @@ class AnomrCalculator {
         index: i,
         factor: factor,
         stats: stats,
-        color: FactorPalette.colorFor(i),
+        color: AppColors.factorColor(i),
         status: computeStatus(
           stats: stats,
           lowerBound: lowerBound,

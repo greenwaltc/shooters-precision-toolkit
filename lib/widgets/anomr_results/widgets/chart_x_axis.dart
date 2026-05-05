@@ -1,9 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../styles/chart/chart_layout.dart';
+import '../../../styles/chart/chart_scale.dart';
 import '../services/factor_row_locator.dart';
-import '../theme/chart_layout.dart';
-import '../theme/chart_scale.dart';
 
 /// Builds the bottom axis [AxisTitles] for the combined results chart.
 ///

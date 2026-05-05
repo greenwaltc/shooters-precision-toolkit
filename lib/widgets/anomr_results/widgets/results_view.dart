@@ -4,12 +4,13 @@ import 'package:provider/provider.dart';
 
 import '../../../model/project_form_model.dart';
 import '../../../model/project_store.dart';
+import '../../../styles/chart/chart_scale.dart';
+import '../../../styles/tokens/app_spacing.dart';
 import '../../project_drawer.dart';
 import '../models/anomr_summary.dart';
 import '../models/export_options.dart';
 import '../services/anomr_calculator.dart';
 import '../services/export_controller.dart';
-import '../theme/chart_scale.dart';
 import 'empty_results_state.dart';
 import 'export_action_button.dart';
 import 'export_dialog.dart';
@@ -158,13 +159,13 @@ class _ResultsBody extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = ChartScale.of(context, constraints);
-        final horizontalPad = scale.chartOuterPadding + 8;
+        final horizontalPad = scale.chartOuterPadding + AppSpacing.md;
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
             horizontalPad,
             scale.chartOuterPadding,
             horizontalPad,
-            scale.chartOuterPadding + 16,
+            scale.chartOuterPadding + AppSpacing.xl,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -182,7 +183,7 @@ class _ResultsBody extends StatelessWidget {
                 onPressed: onExportPressed,
                 isExporting: isExporting,
               ),
-              SizedBox(height: scale.chartOuterPadding + 4),
+              SizedBox(height: scale.chartOuterPadding + AppSpacing.sm),
               RepaintBoundary(
                 key: chartKey,
                 child: ResultsChartCard(

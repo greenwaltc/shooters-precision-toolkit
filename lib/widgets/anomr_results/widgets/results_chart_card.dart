@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../../model/project_form_model.dart';
+import '../../../styles/chart/chart_scale.dart';
+import '../../../styles/components/outlined_surface_card.dart';
+import '../../../styles/theme_extensions/anomr_chart_theme.dart';
+import '../../../styles/tokens/app_radius.dart';
+import '../../../styles/tokens/app_spacing.dart';
 import '../models/factor_row.dart';
-import '../theme/chart_scale.dart';
 import 'chart_legend.dart';
 import 'combined_line_chart.dart';
 import 'conclusion_list.dart';
@@ -32,66 +36,57 @@ class ResultsChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+        const AnomrChartTheme.standard();
 
-    return Card(
-      elevation: 0,
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: scheme.outlineVariant),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(scale.chartOuterPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _Title(scale: scale, textTheme: textTheme, scheme: scheme),
-            SizedBox(height: scale.chartOuterPadding),
-            SizedBox(
-              height: scale.chartHeight,
-              child: CombinedLineChart(
-                factorRows: factorRows,
-                grandMean: grandMean,
-                lowerBound: lowerBound,
-                upperBound: upperBound,
-                detectableDiffPercent: detectableDiffPercent,
-                scale: scale,
-              ),
-            ),
-            SizedBox(height: scale.chartOuterPadding),
-            ChartLegend(
+    return OutlinedSurfaceCard(
+      borderRadius: AppRadius.xlRadius,
+      padding: EdgeInsets.all(scale.chartOuterPadding),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Title(scale: scale),
+          SizedBox(height: scale.chartOuterPadding),
+          SizedBox(
+            height: scale.chartHeight,
+            child: CombinedLineChart(
               factorRows: factorRows,
-              scale: scale,
-              grandMeanColor: scheme.onSurface.withValues(alpha: 0.6),
-              boundColor: scheme.error,
-            ),
-            SizedBox(height: scale.chartOuterPadding),
-            ConclusionList(
-              factorRows: factorRows,
-              riskLevel: riskLevel,
+              grandMean: grandMean,
+              lowerBound: lowerBound,
+              upperBound: upperBound,
+              detectableDiffPercent: detectableDiffPercent,
               scale: scale,
             ),
-          ],
-        ),
+          ),
+          SizedBox(height: scale.chartOuterPadding),
+          ChartLegend(
+            factorRows: factorRows,
+            scale: scale,
+            grandMeanColor: scheme.onSurface
+                .withValues(alpha: chartTheme.referenceLineOpacity),
+            boundColor: scheme.error,
+          ),
+          SizedBox(height: scale.chartOuterPadding),
+          ConclusionList(
+            factorRows: factorRows,
+            riskLevel: riskLevel,
+            scale: scale,
+          ),
+        ],
       ),
     );
   }
 }
 
 class _Title extends StatelessWidget {
-  const _Title({
-    required this.scale,
-    required this.textTheme,
-    required this.scheme,
-  });
+  const _Title({required this.scale});
 
   final ChartScale scale;
-  final TextTheme textTheme;
-  final ColorScheme scheme;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -103,7 +98,7 @@ class _Title extends StatelessWidget {
                 scale.scale.clamp(0.9, 1.2),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           'Mean ranges per factor state vs. grand mean',
           style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),

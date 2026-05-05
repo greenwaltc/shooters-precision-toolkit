@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:shooters_precision_toolkit/widgets/form_text_input.dart';
 
 import '../model/project_form_model.dart';
+import '../styles/components/app_text_field_decoration.dart';
+import '../styles/components/grouped_field_panel.dart';
+import '../styles/components/section_title.dart';
+import '../styles/tokens/app_spacing.dart';
+import '../styles/tokens/app_text_styles.dart';
 
 class ProjectForm extends StatefulWidget {
   final ProjectFormModel formModel;
@@ -120,7 +124,7 @@ class _ProjectFormState extends State<ProjectForm> {
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24.0),
+        padding: AppSpacing.scrollBottom,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -130,17 +134,17 @@ class _ProjectFormState extends State<ProjectForm> {
                 style: theme.textTheme.titleLarge,
               ),
             ),
-            const SizedBox(height: 8.0),
+            const SizedBox(height: AppSpacing.md),
             _buildProjectNameInput(),
-            _buildSectionTitle('Choose the Structure of Your Experiment'),
+            const SectionTitle('Choose the Structure of Your Experiment'),
             _buildExperimentStructureOptions(),
             _buildFactorDefinitionContainer(),
-            _buildSectionTitle(
+            const SectionTitle(
               'Choose Your Risk Level (chance of being wrong if test indicates '
               'a real difference in factor states)',
             ),
             _buildRiskLevelOptions(),
-            _buildSectionTitle('Choose your sample size'),
+            const SectionTitle('Choose your sample size'),
             _buildSampleSizeOptions(),
             _buildImputeMissingDataCheckbox(),
             _buildSubmitButton(),
@@ -156,13 +160,6 @@ class _ProjectFormState extends State<ProjectForm> {
       labelText: 'Project Name',
       prefixIcon: Icons.title,
       validator: (value) => _requiredField(value, 'Project name is required.'),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8.0, 20.0, 8.0, 8.0),
-      child: Text(title, style: Theme.of(context).textTheme.titleMedium),
     );
   }
 
@@ -202,24 +199,15 @@ class _ProjectFormState extends State<ProjectForm> {
   Widget _buildFactorDefinitionContainer() {
     final factorCount = widget.formModel.experimentStructure.factorCount;
 
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          border: Border.all(color: Colors.grey, width: 1.5),
-          borderRadius: BorderRadius.circular(12.0),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < factorCount; index++) ...[
-              _buildFactorFields(index),
-              if (index < factorCount - 1) const Divider(height: 24.0),
-            ],
+    return GroupedFieldPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var index = 0; index < factorCount; index++) ...[
+            _buildFactorFields(index),
+            if (index < factorCount - 1) const Divider(height: AppSpacing.xxxl),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -231,10 +219,10 @@ class _ProjectFormState extends State<ProjectForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 4.0),
+          padding: AppSpacing.factorTitle,
           child: Text(
             'Factor ${index + 1}',
-            style: Theme.of(context).textTheme.titleSmall,
+            style: AppTextStyles.factorLabel(context),
           ),
         ),
         _buildTextField(
@@ -305,12 +293,12 @@ class _ProjectFormState extends State<ProjectForm> {
     final structure = widget.formModel.experimentStructure;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: AppSpacing.radioItemVertical,
       child: RadioListTile<SampleSizeOption>(
         value: option,
         title: Text(option.labelFor(structure)),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8.0),
+          padding: const EdgeInsets.only(top: AppSpacing.md),
           child: _buildDetectableDifferenceTable(option),
         ),
         selected: widget.formModel.sampleSizeOption == option,
@@ -320,10 +308,7 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildDetectableDifferenceTable(SampleSizeOption option) {
-    final theme = Theme.of(context);
-    final headerStyle = theme.textTheme.labelMedium?.copyWith(
-      fontWeight: FontWeight.bold,
-    );
+    final headerStyle = AppTextStyles.formTableHeader(context);
 
     return Table(
       columnWidths: const {0: FlexColumnWidth(), 1: FlexColumnWidth()},
@@ -349,11 +334,11 @@ class _ProjectFormState extends State<ProjectForm> {
     return TableRow(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2.0),
+          padding: AppSpacing.tableCellVertical,
           child: Text(riskLevel, style: textStyle),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2.0),
+          padding: AppSpacing.tableCellVertical,
           child: Text(detectableDifference, style: textStyle),
         ),
       ],
@@ -375,7 +360,7 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildSubmitButton() {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: AppSpacing.fieldPadding,
       child: ElevatedButton(
         onPressed: _onSubmitClicked,
         child: const Text('Submit'),
@@ -390,10 +375,10 @@ class _ProjectFormState extends State<ProjectForm> {
     required FormFieldValidator<String> validator,
   }) {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
+      padding: AppSpacing.fieldPadding,
       child: TextFormField(
         controller: controller,
-        decoration: buildTextInputDecoration(
+        decoration: buildAppTextFieldDecoration(
           labelText: labelText,
           prefixIcon: Icon(prefixIcon),
           controller: controller,

@@ -1,7 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../theme/chart_scale.dart';
+import '../../../styles/chart/chart_scale.dart';
+import '../../../styles/theme_extensions/anomr_chart_theme.dart';
 
 /// Builds the [ExtraLinesData] containing the grand-mean line and the
 /// upper/lower detectable-difference bound lines.
@@ -18,7 +19,10 @@ class ChartReferenceLines {
   }) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final grandMeanColor = scheme.onSurface.withValues(alpha: 0.6);
+    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+        const AnomrChartTheme.standard();
+    final grandMeanColor =
+        scheme.onSurface.withValues(alpha: chartTheme.referenceLineOpacity);
     final boundColor = scheme.error;
 
     final percentLabel = (detectableDiffPercent * 100).toStringAsFixed(0);
@@ -32,7 +36,7 @@ class ChartReferenceLines {
           label: HorizontalLineLabel(
             show: true,
             alignment: Alignment.topRight,
-            padding: const EdgeInsets.only(right: 6, bottom: 2),
+            padding: scale.topRefLabelPadding,
             style: textTheme.bodySmall?.copyWith(
               color: grandMeanColor,
               fontWeight: FontWeight.w600,
@@ -45,11 +49,11 @@ class ChartReferenceLines {
           y: upperBound,
           color: boundColor,
           strokeWidth: scale.meanLineWidth,
-          dashArray: const [6, 4],
+          dashArray: chartTheme.boundLineDashArray,
           label: HorizontalLineLabel(
             show: true,
             alignment: Alignment.topRight,
-            padding: const EdgeInsets.only(right: 6, bottom: 2),
+            padding: scale.topRefLabelPadding,
             style: textTheme.bodySmall?.copyWith(
               color: boundColor,
               fontWeight: FontWeight.w600,
@@ -62,11 +66,11 @@ class ChartReferenceLines {
           y: lowerBound,
           color: boundColor,
           strokeWidth: scale.meanLineWidth,
-          dashArray: const [6, 4],
+          dashArray: chartTheme.boundLineDashArray,
           label: HorizontalLineLabel(
             show: true,
             alignment: Alignment.bottomRight,
-            padding: const EdgeInsets.only(right: 6, top: 2),
+            padding: scale.bottomRefLabelPadding,
             style: textTheme.bodySmall?.copyWith(
               color: boundColor,
               fontWeight: FontWeight.w600,

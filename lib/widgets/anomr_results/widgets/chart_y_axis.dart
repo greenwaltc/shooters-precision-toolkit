@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../theme/chart_scale.dart';
+import '../../../styles/chart/chart_scale.dart';
 
 /// Builds the left axis [AxisTitles] for the combined results chart.
 ///
@@ -21,7 +21,7 @@ class ChartYAxis {
     return AxisTitles(
       axisNameSize: scale.yAxisNameReserve,
       axisNameWidget: Padding(
-        padding: const EdgeInsets.only(bottom: 6),
+        padding: scale.axisNamePadding,
         child: Text(
           'Range',
           style: textTheme.labelLarge?.copyWith(
@@ -40,7 +40,7 @@ class ChartYAxis {
             return const SizedBox.shrink();
           }
           return Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: scale.yTickPadding,
             child: Text(
               value.toStringAsFixed(2),
               style: textTheme.bodySmall?.copyWith(

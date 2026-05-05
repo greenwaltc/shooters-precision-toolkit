@@ -1,10 +1,11 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../styles/chart/chart_layout.dart';
+import '../../../styles/chart/chart_scale.dart';
+import '../../../styles/theme_extensions/anomr_chart_theme.dart';
 import '../models/factor_row.dart';
 import '../services/factor_row_locator.dart';
-import '../theme/chart_layout.dart';
-import '../theme/chart_scale.dart';
 import 'chart_reference_lines.dart';
 import 'chart_x_axis.dart';
 import 'chart_y_axis.dart';
@@ -88,7 +89,7 @@ class CombinedLineChart extends StatelessWidget {
           upperBound: upperBound,
           detectableDiffPercent: detectableDiffPercent,
         ),
-        lineBarsData: _lineBars(),
+        lineBarsData: _lineBars(context),
       ),
     );
   }
@@ -120,19 +121,24 @@ class CombinedLineChart extends StatelessWidget {
 
   FlGridData _grid(BuildContext context, ChartYRangeValues yRange) {
     final scheme = Theme.of(context).colorScheme;
+    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+        const AnomrChartTheme.standard();
     return FlGridData(
       show: true,
       drawVerticalLine: false,
       horizontalInterval: ((yRange.max - yRange.min) / 4).abs(),
       getDrawingHorizontalLine: (_) => FlLine(
-        color: scheme.outlineVariant.withValues(alpha: 0.6),
+        color: scheme.outlineVariant
+            .withValues(alpha: chartTheme.gridLineOpacity),
         strokeWidth: 1,
-        dashArray: const [2, 4],
+        dashArray: chartTheme.gridLineDashArray,
       ),
     );
   }
 
-  List<LineChartBarData> _lineBars() {
+  List<LineChartBarData> _lineBars(BuildContext context) {
+    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+        const AnomrChartTheme.standard();
     return [
       for (final row in factorRows)
         if (row.stats.hasBoth)
@@ -151,7 +157,7 @@ class CombinedLineChart extends StatelessWidget {
                 radius: scale.dotRadius,
                 color: row.color,
                 strokeWidth: scale.dotStroke,
-                strokeColor: Colors.white,
+                strokeColor: chartTheme.dotOutlineColor,
               ),
             ),
           ),

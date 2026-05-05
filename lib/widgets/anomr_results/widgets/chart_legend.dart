@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../styles/chart/chart_scale.dart';
 import '../models/factor_row.dart';
-import '../theme/chart_scale.dart';
 import 'legend_chip.dart';
 import 'legend_painter.dart';
 
@@ -26,8 +26,8 @@ class ChartLegend extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Wrap(
-      spacing: 18,
-      runSpacing: 10,
+      spacing: scale.legendItemSpacing,
+      runSpacing: scale.legendRunSpacing,
       children: [
         for (final row in factorRows)
           LegendChip(

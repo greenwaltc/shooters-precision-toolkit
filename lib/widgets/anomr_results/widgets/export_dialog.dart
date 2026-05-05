@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../styles/tokens/app_opacity.dart';
+import '../../../styles/tokens/app_spacing.dart';
 import '../models/export_options.dart';
 
 /// Modal dialog that asks the user for an [ExportFormat] and whether to
@@ -15,6 +17,9 @@ class ExportDialog extends StatefulWidget {
 class _ExportDialogState extends State<ExportDialog> {
   ExportFormat _format = ExportFormat.pdf;
   bool _includeMatrix = false;
+
+  /// Maximum dialog content width.
+  static const double _contentWidth = 360;
 
   bool get _pdfSelected => _format == ExportFormat.pdf;
 
@@ -32,10 +37,9 @@ class _ExportDialogState extends State<ExportDialog> {
     final textTheme = Theme.of(context).textTheme;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       title: const Text('Export Results'),
       content: SizedBox(
-        width: 360,
+        width: _contentWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,7 +50,7 @@ class _ExportDialogState extends State<ExportDialog> {
                 color: scheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.sm),
             RadioGroup<ExportFormat>(
               groupValue: _format,
               onChanged: _onFormatChanged,
@@ -63,11 +67,11 @@ class _ExportDialogState extends State<ExportDialog> {
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            Divider(color: scheme.outlineVariant),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.md),
+            const Divider(),
+            const SizedBox(height: AppSpacing.md),
             Opacity(
-              opacity: _pdfSelected ? 1 : 0.5,
+              opacity: _pdfSelected ? 1 : AppOpacity.disabled,
               child: CheckboxListTile(
                 value: _includeMatrix,
                 onChanged: _pdfSelected

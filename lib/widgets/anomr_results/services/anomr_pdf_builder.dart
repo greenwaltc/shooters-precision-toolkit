@@ -5,9 +5,13 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pluto_grid/pluto_grid.dart';
 
 import '../../../model/project_form_model.dart';
+import '../../../styles/pdf/pdf_styles.dart';
 
 /// Builds a PDF document containing the captured chart image and an optional
 /// ANOMR data table.
+///
+/// All visual decisions (margins, typography, table borders) come from
+/// [PdfStyles] so the export reads as a sibling of the in-app card.
 class AnomrPdfBuilder {
   const AnomrPdfBuilder._();
 
@@ -35,7 +39,7 @@ class AnomrPdfBuilder {
     document.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.letter,
-        margin: const pw.EdgeInsets.all(36),
+        margin: PdfStyles.pageMargin,
         build: (_) => sections,
       ),
     );
@@ -52,14 +56,11 @@ class AnomrPdfBuilder {
     return [
       pw.Text(
         projectTitle.isEmpty ? 'ANOMR Results' : projectTitle,
-        style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+        style: PdfStyles.title(),
       ),
-      pw.SizedBox(height: 4),
-      pw.Text(
-        'Analysis of Mean Ranges',
-        style: const pw.TextStyle(fontSize: 14, color: PdfColors.grey700),
-      ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: PdfStyles.gapSm),
+      pw.Text('Analysis of Mean Ranges', style: PdfStyles.subtitle()),
+      pw.SizedBox(height: PdfStyles.gapLg),
       pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -71,31 +72,25 @@ class AnomrPdfBuilder {
           ),
         ],
       ),
-      pw.SizedBox(height: 18),
-      pw.Divider(color: PdfColors.grey400),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: PdfStyles.gapXl),
+      pw.Divider(color: PdfStyles.dividerColor),
+      pw.SizedBox(height: PdfStyles.gapLg),
     ];
   }
 
   static List<pw.Widget> _matrixSection(PlutoGridStateManager manager) {
     return [
-      pw.Text(
-        'ANOMR Data Matrix',
-        style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-      ),
-      pw.SizedBox(height: 8),
+      pw.Text('ANOMR Data Matrix', style: PdfStyles.sectionHeader()),
+      pw.SizedBox(height: PdfStyles.gapMd),
       _matrixTable(manager),
-      pw.SizedBox(height: 24),
+      pw.SizedBox(height: PdfStyles.gapXxl),
     ];
   }
 
   static List<pw.Widget> _chartSection(Uint8List chartImage) {
     return [
-      pw.Text(
-        'Results',
-        style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-      ),
-      pw.SizedBox(height: 8),
+      pw.Text('Results', style: PdfStyles.sectionHeader()),
+      pw.SizedBox(height: PdfStyles.gapMd),
       pw.ClipRect(
         child: pw.Image(pw.MemoryImage(chartImage), fit: pw.BoxFit.contain),
       ),
@@ -106,19 +101,9 @@ class AnomrPdfBuilder {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(
-          label.toUpperCase(),
-          style: pw.TextStyle(
-            fontSize: 9,
-            color: PdfColors.grey600,
-            letterSpacing: 0.8,
-          ),
-        ),
-        pw.SizedBox(height: 2),
-        pw.Text(
-          value,
-          style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-        ),
+        pw.Text(label.toUpperCase(), style: PdfStyles.statLabel()),
+        pw.SizedBox(height: PdfStyles.gapXs),
+        pw.Text(value, style: PdfStyles.statValue()),
       ],
     );
   }
@@ -126,24 +111,21 @@ class AnomrPdfBuilder {
   static pw.Widget _matrixTable(PlutoGridStateManager manager) {
     final columns = manager.columns;
     return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      border: pw.TableBorder.all(
+        color: PdfStyles.tableBorderColor,
+        width: PdfStyles.tableBorderWidth,
+      ),
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       children: [
         pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          decoration: const pw.BoxDecoration(color: PdfStyles.tableHeaderFill),
           children: columns
               .map(
                 (column) => pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
+                  padding: PdfStyles.tableHeaderCell,
                   child: pw.Text(
                     column.title,
-                    style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 10,
-                    ),
+                    style: PdfStyles.tableHeaderCellText(),
                   ),
                 ),
               )
@@ -154,13 +136,10 @@ class AnomrPdfBuilder {
             children: columns.map((column) {
               final value = row.cells[column.field]?.value;
               return pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: PdfStyles.tableBodyCell,
                 child: pw.Text(
                   value?.toString() ?? '',
-                  style: const pw.TextStyle(fontSize: 10),
+                  style: PdfStyles.tableBodyCellText(),
                 ),
               );
             }).toList(),

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'model/project_store.dart';
 import 'navigation/app_routes.dart';
 import 'storage/project_storage.dart';
+import 'styles/app_theme.dart';
 import 'widgets/anomr_matrix.dart';
 import 'widgets/anomr_results_page.dart';
 import 'widgets/project_form_page.dart';
@@ -54,10 +55,7 @@ class _MyAppState extends State<MyApp> {
       value: _projectStore,
       child: MaterialApp(
         title: 'Shooter\'s Precision Toolkit',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.light(),
         initialRoute: AppRoutes.projects,
         routes: {
           AppRoutes.projects: (_) => const ProjectHomePage(),

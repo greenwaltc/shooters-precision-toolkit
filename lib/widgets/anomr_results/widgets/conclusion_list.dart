@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../model/project_form_model.dart';
+import '../../../styles/chart/chart_scale.dart';
+import '../../../styles/tokens/app_spacing.dart';
 import '../models/factor_row.dart';
-import '../theme/chart_scale.dart';
 import 'conclusion_row.dart';
 
 /// Stacked list of [ConclusionRow]s, one per factor, under a section title.
@@ -33,10 +34,11 @@ class ConclusionList extends StatelessWidget {
             fontSize: scale.axisLabelFontSize + 1,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.md),
         for (var i = 0; i < factorRows.length; i++) ...[
           ConclusionRow(row: factorRows[i], scale: scale),
-          if (i != factorRows.length - 1) const SizedBox(height: 8),
+          if (i != factorRows.length - 1)
+            const SizedBox(height: AppSpacing.md),
         ],
       ],
     );

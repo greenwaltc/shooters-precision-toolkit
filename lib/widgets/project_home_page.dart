@@ -5,11 +5,22 @@ import '../help/help_instructions.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/tokens/app_radius.dart';
+import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
 import 'confirm_delete_project_dialog.dart';
 
 class ProjectHomePage extends StatelessWidget {
   const ProjectHomePage({super.key});
+
+  /// Maximum width of the empty-state column on wide viewports.
+  static const double _emptyStateMaxWidth = 420;
+
+  /// Size of the leading hero icon on the empty state.
+  static const double _emptyStateIconSize = 56;
+
+  /// Help bottom sheet height as a fraction of the screen.
+  static const double _helpSheetHeightFactor = 0.75;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +30,7 @@ class ProjectHomePage extends StatelessWidget {
       appBar: AppBar(title: const Text("Shooter's Precision Toolkit")),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.page,
           child: !store.isLoaded
               ? const Center(child: CircularProgressIndicator())
               : _buildBody(context, store),
@@ -37,21 +48,21 @@ class ProjectHomePage extends StatelessWidget {
     if (store.projects.isEmpty) {
       return Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420.0),
+          constraints: const BoxConstraints(maxWidth: _emptyStateMaxWidth),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.analytics_outlined,
-                size: 56.0,
+                size: _emptyStateIconSize,
                 color: Theme.of(context).colorScheme.primary,
               ),
-              const SizedBox(height: 16.0),
+              const SizedBox(height: AppSpacing.xl),
               Text(
                 'No projects yet',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              const SizedBox(height: 16.0),
+              const SizedBox(height: AppSpacing.xl),
               FilledButton.icon(
                 onPressed: () => _createProject(context, store),
                 icon: const Icon(Icons.add),
@@ -71,13 +82,13 @@ class ProjectHomePage extends StatelessWidget {
           icon: const Icon(Icons.add),
           label: const Text('Create a New Project'),
         ),
-        const SizedBox(height: 16.0),
+        const SizedBox(height: AppSpacing.xl),
         Text('Projects', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8.0),
+        const SizedBox(height: AppSpacing.md),
         Expanded(
           child: ListView.separated(
             itemCount: store.projects.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 8.0),
+            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, index) {
               return _ProjectListTile(project: store.projects[index]);
             },
@@ -98,12 +109,11 @@ class ProjectHomePage extends StatelessWidget {
       context: context,
       builder: (context) {
         return SizedBox(
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(context).size.height * _helpSheetHeightFactor,
           width: MediaQuery.of(context).size.width,
           child: const HelpInstructions(),
         );
       },
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.0)),
       isScrollControlled: true,
     );
   }
@@ -114,13 +124,17 @@ class _ProjectListTile extends StatelessWidget {
 
   final SavedProject project;
 
+  /// Width reserved for the trailing actions column.
+  static const double _trailingWidth = 96;
+
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 0.0,
+      // Compact radius variant for list cards (cards default to AppRadius.sm
+      // in AppTheme; setting it explicitly keeps the local style obvious).
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Theme.of(context).dividerColor),
-        borderRadius: BorderRadius.circular(8.0),
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: AppRadius.smRadius,
       ),
       child: ListTile(
         leading: const Icon(Icons.analytics_outlined),
@@ -131,7 +145,7 @@ class _ProjectListTile extends StatelessWidget {
         ),
         isThreeLine: true,
         trailing: SizedBox(
-          width: 96.0,
+          width: _trailingWidth,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [

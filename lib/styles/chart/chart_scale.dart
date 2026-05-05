@@ -5,6 +5,10 @@ import 'package:flutter/widgets.dart';
 /// All measurements derive from a single [scale] factor, computed from the
 /// available width. Each getter clamps independently so individual values
 /// never drift to extremes even when [scale] does.
+///
+/// Lives under `lib/styles/` because it's part of the chart's design
+/// system: tweaking it changes only sizing/typography of the chart, never
+/// behavior.
 class ChartScale {
   const ChartScale._(this.scale);
 
@@ -12,10 +16,17 @@ class ChartScale {
     final width = constraints.hasBoundedWidth
         ? constraints.maxWidth
         : MediaQuery.of(context).size.width;
-    final raw = width / 820;
-    final clamped = raw.clamp(0.78, 1.45);
+    final raw = width / _baseWidth;
+    final clamped = raw.clamp(_minScale, _maxScale);
     return ChartScale._(clamped);
   }
+
+  /// Width (in logical pixels) at which [scale] equals 1.0.
+  static const double _baseWidth = 820;
+
+  /// Minimum / maximum scale factor.
+  static const double _minScale = 0.78;
+  static const double _maxScale = 1.45;
 
   final double scale;
 
@@ -49,4 +60,21 @@ class ChartScale {
 
   // Legend
   double get legendIconWidth => (28 * scale).clamp(24.0, 38.0);
+  double get legendIconHeight => 14;
+  double get legendIconLabelGap => 6;
+  double get legendItemSpacing => 18;
+  double get legendRunSpacing => 10;
+
+  // Conclusion row
+  double get conclusionRowFactorGap => 10;
+  double get conclusionRowPillGap => 12;
+  double get conclusionRowLabelGap => 2;
+
+  /// Axis label paddings reused by the chart's axes and reference lines.
+  EdgeInsets get axisNamePadding => const EdgeInsets.only(bottom: 6);
+  EdgeInsets get yTickPadding => const EdgeInsets.only(right: 6);
+  EdgeInsets get topRefLabelPadding =>
+      const EdgeInsets.only(right: 6, bottom: 2);
+  EdgeInsets get bottomRefLabelPadding =>
+      const EdgeInsets.only(right: 6, top: 2);
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
 import 'confirm_delete_project_dialog.dart';
 
@@ -36,7 +37,7 @@ class ProjectDrawer extends StatelessWidget {
                     ),
             ),
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.page,
               child: FilledButton.icon(
                 onPressed: () => _createProject(context, store),
                 icon: const Icon(Icons.add),

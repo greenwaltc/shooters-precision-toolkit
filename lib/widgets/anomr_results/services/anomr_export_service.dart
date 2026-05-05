@@ -4,6 +4,7 @@ import 'package:image/image.dart' as img;
 import 'package:pluto_grid/pluto_grid.dart';
 
 import '../../../model/project_form_model.dart';
+import '../../../styles/tokens/app_colors.dart';
 import '../models/export_options.dart';
 import 'anomr_pdf_builder.dart';
 
@@ -59,6 +60,9 @@ class AnomrExportService {
     return collapsed.isEmpty ? 'anomr_results' : collapsed;
   }
 
+  /// JPEG quality used by [_reencodeAsJpeg].
+  static const int _jpegQuality = 92;
+
   static Future<Uint8List> _reencodeAsJpeg(Uint8List pngBytes) async {
     final decoded = img.decodePng(pngBytes);
     if (decoded == null) return pngBytes;
@@ -67,8 +71,19 @@ class AnomrExportService {
       height: decoded.height,
       numChannels: 4,
     );
-    img.fill(withBackground, color: img.ColorRgba8(255, 255, 255, 255));
+    final bg = AppColors.exportImageBackground;
+    img.fill(
+      withBackground,
+      color: img.ColorRgba8(
+        (bg.r * 255).round(),
+        (bg.g * 255).round(),
+        (bg.b * 255).round(),
+        (bg.a * 255).round(),
+      ),
+    );
     img.compositeImage(withBackground, decoded);
-    return Uint8List.fromList(img.encodeJpg(withBackground, quality: 92));
+    return Uint8List.fromList(
+      img.encodeJpg(withBackground, quality: _jpegQuality),
+    );
   }
 }

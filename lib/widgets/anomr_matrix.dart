@@ -7,6 +7,9 @@ import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/theme_extensions/pluto_grid_theme.dart';
+import '../styles/tokens/app_spacing.dart';
+import '../styles/tokens/app_text_styles.dart';
 import 'project_drawer.dart';
 
 class AnomrMatrix extends StatelessWidget {
@@ -55,7 +58,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: AppSpacing.page,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -63,7 +66,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                     'Analysis of Mean Ranges (ANOMR)',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 8.0),
+                  const SizedBox(height: AppSpacing.md),
                   Text(formModel.experimentStructure.label),
                 ],
               ),
@@ -107,6 +110,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   late List<PlutoColumnGroup> _columnGroups;
   PlutoGridStateManager? _stateManager;
 
+  /// Default factor column width.
+  static const double _factorColumnWidth = 120;
+
+  /// Default range column width.
+  static const double _rangeColumnWidth = 150;
+
   @override
   void initState() {
     super.initState();
@@ -138,18 +147,20 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           enableColumnDrag: false,
           enableContextMenu: false,
           enableDropToResize: true,
-          width: 120,
+          width: _factorColumnWidth,
           renderer: (rendererContext) {
+            // Resolve the Pluto theme at render time (not initState) so we
+            // don't violate the "no inherited lookups in initState" rule.
+            final plutoTheme =
+                Theme.of(context).extension<PlutoGridStyleTheme>() ??
+                    const PlutoGridStyleTheme.standard();
             return Container(
-              color: Colors.grey[100],
+              color: plutoTheme.factorCellBackground,
               alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: AppSpacing.plutoFactorCell,
               child: Text(
                 rendererContext.cell.value?.toString() ?? '',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
-                ),
+                style: AppTextStyles.plutoFactorCell(context),
                 softWrap: false,
                 maxLines: 2,
                 overflow: TextOverflow.fade,
@@ -166,7 +177,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         ),
         enableColumnDrag: false,
         enableContextMenu: false,
-        width: 150,
+        width: _rangeColumnWidth,
       ),
     ];
 
@@ -228,39 +239,46 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     showDialog(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: const Text('Clear All Ranges?'),
-        content: const Text(
-          'Are you sure you want to clear all entered range values? This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder: (BuildContext context) {
+        final scheme = Theme.of(context).colorScheme;
+        return AlertDialog(
+          title: const Text('Clear All Ranges?'),
+          content: const Text(
+            'Are you sure you want to clear all entered range values? This action cannot be undone.',
           ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                for (int i = 0; i < _stateManager!.rows.length; i++) {
-                  _stateManager!.rows[i].cells['range']!.value = null;
-                  widget.project.matrixState.remove('range_$i');
-                }
-                _stateManager!.notifyListeners();
-                context.read<ProjectStore>().persistSelectedProject(
-                  markModified: true,
-                );
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  for (int i = 0; i < _stateManager!.rows.length; i++) {
+                    _stateManager!.rows[i].cells['range']!.value = null;
+                    widget.project.matrixState.remove('range_$i');
+                  }
+                  _stateManager!.notifyListeners();
+                  context.read<ProjectStore>().persistSelectedProject(
+                    markModified: true,
+                  );
+                });
+                Navigator.pop(context);
+              },
+              child: Text('Clear All', style: TextStyle(color: scheme.error)),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final plutoTheme = Theme.of(context).extension<PlutoGridStyleTheme>() ??
+        const PlutoGridStyleTheme.standard();
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Expanded(
@@ -276,18 +294,18 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             },
             configuration: PlutoGridConfiguration(
               style: PlutoGridStyleConfig(
-                gridBorderColor: Colors.grey[300]!,
-                gridBorderRadius: BorderRadius.circular(8),
-                columnTextStyle: const TextStyle(fontWeight: FontWeight.bold),
+                gridBorderColor: plutoTheme.borderColor,
+                gridBorderRadius: plutoTheme.borderRadius,
+                columnTextStyle: AppTextStyles.plutoColumn,
                 enableColumnBorderVertical: true,
-                rowHeight: 48,
-                columnHeight: 52,
-                gridBackgroundColor: Colors.white,
+                rowHeight: plutoTheme.rowHeight,
+                columnHeight: plutoTheme.columnHeight,
+                gridBackgroundColor: plutoTheme.backgroundColor,
               ),
-              scrollbar: const PlutoGridScrollbarConfig(
+              scrollbar: PlutoGridScrollbarConfig(
                 isAlwaysShown: true,
-                scrollbarThickness: 8,
-                scrollbarRadius: Radius.circular(10),
+                scrollbarThickness: plutoTheme.scrollbarThickness,
+                scrollbarRadius: plutoTheme.scrollbarRadius,
               ),
               columnSize: const PlutoGridColumnSizeConfig(
                 autoSizeMode: PlutoAutoSizeMode.none,
@@ -313,7 +331,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: AppSpacing.page,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -330,7 +348,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                 onPressed: _clearRanges,
                 icon: const Icon(Icons.clear_all),
                 label: const Text('Clear All Ranges'),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
               ),
             ],
           ),

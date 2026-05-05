@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../styles/tokens/app_colors.dart';
+
 /// Visual style of a [LegendPainter] indicator.
 enum LegendStyle { solid, dashed, solidDots }
 
@@ -13,23 +15,27 @@ class LegendPainter extends CustomPainter {
   final Color color;
   final LegendStyle style;
 
+  static const double _strokeWidth = 2;
+  static const double _dashLength = 4;
+  static const double _dashGap = 3;
+  static const double _dotRadius = 4;
+  static const double _dotInset = 3;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 2
+      ..strokeWidth = _strokeWidth
       ..strokeCap = StrokeCap.round;
 
     final midY = size.height / 2;
 
     if (style == LegendStyle.dashed) {
-      const dash = 4.0;
-      const gap = 3.0;
       var x = 0.0;
       while (x < size.width) {
-        final end = math.min(x + dash, size.width);
+        final end = math.min(x + _dashLength, size.width);
         canvas.drawLine(Offset(x, midY), Offset(end, midY), paint);
-        x = end + gap;
+        x = end + _dashGap;
       }
     } else {
       canvas.drawLine(Offset(0, midY), Offset(size.width, midY), paint);
@@ -38,12 +44,12 @@ class LegendPainter extends CustomPainter {
     if (style == LegendStyle.solidDots) {
       final dotPaint = Paint()..color = color;
       final strokePaint = Paint()
-        ..color = Colors.white
+        ..color = AppColors.chartDotOutline
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
-      for (final dx in [3.0, size.width - 3.0]) {
-        canvas.drawCircle(Offset(dx, midY), 4, dotPaint);
-        canvas.drawCircle(Offset(dx, midY), 4, strokePaint);
+        ..strokeWidth = _strokeWidth;
+      for (final dx in [_dotInset, size.width - _dotInset]) {
+        canvas.drawCircle(Offset(dx, midY), _dotRadius, dotPaint);
+        canvas.drawCircle(Offset(dx, midY), _dotRadius, strokePaint);
       }
     }
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../theme/chart_scale.dart';
+import '../../../styles/chart/chart_scale.dart';
 import 'legend_painter.dart';
 
 /// A single legend entry: small line indicator plus a label.
@@ -28,12 +28,12 @@ class LegendChip extends StatelessWidget {
       children: [
         SizedBox(
           width: scale.legendIconWidth,
-          height: 14,
+          height: scale.legendIconHeight,
           child: CustomPaint(
             painter: LegendPainter(color: color, style: style),
           ),
         ),
-        const SizedBox(width: 6),
+        SizedBox(width: scale.legendIconLabelGap),
         Text(
           label,
           style: textTheme.bodySmall?.copyWith(

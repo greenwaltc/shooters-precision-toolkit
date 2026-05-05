@@ -12,6 +12,10 @@ class ExportActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isExporting;
 
+  /// Size of the inline progress indicator.
+  static const double _spinnerSize = 16;
+  static const double _spinnerStroke = 2;
+
   @override
   Widget build(BuildContext context) {
     return Align(
@@ -20,9 +24,9 @@ class ExportActionButton extends StatelessWidget {
         onPressed: isExporting ? null : onPressed,
         icon: isExporting
             ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                width: _spinnerSize,
+                height: _spinnerSize,
+                child: CircularProgressIndicator(strokeWidth: _spinnerStroke),
               )
             : const Icon(Icons.ios_share),
         label: Text(isExporting ? 'Exporting…' : 'Export'),

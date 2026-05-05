@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../styles/tokens/app_spacing.dart';
+
 /// Placeholder shown when the project has no usable range data to summarize.
 class EmptyResultsState extends StatelessWidget {
   const EmptyResultsState({super.key});
+
+  /// Size of the leading icon on the empty state.
+  static const double _iconSize = 48;
 
   @override
   Widget build(BuildContext context) {
@@ -10,18 +15,22 @@ class EmptyResultsState extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: AppSpacing.emptyState,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.insights_outlined, size: 48, color: scheme.primary),
-            const SizedBox(height: 16),
+            Icon(
+              Icons.insights_outlined,
+              size: _iconSize,
+              color: scheme.primary,
+            ),
+            const SizedBox(height: AppSpacing.xl),
             Text(
               'No range data available',
               style: textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Enter at least one range value in the ANOMR matrix to see results.',
               style: textTheme.bodyMedium?.copyWith(

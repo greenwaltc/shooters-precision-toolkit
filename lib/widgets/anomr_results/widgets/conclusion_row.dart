@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../styles/chart/chart_scale.dart';
+import '../../../styles/components/status_pill.dart';
+import '../../../styles/tokens/app_opacity.dart';
+import '../../../styles/tokens/app_radius.dart';
 import '../models/effect_status.dart';
 import '../models/factor_row.dart';
-import '../theme/chart_scale.dart';
 import 'legend_painter.dart';
 
 /// Single per-factor conclusion row: colored line indicator + factor name &
@@ -25,15 +28,17 @@ class ConclusionRow extends StatelessWidget {
         vertical: (10 * scale.scale).clamp(8.0, 14.0),
       ),
       decoration: BoxDecoration(
-        color: row.color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: row.color.withValues(alpha: 0.35)),
+        color: row.color.withValues(alpha: AppOpacity.rowFill),
+        borderRadius: AppRadius.mdRadius,
+        border: Border.all(
+          color: row.color.withValues(alpha: AppOpacity.rowBorder),
+        ),
       ),
       child: Row(
         children: [
           SizedBox(
             width: scale.legendIconWidth,
-            height: 14,
+            height: scale.legendIconHeight,
             child: CustomPaint(
               painter: LegendPainter(
                 color: row.color,
@@ -41,7 +46,7 @@ class ConclusionRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: scale.conclusionRowFactorGap),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +58,7 @@ class ConclusionRow extends StatelessWidget {
                     fontSize: scale.stateLabelFontSize + 1,
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: scale.conclusionRowLabelGap),
                 Text(
                   '${row.firstLabel} → ${row.secondLabel}',
                   style: textTheme.bodySmall?.copyWith(
@@ -64,13 +69,14 @@ class ConclusionRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          _StatusPill(
+          SizedBox(width: scale.conclusionRowPillGap),
+          StatusPill(
             label: row.status.label,
             color: statusColor,
             icon: statusIcon,
-            scale: scale,
-            textTheme: textTheme,
+            scale: scale.scale,
+            iconSize: scale.stateLabelFontSize + 4,
+            fontSize: scale.axisLabelFontSize + 1,
           ),
         ],
       ),
@@ -88,51 +94,5 @@ class ConclusionRow extends StatelessWidget {
       case EffectStatus.insufficient:
         return (scheme.onSurfaceVariant, Icons.help_outline);
     }
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.label,
-    required this.color,
-    required this.icon,
-    required this.scale,
-    required this.textTheme,
-  });
-
-  final String label;
-  final Color color;
-  final IconData icon;
-  final ChartScale scale;
-  final TextTheme textTheme;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: (10 * scale.scale).clamp(8.0, 14.0),
-        vertical: (6 * scale.scale).clamp(5.0, 10.0),
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: scale.stateLabelFontSize + 4, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: textTheme.labelLarge?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-              fontSize: scale.axisLabelFontSize + 1,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

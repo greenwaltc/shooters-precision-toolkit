@@ -1,0 +1,44 @@
+import 'package:flutter/material.dart';
+
+import '../../../model/project_form_model.dart';
+import '../models/factor_row.dart';
+import '../theme/chart_scale.dart';
+import 'conclusion_row.dart';
+
+/// Stacked list of [ConclusionRow]s, one per factor, under a section title.
+class ConclusionList extends StatelessWidget {
+  const ConclusionList({
+    super.key,
+    required this.factorRows,
+    required this.riskLevel,
+    required this.scale,
+  });
+
+  final List<FactorRow> factorRows;
+  final RiskLevel riskLevel;
+  final ChartScale scale;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Per-factor results at risk level ${riskLevel.label}',
+          style: textTheme.labelLarge?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontSize: scale.axisLabelFontSize + 1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (var i = 0; i < factorRows.length; i++) ...[
+          ConclusionRow(row: factorRows[i], scale: scale),
+          if (i != factorRows.length - 1) const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}

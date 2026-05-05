@@ -87,80 +87,22 @@ class FactorDefinition {
   }
 }
 
+/// A single sample-size choice the user can select on the project form.
+///
+/// Pure value object: identified by [totalSamples] + [family]. There are no
+/// pre-baked "named" instances — to expose more options in the UI, edit the
+/// list returned by [SampleSizeCatalog.optionsFor].
 @immutable
 class SampleSizeOption {
-  const SampleSizeOption({
-    required this.totalSamples,
-    required this.family,
-    required this.detectableDifferences,
-  });
+  const SampleSizeOption({required this.totalSamples, required this.family});
 
   final int totalSamples;
   final SampleSizeFamily family;
-  final List<String> detectableDifferences;
 
-  static const simpleEight = SampleSizeOption(
-    totalSamples: 8,
-    family: SampleSizeFamily.simpleComparison,
-    detectableDifferences: ['±45%', '±52%', '±66%'],
-  );
-
-  static const simpleFourteen = SampleSizeOption(
-    totalSamples: 14,
-    family: SampleSizeFamily.simpleComparison,
-    detectableDifferences: ['±34%', '±40%', '±52%'],
-  );
-
-  static const simpleFiftySix = SampleSizeOption(
-    totalSamples: 56,
-    family: SampleSizeFamily.simpleComparison,
-    detectableDifferences: ['±17%', '±20%', '±26%'],
-  );
-
-  static const factorialSixteen = SampleSizeOption(
-    totalSamples: 16,
-    family: SampleSizeFamily.factorial,
-    detectableDifferences: ['±31%', '±37%', '±48%'],
-  );
-
-  static const factorialTwentyFour = SampleSizeOption(
-    totalSamples: 24,
-    family: SampleSizeFamily.factorial,
-    detectableDifferences: ['±25%', '±30%', '±40%'],
-  );
-
-  static const factorialFortyEight = SampleSizeOption(
-    totalSamples: 48,
-    family: SampleSizeFamily.factorial,
-    detectableDifferences: ['±18%', '±21%', '±28%'],
-  );
-
-  static const simpleOptions = [simpleEight, simpleFourteen, simpleFiftySix];
-
-  static const factorialOptions = [
-    factorialSixteen,
-    factorialTwentyFour,
-    factorialFortyEight,
-  ];
-
-  static List<SampleSizeOption> optionsFor(ExperimentStructure structure) {
-    return structure.usesFactorialSamplePlan ? factorialOptions : simpleOptions;
-  }
-
-  static SampleSizeOption fromJson(
-    Map<String, dynamic>? json,
-    ExperimentStructure structure,
-  ) {
-    if (json == null) return optionsFor(structure).first;
-
-    final family = SampleSizeFamily.fromName(json['family'] as String?);
-    final totalSamples = json['totalSamples'] as int?;
-    final options = optionsFor(structure);
-
-    return options.firstWhere(
-      (option) =>
-          option.family == family && option.totalSamples == totalSamples,
-      orElse: () => options.first,
+  factory SampleSizeOption.fromJson(Map<String, dynamic> json) {
+    return SampleSizeOption(
+      totalSamples: json['totalSamples'] as int? ?? 0,
+      family: SampleSizeFamily.fromName(json['family'] as String?),
     );
   }
 
@@ -176,10 +118,6 @@ class SampleSizeOption {
     return totalSamples / groupCountFor(structure);
   }
 
-  String detectableDifferenceFor(RiskLevel riskLevel) {
-    return detectableDifferences[RiskLevel.values.indexOf(riskLevel)];
-  }
-
   String labelFor(ExperimentStructure structure) {
     final groupCount = groupCountFor(structure);
     final rangesPerGroup = _formatSampleValue(rangesPerGroupFor(structure));
@@ -188,10 +126,66 @@ class SampleSizeOption {
         '$rangesPerGroup ranges each';
   }
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SampleSizeOption &&
+        other.totalSamples == totalSamples &&
+        other.family == family;
+  }
+
+  @override
+  int get hashCode => Object.hash(totalSamples, family);
+
   static String _formatSampleValue(double value) {
     return value == value.roundToDouble()
         ? value.round().toString()
         : value.toStringAsFixed(1);
+  }
+}
+
+/// Source of truth for which [SampleSizeOption]s appear in the UI for a
+/// given [ExperimentStructure].
+///
+/// To add or remove options, edit the lists returned here — no other
+/// changes to the model layer are required.
+class SampleSizeCatalog {
+  const SampleSizeCatalog._();
+
+  /// Sample-size options for a simple A/B comparison experiment.
+  static const List<SampleSizeOption> simpleOptions = [
+    SampleSizeOption(totalSamples: 8, family: SampleSizeFamily.simpleComparison),
+    SampleSizeOption(totalSamples: 14, family: SampleSizeFamily.simpleComparison),
+    SampleSizeOption(totalSamples: 56, family: SampleSizeFamily.simpleComparison),
+  ];
+
+  /// Sample-size options for any factorial experiment (2/3/4-factor).
+  static const List<SampleSizeOption> factorialOptions = [
+    SampleSizeOption(totalSamples: 16, family: SampleSizeFamily.factorial),
+    SampleSizeOption(totalSamples: 24, family: SampleSizeFamily.factorial),
+    SampleSizeOption(totalSamples: 48, family: SampleSizeFamily.factorial),
+  ];
+
+  /// Returns the available [SampleSizeOption]s for [structure].
+  static List<SampleSizeOption> optionsFor(ExperimentStructure structure) {
+    return structure.usesFactorialSamplePlan ? factorialOptions : simpleOptions;
+  }
+
+  /// Resolves a persisted [SampleSizeOption] back to one of the catalog
+  /// entries for [structure], falling back to the first option if no match
+  /// is found.
+  static SampleSizeOption resolveFromJson(
+    Map<String, dynamic>? json,
+    ExperimentStructure structure,
+  ) {
+    final options = optionsFor(structure);
+    if (json == null) return options.first;
+
+    final candidate = SampleSizeOption.fromJson(json);
+    return options.firstWhere(
+      (option) => option == candidate,
+      orElse: () => options.first,
+    );
   }
 }
 
@@ -205,7 +199,7 @@ class ProjectFormModel extends ChangeNotifier {
     this.imputeMissingData = false,
   }) : sampleSizeOption =
            sampleSizeOption ??
-           SampleSizeOption.optionsFor(experimentStructure).first,
+           SampleSizeCatalog.optionsFor(experimentStructure).first,
        _factorDefinitions = _normalizedFactorDefinitions(
          experimentStructure,
          factorDefinitions,
@@ -233,7 +227,10 @@ class ProjectFormModel extends ChangeNotifier {
       projectTitle: json['projectTitle'] as String? ?? '',
       experimentStructure: structure,
       riskLevel: RiskLevel.fromName(json['riskLevel'] as String?),
-      sampleSizeOption: SampleSizeOption.fromJson(sampleSizeJson, structure),
+      sampleSizeOption: SampleSizeCatalog.resolveFromJson(
+        sampleSizeJson,
+        structure,
+      ),
       factorDefinitions: _factorDefinitionsFromJson(json['factorDefinitions']),
       imputeMissingData: json['imputeMissingData'] as bool? ?? false,
     );
@@ -328,7 +325,7 @@ class ProjectFormModel extends ChangeNotifier {
   }
 
   void _ensureSampleSizeOptionIsValid() {
-    final validOptions = SampleSizeOption.optionsFor(experimentStructure);
+    final validOptions = SampleSizeCatalog.optionsFor(experimentStructure);
     if (!validOptions.contains(sampleSizeOption)) {
       sampleSizeOption = validOptions.first;
     }

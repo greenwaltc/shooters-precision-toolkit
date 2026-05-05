@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../model/detectable_difference.dart';
 import '../model/project_form_model.dart';
 import '../styles/components/app_text_field_decoration.dart';
 import '../styles/components/grouped_field_panel.dart';
@@ -279,7 +280,7 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildSampleSizeOptions() {
-    final options = SampleSizeOption.optionsFor(
+    final options = SampleSizeCatalog.optionsFor(
       widget.formModel.experimentStructure,
     );
 
@@ -314,6 +315,13 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildDetectableDifferenceTable(SampleSizeOption option) {
     final headerStyle = AppTextStyles.formTableHeader(context);
+    final riskLevel = widget.formModel.riskLevel;
+    final detectableLabel = DetectableDifference.formatFraction(
+      DetectableDifference.fractionForOption(
+        option: option,
+        riskLevel: riskLevel,
+      ),
+    );
 
     return Table(
       columnWidths: const {0: FlexColumnWidth(), 1: FlexColumnWidth()},
@@ -323,10 +331,7 @@ class _ProjectFormState extends State<ProjectForm> {
           'Detects Difference of',
           textStyle: headerStyle,
         ),
-        _buildTableRow(
-          widget.formModel.riskLevel.label,
-          option.detectableDifferenceFor(widget.formModel.riskLevel),
-        ),
+        _buildTableRow(riskLevel.label, detectableLabel),
       ],
     );
   }

@@ -9,6 +9,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pluto_grid/pluto_grid.dart';
 
+import '../../../model/detectable_difference.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/pdf/pdf_styles.dart';
 
@@ -73,7 +74,7 @@ class AnomrPdfBuilder {
           _statBlock('Risk Level', riskLevel.label),
           _statBlock(
             'Detectable Difference',
-            '±${(detectableDiffPercent * 100).toStringAsFixed(0)}%',
+            DetectableDifference.formatFraction(detectableDiffPercent),
           ),
         ],
       ),

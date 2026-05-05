@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../../model/detectable_difference.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/components/outlined_surface_card.dart';
 import '../../../styles/components/stat_tile.dart';
@@ -56,8 +57,9 @@ class HeaderSummary extends StatelessWidget {
                 StatTile(label: 'Risk Level', value: riskLevel.label),
                 StatTile(
                   label: 'Detectable Difference',
-                  value:
-                      '±${(detectableDiffPercent * 100).toStringAsFixed(0)}%',
+                  value: DetectableDifference.formatFraction(
+                    detectableDiffPercent,
+                  ),
                 ),
               ];
               if (constraints.maxWidth < _stackBreakpoint) {

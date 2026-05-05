@@ -5,6 +5,7 @@
 
 import 'package:pluto_grid/pluto_grid.dart';
 
+import '../../../model/detectable_difference.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/chart/chart_layout.dart';
 import '../../../styles/tokens/app_colors.dart';
@@ -62,13 +63,6 @@ class AnomrCalculator {
       firstCount: firstRanges.length,
       secondCount: secondRanges.length,
     );
-  }
-
-  /// Parses a detectable-difference label such as `"±31%"` into `0.31`.
-  static double parseDetectableDiff(String source) {
-    final match = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(source);
-    if (match == null) return 0.0;
-    return double.parse(match.group(1)!) / 100.0;
   }
 
   static String factorDisplayName(FactorDefinition factor, int index) {
@@ -139,8 +133,9 @@ class AnomrCalculator {
   }) {
     final ranges = collectRanges(stateManager);
     final grandMean = mean(ranges);
-    final detectableDiffPercent = parseDetectableDiff(
-      formModel.sampleSizeOption.detectableDifferenceFor(formModel.riskLevel),
+    final detectableDiffPercent = DetectableDifference.fractionForOption(
+      option: formModel.sampleSizeOption,
+      riskLevel: formModel.riskLevel,
     );
     final upperBound = grandMean * (1 + detectableDiffPercent);
     final lowerBound = grandMean * (1 - detectableDiffPercent);

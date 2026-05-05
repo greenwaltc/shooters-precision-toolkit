@@ -11,4 +11,4 @@ PRODUCT_NAME = shooters_precision_toolkit
 PRODUCT_BUNDLE_IDENTIFIER = com.bramwell.shootersPrecisionToolkit
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.bramwell. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Denton M. Bramwell. All rights reserved.

@@ -1,10 +1,10 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(shooters_precision_toolkit LANGUAGES CXX)
+project(shooters_precision_test_kit LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "shooters_precision_toolkit")
+set(BINARY_NAME "shooters_precision_test_kit")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

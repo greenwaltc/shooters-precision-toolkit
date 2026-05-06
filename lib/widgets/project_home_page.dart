@@ -32,7 +32,7 @@ class ProjectHomePage extends StatelessWidget {
     final store = context.watch<ProjectStore>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Shooter's Precision Toolkit")),
+      appBar: AppBar(title: const Text("Shooter's Precision Test Kit")),
       body: SafeArea(
         child: Padding(
           padding: AppSpacing.page,

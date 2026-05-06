@@ -12,7 +12,7 @@ import 'tokens/app_borders.dart';
 import 'tokens/app_colors.dart';
 import 'tokens/app_radius.dart';
 
-/// Builds the [ThemeData] used by the Shooter's Precision Toolkit.
+/// Builds the [ThemeData] used by the Shooter's Precision Test Kit.
 ///
 /// All app-wide styling lives here:
 ///   * [ColorScheme] is generated from [AppColors.seed].

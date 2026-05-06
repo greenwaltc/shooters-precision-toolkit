@@ -59,7 +59,7 @@ class _MyAppState extends State<MyApp> {
     return ChangeNotifierProvider<ProjectStore>.value(
       value: _projectStore,
       child: MaterialApp(
-        title: 'Shooter\'s Precision Toolkit',
+        title: 'Shooter\'s Precision Test Kit',
         theme: AppTheme.light(),
         initialRoute: AppRoutes.projects,
         routes: {

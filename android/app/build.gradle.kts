@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.bramwell.shooters_precision_toolkit"
+    namespace = "com.bramwell.shooters_precision_test_kit"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.bramwell.shooters_precision_toolkit"
+        applicationId = "com.bramwell.shooters_precision_test_kit"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

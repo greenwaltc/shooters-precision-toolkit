@@ -5,7 +5,7 @@
 
 import 'package:flutter/material.dart';
 
-/// Foundational color tokens for the Shooter's Precision Toolkit.
+/// Foundational color tokens for the Shooter's Precision Test Kit.
 ///
 /// Color *values* live here and nowhere else. Widgets should never reference
 /// raw `Color(0x..)` literals; they should pull from these tokens or the

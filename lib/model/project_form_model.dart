@@ -89,91 +89,193 @@ class FactorDefinition {
 
 /// A single sample-size choice the user can select on the project form.
 ///
-/// Pure value object: identified by [totalSamples] + [family]. There are no
-/// pre-baked "named" instances — to expose more options in the UI, edit the
-/// list returned by [SampleSizeCatalog.optionsFor].
+/// Identified by [numSets] + [setSize] + [family]. The total number of
+/// samples is [totalSamples] = [numSets] * [setSize]:
+///
+/// * [setSize] is the cardinality of the Cartesian product of factor-state
+///   combinations for the experiment (e.g. `2` for a 1-factor / 2-state
+///   simple comparison, `2^N` for an N-factor / 2-state-per-factor
+///   factorial design).
+/// * [numSets] is the number of times that one full Cartesian-product set
+///   is repeated. Allowed to be fractional (e.g. `1.5`) to support
+///   fractional-factorial designs.
+///
+/// To expose new options in the UI, edit the per-structure lists in
+/// [SampleSizeCatalog] — no other changes to this class are required.
 @immutable
 class SampleSizeOption {
-  const SampleSizeOption({required this.totalSamples, required this.family});
+  const SampleSizeOption({
+    required this.numSets,
+    required this.setSize,
+    required this.family,
+  });
 
-  final int totalSamples;
+  /// Number of times the full Cartesian-product set of factor-state
+  /// combinations is repeated.
+  final num numSets;
+
+  /// Cardinality of one full Cartesian-product set of factor-state
+  /// combinations.
+  final int setSize;
+
   final SampleSizeFamily family;
+
+  /// Total number of individual samples — `numSets * setSize`, rounded to
+  /// the nearest integer to absorb fractional-factorial replications.
+  int get totalSamples => (numSets * setSize).round();
+
+  /// Number of groups in the design — one per Cartesian-product cell.
+  int get groupCount => setSize;
+
+  /// Number of replicate ranges per group.
+  num get rangesPerGroup => numSets;
+
+  /// Display label, e.g. `"16 total samples in 4 groups of 4 ranges each"`.
+  String get label {
+    final ranges = _formatSampleValue(rangesPerGroup);
+    return '$totalSamples total samples in $setSize groups of '
+        '$ranges ranges each';
+  }
 
   factory SampleSizeOption.fromJson(Map<String, dynamic> json) {
     return SampleSizeOption(
-      totalSamples: json['totalSamples'] as int? ?? 0,
+      numSets: (json['numSets'] as num?) ?? 0,
+      setSize: (json['setSize'] as int?) ?? 0,
       family: SampleSizeFamily.fromName(json['family'] as String?),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'totalSamples': totalSamples, 'family': family.name};
-  }
-
-  int groupCountFor(ExperimentStructure structure) {
-    return structure.usesFactorialSamplePlan ? 1 << structure.factorCount : 2;
-  }
-
-  double rangesPerGroupFor(ExperimentStructure structure) {
-    return totalSamples / groupCountFor(structure);
-  }
-
-  String labelFor(ExperimentStructure structure) {
-    final groupCount = groupCountFor(structure);
-    final rangesPerGroup = _formatSampleValue(rangesPerGroupFor(structure));
-
-    return '$totalSamples total samples in $groupCount groups of '
-        '$rangesPerGroup ranges each';
+    return {
+      'numSets': numSets,
+      'setSize': setSize,
+      'family': family.name,
+    };
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is SampleSizeOption &&
-        other.totalSamples == totalSamples &&
+        other.numSets == numSets &&
+        other.setSize == setSize &&
         other.family == family;
   }
 
   @override
-  int get hashCode => Object.hash(totalSamples, family);
+  int get hashCode => Object.hash(numSets, setSize, family);
 
-  static String _formatSampleValue(double value) {
-    return value == value.roundToDouble()
-        ? value.round().toString()
-        : value.toStringAsFixed(1);
+  static String _formatSampleValue(num value) {
+    final asDouble = value.toDouble();
+    return asDouble == asDouble.roundToDouble()
+        ? asDouble.round().toString()
+        : asDouble.toStringAsFixed(1);
   }
 }
 
 /// Source of truth for which [SampleSizeOption]s appear in the UI for a
 /// given [ExperimentStructure].
 ///
-/// To add or remove options, edit the lists returned here — no other
-/// changes to the model layer are required.
+/// One list per structure, since `setSize = 2^factorCount` differs by
+/// factor count for factorial designs. Each list preserves the canonical
+/// `totalSamples` levels — `8 / 14 / 56` for simple comparisons and
+/// `16 / 24 / 48` for every factorial structure — by adapting `numSets`
+/// to the structure-specific `setSize`.
+///
+/// To add or remove options, edit the lists below — no other changes to
+/// the model layer are required.
 class SampleSizeCatalog {
   const SampleSizeCatalog._();
 
-  /// Sample-size options for a simple A/B comparison experiment.
-  static const List<SampleSizeOption> simpleOptions = [
-    SampleSizeOption(totalSamples: 8, family: SampleSizeFamily.simpleComparison),
-    SampleSizeOption(totalSamples: 14, family: SampleSizeFamily.simpleComparison),
-    SampleSizeOption(totalSamples: 56, family: SampleSizeFamily.simpleComparison),
-  ];
-
-  /// Sample-size options for any factorial experiment (2/3/4-factor).
-  static const List<SampleSizeOption> factorialOptions = [
-    SampleSizeOption(totalSamples: 16, family: SampleSizeFamily.factorial),
-    SampleSizeOption(totalSamples: 24, family: SampleSizeFamily.factorial),
-    SampleSizeOption(totalSamples: 48, family: SampleSizeFamily.factorial),
-  ];
+  /// Per-structure available options.
+  static const Map<ExperimentStructure, List<SampleSizeOption>> _byStructure = {
+    ExperimentStructure.simpleABComparison: [
+      // totalSamples: 8, 14, 56 — 1 factor / 2 states, setSize = 2.
+      SampleSizeOption(
+        numSets: 4,
+        setSize: 2,
+        family: SampleSizeFamily.simpleComparison,
+      ),
+      SampleSizeOption(
+        numSets: 7,
+        setSize: 2,
+        family: SampleSizeFamily.simpleComparison,
+      ),
+      SampleSizeOption(
+        numSets: 28,
+        setSize: 2,
+        family: SampleSizeFamily.simpleComparison,
+      ),
+    ],
+    ExperimentStructure.twoFactors: [
+      // totalSamples: 16, 24, 48 — 2 factors, setSize = 4.
+      SampleSizeOption(
+        numSets: 4,
+        setSize: 4,
+        family: SampleSizeFamily.factorial,
+      ),
+      SampleSizeOption(
+        numSets: 6,
+        setSize: 4,
+        family: SampleSizeFamily.factorial,
+      ),
+      SampleSizeOption(
+        numSets: 12,
+        setSize: 4,
+        family: SampleSizeFamily.factorial,
+      ),
+    ],
+    ExperimentStructure.threeFactors: [
+      // totalSamples: 16, 24, 48 — 3 factors, setSize = 8.
+      SampleSizeOption(
+        numSets: 2,
+        setSize: 8,
+        family: SampleSizeFamily.factorial,
+      ),
+      SampleSizeOption(
+        numSets: 3,
+        setSize: 8,
+        family: SampleSizeFamily.factorial,
+      ),
+      SampleSizeOption(
+        numSets: 6,
+        setSize: 8,
+        family: SampleSizeFamily.factorial,
+      ),
+    ],
+    ExperimentStructure.fourFactors: [
+      // totalSamples: 16, 24, 48 — 4 factors, setSize = 16.
+      // numSets: 1.5 represents a half-fraction replication for the
+      // 24-sample design.
+      SampleSizeOption(
+        numSets: 1,
+        setSize: 16,
+        family: SampleSizeFamily.factorial,
+      ),
+      SampleSizeOption(
+        numSets: 1.5,
+        setSize: 16,
+        family: SampleSizeFamily.factorial,
+      ),
+      SampleSizeOption(
+        numSets: 3,
+        setSize: 16,
+        family: SampleSizeFamily.factorial,
+      ),
+    ],
+  };
 
   /// Returns the available [SampleSizeOption]s for [structure].
   static List<SampleSizeOption> optionsFor(ExperimentStructure structure) {
-    return structure.usesFactorialSamplePlan ? factorialOptions : simpleOptions;
+    return _byStructure[structure] ?? const [];
   }
 
   /// Resolves a persisted [SampleSizeOption] back to one of the catalog
-  /// entries for [structure], falling back to the first option if no match
-  /// is found.
+  /// entries for [structure].
+  ///
+  /// Tries an exact-shape match first, then falls back to a totalSamples
+  /// match (so saved projects keep the user's selection across catalog
+  /// edits or factor-count changes).
   static SampleSizeOption resolveFromJson(
     Map<String, dynamic>? json,
     ExperimentStructure structure,
@@ -184,7 +286,10 @@ class SampleSizeCatalog {
     final candidate = SampleSizeOption.fromJson(json);
     return options.firstWhere(
       (option) => option == candidate,
-      orElse: () => options.first,
+      orElse: () => options.firstWhere(
+        (option) => option.totalSamples == candidate.totalSamples,
+        orElse: () => options.first,
+      ),
     );
   }
 }
@@ -326,9 +431,14 @@ class ProjectFormModel extends ChangeNotifier {
 
   void _ensureSampleSizeOptionIsValid() {
     final validOptions = SampleSizeCatalog.optionsFor(experimentStructure);
-    if (!validOptions.contains(sampleSizeOption)) {
-      sampleSizeOption = validOptions.first;
-    }
+    if (validOptions.contains(sampleSizeOption)) return;
+
+    // Preserve the user's chosen totalSamples across factor-count changes
+    // when possible; otherwise fall back to the first available option.
+    sampleSizeOption = validOptions.firstWhere(
+      (option) => option.totalSamples == sampleSizeOption.totalSamples,
+      orElse: () => validOptions.first,
+    );
   }
 
   static List<FactorDefinition> _factorDefinitionsFromJson(Object? value) {

@@ -131,9 +131,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final formModel = context.read<ProjectFormModel>();
     final factors = formModel.factorDefinitions;
     final combinations = _generateCombinations(factors);
-    final n = formModel.sampleSizeOption
-        .rangesPerGroupFor(formModel.experimentStructure)
-        .toInt();
+    final n = formModel.sampleSizeOption.rangesPerGroup.toInt();
 
     final factorFields = <String>[];
 

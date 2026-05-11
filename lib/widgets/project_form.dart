@@ -296,13 +296,11 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildSampleSizeOption(SampleSizeOption option) {
-    final structure = widget.formModel.experimentStructure;
-
     return Padding(
       padding: AppSpacing.radioItemVertical,
       child: RadioListTile<SampleSizeOption>(
         value: option,
-        title: Text(option.labelFor(structure)),
+        title: Text(option.label),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: AppSpacing.md),
           child: _buildDetectableDifferenceTable(option),

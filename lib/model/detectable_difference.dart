@@ -23,6 +23,12 @@ class DetectableDifference {
   ///
   /// Each entry mirrors one row of the canonical design matrix:
   /// `totalSamples, family, riskLevel → fraction`.
+  ///
+  /// Convention for newly-added designs whose calibrated value is not yet
+  /// known: add an explicit entry with the placeholder value `0.5` and an
+  /// inline `// TODO: calibrate` comment, so the missing calibration is
+  /// discoverable by a code search rather than silently falling back at
+  /// runtime.
   static const Map<_Key, double> _table = {
     // Simple A/B comparison
     (totalSamples: 8,  family: SampleSizeFamily.simpleComparison, risk: RiskLevel.tenPercent):  0.45,
@@ -51,8 +57,10 @@ class DetectableDifference {
   /// (e.g. `0.20` for a `±20%` window).
   ///
   /// Throws [ArgumentError] if no entry exists for the given
-  /// `(totalSamples, family, riskLevel)` — keeping the catalog and lookup
-  /// table in lock-step is a developer responsibility.
+  /// `(totalSamples, family, riskLevel)`. New designs added to
+  /// [SampleSizeCatalog] must be paired with an explicit row in [_table];
+  /// see [_table]'s docstring for the placeholder convention when the
+  /// calibrated value is not yet known.
   static double fractionFor({
     required int totalSamples,
     required SampleSizeFamily family,
@@ -69,7 +77,9 @@ class DetectableDifference {
       throw ArgumentError(
         'No detectable-difference entry for '
         'totalSamples=$totalSamples, family=${family.name}, '
-        'riskLevel=${riskLevel.name}.',
+        'riskLevel=${riskLevel.name}. Add an explicit row to '
+        'DetectableDifference._table (use 0.5 with a // TODO: calibrate '
+        'comment if the real value is unknown).',
       );
     }
     return value;

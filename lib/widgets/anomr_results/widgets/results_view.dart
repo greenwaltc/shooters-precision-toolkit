@@ -179,9 +179,7 @@ class _ResultsBody extends StatelessWidget {
                 grandMean: summary.grandMean,
                 riskLevel: formModel.riskLevel,
                 detectableDiffPercent: summary.detectableDiffPercent,
-                sampleSizeLabel: formModel.sampleSizeOption.labelFor(
-                  formModel.experimentStructure,
-                ),
+                sampleSizeLabel: formModel.sampleSizeOption.label,
               ),
               SizedBox(height: scale.chartOuterPadding),
               ExportActionButton(

@@ -5,7 +5,6 @@
 
 import 'package:pluto_grid/pluto_grid.dart';
 
-import '../../../model/detectable_difference.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/chart/chart_layout.dart';
 import '../../../styles/tokens/app_colors.dart';
@@ -133,10 +132,8 @@ class AnomrCalculator {
   }) {
     final ranges = collectRanges(stateManager);
     final grandMean = mean(ranges);
-    final detectableDiffPercent = DetectableDifference.fractionForOption(
-      option: formModel.sampleSizeOption,
-      riskLevel: formModel.riskLevel,
-    );
+    final detectableDiffPercent = formModel.sampleSizeOption
+        .detectableDifferenceFor(formModel.riskLevel);
     final upperBound = grandMean * (1 + detectableDiffPercent);
     final lowerBound = grandMean * (1 - detectableDiffPercent);
     final factorRows = buildFactorRows(

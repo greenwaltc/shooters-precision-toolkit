@@ -5,8 +5,8 @@
 
 import 'package:flutter/material.dart';
 
-import '../model/detectable_difference.dart';
 import '../model/project_form_model.dart';
+import '../sample_size_catalog.dart';
 import '../styles/components/app_text_field_decoration.dart';
 import '../styles/components/grouped_field_panel.dart';
 import '../styles/components/section_title.dart';
@@ -281,7 +281,8 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildSampleSizeOptions() {
     final options = SampleSizeCatalog.optionsFor(
-      widget.formModel.experimentStructure,
+      structure: widget.formModel.experimentStructure,
+      riskLevel: widget.formModel.riskLevel,
     );
 
     return RadioGroup<SampleSizeOption>(
@@ -314,12 +315,7 @@ class _ProjectFormState extends State<ProjectForm> {
   Widget _buildDetectableDifferenceTable(SampleSizeOption option) {
     final headerStyle = AppTextStyles.formTableHeader(context);
     final riskLevel = widget.formModel.riskLevel;
-    final detectableLabel = DetectableDifference.formatFraction(
-      DetectableDifference.fractionForOption(
-        option: option,
-        riskLevel: riskLevel,
-      ),
-    );
+    final detectableLabel = option.detectableDifferenceLabel(riskLevel);
 
     return Table(
       columnWidths: const {0: FlexColumnWidth(), 1: FlexColumnWidth()},

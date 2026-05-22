@@ -281,7 +281,7 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildSampleSizeOptions() {
     final options = SampleSizeCatalog.optionsFor(
-      structure: widget.formModel.experimentStructure,
+      factorCount: widget.formModel.experimentStructure.factorCount,
       riskLevel: widget.formModel.riskLevel,
     );
 

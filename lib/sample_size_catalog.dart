@@ -13,27 +13,30 @@ import 'model/project_form_model.dart';
 // appear on the project form. To add, remove, or recalibrate an option:
 //
 //   1. Declare (or edit) a top-level `const SampleSizeOption` below.
-//      * `numSets * setSize` = total samples.
+//      * Set `numFactors` to match the factor-count section the option
+//        belongs to. `groupSize` is derived automatically as `2^numFactors`.
+//      * `numSets * groupSize` = total samples.
 //      * Provide a `detectableDifferences` entry for every [RiskLevel]
 //        under which the option is offered. Use `0.5` with an inline
 //        `// TODO: calibrate` comment as a discoverable placeholder.
 //   2. Add the option to `SampleSizeCatalog._entries` under each
-//      (ExperimentStructure, RiskLevel) pair where it should be visible.
+//      (factorCount, RiskLevel) pair where it should be visible.
 //
-// The same option `const` can appear in any number of (structure, risk)
+// The same option `const` can appear in any number of (factorCount, risk)
 // lists — there is no need to duplicate the calibrated values.
 //
-// To make a (structure, risk) combination show a different list of
+// To make a (factorCount, risk) combination show a different list of
 // options entirely, just write a different list literal in `_entries`.
 // =============================================================================
 
 // ---------------------------------------------------------------------------
-// Simple A/B comparison (1 factor, 2 states ⇒ setSize = 2).
+// One factor (numFactors = 1 ⇒ groupSize = 2).
+// totalSamples levels: 8, 14, 56.
 // ---------------------------------------------------------------------------
 
-const SampleSizeOption _simpleAB_8 = SampleSizeOption(
-  groupSize: 2,
-  numGroups: 4,
+const SampleSizeOption _oneFactor_8 = SampleSizeOption(
+  numFactors: 1,
+  numSets: 4,
   family: SampleSizeFamily.simpleComparison,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.45,
@@ -42,9 +45,9 @@ const SampleSizeOption _simpleAB_8 = SampleSizeOption(
   },
 );
 
-const SampleSizeOption _simpleAB_14 = SampleSizeOption(
-  groupSize: 2,
-  numGroups: 7,
+const SampleSizeOption _oneFactor_14 = SampleSizeOption(
+  numFactors: 1,
+  numSets: 7,
   family: SampleSizeFamily.simpleComparison,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.34,
@@ -53,9 +56,9 @@ const SampleSizeOption _simpleAB_14 = SampleSizeOption(
   },
 );
 
-const SampleSizeOption _simpleAB_56 = SampleSizeOption(
-  groupSize: 2,
-  numGroups: 28,
+const SampleSizeOption _oneFactor_56 = SampleSizeOption(
+  numFactors: 1,
+  numSets: 28,
   family: SampleSizeFamily.simpleComparison,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.17,
@@ -65,13 +68,13 @@ const SampleSizeOption _simpleAB_56 = SampleSizeOption(
 );
 
 // ---------------------------------------------------------------------------
-// Two-factor factorial (setSize = 4).
+// Two factors (numFactors = 2 ⇒ groupSize = 4).
 // totalSamples levels: 16, 24, 48.
 // ---------------------------------------------------------------------------
 
 const SampleSizeOption _twoFactor_16 = SampleSizeOption(
-  groupSize: 4,
-  numGroups: 4,
+  numFactors: 2,
+  numSets: 4,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.31,
@@ -81,8 +84,8 @@ const SampleSizeOption _twoFactor_16 = SampleSizeOption(
 );
 
 const SampleSizeOption _twoFactor_24 = SampleSizeOption(
-  groupSize: 4,
-  numGroups: 6,
+  numFactors: 2,
+  numSets: 6,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.25,
@@ -92,8 +95,8 @@ const SampleSizeOption _twoFactor_24 = SampleSizeOption(
 );
 
 const SampleSizeOption _twoFactor_48 = SampleSizeOption(
-  groupSize: 4,
-  numGroups: 12,
+  numFactors: 2,
+  numSets: 12,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.18,
@@ -103,13 +106,13 @@ const SampleSizeOption _twoFactor_48 = SampleSizeOption(
 );
 
 // ---------------------------------------------------------------------------
-// Three-factor factorial (setSize = 8).
+// Three factors (numFactors = 3 ⇒ groupSize = 8).
 // totalSamples levels: 16, 24, 48.
 // ---------------------------------------------------------------------------
 
 const SampleSizeOption _threeFactor_16 = SampleSizeOption(
-  groupSize: 8,
-  numGroups: 2,
+  numFactors: 3,
+  numSets: 2,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.31,
@@ -119,8 +122,8 @@ const SampleSizeOption _threeFactor_16 = SampleSizeOption(
 );
 
 const SampleSizeOption _threeFactor_24 = SampleSizeOption(
-  groupSize: 8,
-  numGroups: 3,
+  numFactors: 3,
+  numSets: 3,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.25,
@@ -130,8 +133,8 @@ const SampleSizeOption _threeFactor_24 = SampleSizeOption(
 );
 
 const SampleSizeOption _threeFactor_48 = SampleSizeOption(
-  groupSize: 8,
-  numGroups: 6,
+  numFactors: 3,
+  numSets: 6,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.18,
@@ -141,14 +144,14 @@ const SampleSizeOption _threeFactor_48 = SampleSizeOption(
 );
 
 // ---------------------------------------------------------------------------
-// Four-factor factorial (setSize = 16).
+// Four factors (numFactors = 4 ⇒ groupSize = 16).
 // totalSamples levels: 16, 24, 48. numSets = 1.5 is a half-fraction
 // replication for the 24-sample design.
 // ---------------------------------------------------------------------------
 
 const SampleSizeOption _fourFactor_16 = SampleSizeOption(
-  groupSize: 16,
-  numGroups: 1,
+  numFactors: 4,
+  numSets: 1,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.31,
@@ -158,8 +161,8 @@ const SampleSizeOption _fourFactor_16 = SampleSizeOption(
 );
 
 // const SampleSizeOption _fourFactor_24 = SampleSizeOption(
-//   groupSize: 1.5,
-//   numGroups: 16,
+//   numFactors: 4,
+//   numSets: 1.5,
 //   family: SampleSizeFamily.factorial,
 //   detectableDifferences: {
 //     RiskLevel.tenPercent: 0.25,
@@ -169,8 +172,8 @@ const SampleSizeOption _fourFactor_16 = SampleSizeOption(
 // );
 
 const SampleSizeOption _fourFactor_48 = SampleSizeOption(
-  groupSize: 16,
-  numGroups: 3,
+  numFactors: 4,
+  numSets: 3,
   family: SampleSizeFamily.factorial,
   detectableDifferences: {
     RiskLevel.tenPercent: 0.18,
@@ -184,33 +187,32 @@ const SampleSizeOption _fourFactor_48 = SampleSizeOption(
 // ---------------------------------------------------------------------------
 
 /// Source of truth for which [SampleSizeOption]s appear in the UI for a
-/// given combination of [ExperimentStructure] and [RiskLevel].
+/// given combination of factor count and [RiskLevel].
 ///
-/// Each `(structure, riskLevel)` pair maps to an independently-editable
+/// Each `(factorCount, riskLevel)` pair maps to an independently-editable
 /// list of options, so future requirements like "for four-factor designs
 /// at 1% risk, only offer 48-sample plans" become a one-line edit below.
 class SampleSizeCatalog {
   const SampleSizeCatalog._();
 
-  /// Per-(structure, risk-level) available options.
+  /// Per-(factor-count, risk-level) available options.
   ///
   /// To diverge the visible options by risk level, replace the shared list
   /// for a given inner key with a custom list literal — e.g.
-  /// `RiskLevel.onePercent: [_simpleAB_14, _simpleAB_56]` to hide the
+  /// `RiskLevel.onePercent: [_oneFactor_14, _oneFactor_56]` to hide the
   /// 8-sample plan at the strictest risk level.
-  static const Map<ExperimentStructure, Map<RiskLevel, List<SampleSizeOption>>>
-      _entries = {
-    ExperimentStructure.simpleABComparison: {
-      RiskLevel.tenPercent: [_simpleAB_8, _simpleAB_14, _simpleAB_56],
-      RiskLevel.fivePercent: [_simpleAB_8, _simpleAB_14, _simpleAB_56],
-      RiskLevel.onePercent: [_simpleAB_8, _simpleAB_14, _simpleAB_56],
+  static const Map<int, Map<RiskLevel, List<SampleSizeOption>>> _entries = {
+    1: {
+      RiskLevel.tenPercent: [_oneFactor_8, _oneFactor_14, _oneFactor_56],
+      RiskLevel.fivePercent: [_oneFactor_8, _oneFactor_14, _oneFactor_56],
+      RiskLevel.onePercent: [_oneFactor_8, _oneFactor_14, _oneFactor_56],
     },
-    ExperimentStructure.twoFactors: {
+    2: {
       RiskLevel.tenPercent: [_twoFactor_16, _twoFactor_24, _twoFactor_48],
       RiskLevel.fivePercent: [_twoFactor_16, _twoFactor_24, _twoFactor_48],
       RiskLevel.onePercent: [_twoFactor_16, _twoFactor_24, _twoFactor_48],
     },
-    ExperimentStructure.threeFactors: {
+    3: {
       RiskLevel.tenPercent: [_threeFactor_16, _threeFactor_24, _threeFactor_48],
       RiskLevel.fivePercent: [
         _threeFactor_16,
@@ -219,12 +221,7 @@ class SampleSizeCatalog {
       ],
       RiskLevel.onePercent: [_threeFactor_16, _threeFactor_24, _threeFactor_48],
     },
-    // ExperimentStructure.fourFactors: {
-    //   RiskLevel.tenPercent: [_fourFactor_16, _fourFactor_24, _fourFactor_48],
-    //   RiskLevel.fivePercent: [_fourFactor_16, _fourFactor_24, _fourFactor_48],
-    //   RiskLevel.onePercent: [_fourFactor_16, _fourFactor_24, _fourFactor_48],
-    // },
-    ExperimentStructure.fourFactors: {
+    4: {
       RiskLevel.tenPercent: [_fourFactor_16, _fourFactor_48],
       RiskLevel.fivePercent: [_fourFactor_16, _fourFactor_48],
       RiskLevel.onePercent: [_fourFactor_16, _fourFactor_48],
@@ -232,17 +229,17 @@ class SampleSizeCatalog {
   };
 
   /// Returns the [SampleSizeOption]s the UI should offer for the given
-  /// [structure] + [riskLevel] selection. Returns an empty list if no
+  /// [factorCount] + [riskLevel] selection. Returns an empty list if no
   /// entry exists.
   static List<SampleSizeOption> optionsFor({
-    required ExperimentStructure structure,
+    required int factorCount,
     required RiskLevel riskLevel,
   }) {
-    return _entries[structure]?[riskLevel] ?? const [];
+    return _entries[factorCount]?[riskLevel] ?? const [];
   }
 
   /// Resolves a persisted [SampleSizeOption] back to one of the catalog
-  /// entries for the given [structure] + [riskLevel].
+  /// entries for the given [factorCount] + [riskLevel].
   ///
   /// Tries an exact-shape match first, then falls back to a `totalSamples`
   /// match (so saved projects keep the user's selection across catalog
@@ -250,10 +247,16 @@ class SampleSizeCatalog {
   /// first option when nothing else applies.
   static SampleSizeOption resolveFromJson({
     required Map<String, dynamic>? json,
-    required ExperimentStructure structure,
+    required int factorCount,
     required RiskLevel riskLevel,
   }) {
-    final options = optionsFor(structure: structure, riskLevel: riskLevel);
+    final options = optionsFor(factorCount: factorCount, riskLevel: riskLevel);
+    if (options.isEmpty) {
+      throw StateError(
+        'No sample-size options configured for factorCount=$factorCount, '
+        'riskLevel=${riskLevel.name}.',
+      );
+    }
     if (json == null) return options.first;
 
     final candidate = SampleSizeOption.fromJson(json);

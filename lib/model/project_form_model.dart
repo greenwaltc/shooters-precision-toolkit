@@ -91,16 +91,15 @@ class FactorDefinition {
 
 /// A single sample-size choice the user can select on the project form.
 ///
-/// Identified by [groupSize] + [numGroups] + [family]. The total number of
-/// samples is [totalSamples] = [groupSize] * [numGroups]:
+/// Identified by [numFactors] + [numSets] + [family]. The total number of
+/// samples is [totalSamples] = [groupSize] * [numSets]:
 ///
-/// * [numGroups] is the cardinality of the Cartesian product of factor-state
-///   combinations for the experiment (e.g. `2` for a 1-factor / 2-state
-///   simple comparison, `2^N` for an N-factor / 2-state-per-factor
-///   factorial design).
-/// * [groupSize] is the number of times that one full Cartesian-product set
-///   is repeated. Allowed to be fractional (e.g. `1.5`) to support
-///   fractional-factorial designs.
+/// * [numFactors] is the number of factors in the experiment design.
+/// * [groupSize] is derived as `2^numFactors` — the cardinality of the
+///   Cartesian product of factor-state combinations (i.e. the number of
+///   groups in the design).
+/// * [numSets] is the number of replicate ranges per group. Allowed to be
+///   fractional (e.g. `1.5`) to support fractional-factorial designs.
 ///
 /// Each option also carries its own [detectableDifferences] map — the
 /// fractional band around the grand mean within which an effect is
@@ -110,26 +109,24 @@ class FactorDefinition {
 /// single-place edit. See `lib/sample_size_catalog.dart` for the
 /// declarations.
 ///
-/// Equality is based on identity (`numSets`, `setSize`, `family`) only, so
-/// a [SampleSizeOption] decoded from JSON (with no detectable-difference
+/// Equality is based on identity (`numFactors`, `numSets`, `family`) only,
+/// so a [SampleSizeOption] decoded from JSON (with no detectable-difference
 /// data) still matches its catalog counterpart for selection-resolution
 /// purposes.
 @immutable
 class SampleSizeOption {
   const SampleSizeOption({
-    required this.groupSize,
-    required this.numGroups,
+    required this.numFactors,
+    required this.numSets,
     required this.family,
     this.detectableDifferences = const {},
   });
 
-  /// Number of times the full Cartesian-product set of factor-state
-  /// combinations is repeated.
-  final num groupSize;
+  /// Number of factors in the experiment design.
+  final int numFactors;
 
-  /// Cardinality of one full Cartesian-product set of factor-state
-  /// combinations.
-  final int numGroups;
+  /// Number of replicate ranges per group.
+  final num numSets;
 
   final SampleSizeFamily family;
 
@@ -139,21 +136,24 @@ class SampleSizeOption {
   /// [detectableDifferenceFor].
   final Map<RiskLevel, double> detectableDifferences;
 
-  /// Total number of individual samples — `numSets * setSize`, rounded to
-  /// the nearest integer to absorb fractional-factorial replications.
-  int get totalSamples => (groupSize * numGroups).round();
+  /// Number of groups in the design — `2^numFactors`.
+  int get groupSize => 1 << numFactors;
 
-  /// Number of groups in the design — one per Cartesian-product cell.
-  int get groupCount => numGroups;
+  /// Total number of individual samples — `numSets * groupSize`, rounded to
+  /// the nearest integer to absorb fractional-factorial replications.
+  int get totalSamples => (numSets * groupSize).round();
+
+  /// Alias for [groupSize] — one group per Cartesian-product cell.
+  int get groupCount => groupSize;
 
   /// Number of replicate ranges per group.
-  num get rangesPerGroup => groupSize;
+  num get rangesPerGroup => numSets;
 
   /// Display label, e.g. `"16 total samples in 4 groups of 4 ranges each"`.
   String get label {
     final ranges = _formatSampleValue(rangesPerGroup);
-    return '$totalSamples total samples in $numGroups groups of '
-        '$ranges ranges each';
+    return '$totalSamples total samples in $ranges groups of '
+        '$groupSize ranges each';
   }
 
   /// Detectable-difference fraction of the grand mean for [riskLevel]
@@ -162,7 +162,7 @@ class SampleSizeOption {
     final value = detectableDifferences[riskLevel];
     if (value == null) {
       throw ArgumentError(
-        'SampleSizeOption(numSets: $groupSize, setSize: $numGroups, '
+        'SampleSizeOption(numFactors: $numFactors, numSets: $numSets, '
         'family: ${family.name}) has no detectable-difference value for '
         '${riskLevel.name}. Add an entry to its detectableDifferences '
         'map in lib/sample_size_catalog.dart.',
@@ -178,9 +178,14 @@ class SampleSizeOption {
   }
 
   factory SampleSizeOption.fromJson(Map<String, dynamic> json) {
+    final persistedGroupSize = (json['setSize'] as int?) ?? 0;
+    final numFactorsFromJson = json['numFactors'] as int?;
+    final numFactors = numFactorsFromJson ??
+        (persistedGroupSize > 0 ? _numFactorsForGroupSize(persistedGroupSize) : 0);
+
     return SampleSizeOption(
-      groupSize: (json['numSets'] as num?) ?? 0,
-      numGroups: (json['setSize'] as int?) ?? 0,
+      numFactors: numFactors,
+      numSets: (json['numSets'] as num?) ?? 0,
       family: SampleSizeFamily.fromName(json['family'] as String?),
     );
   }
@@ -189,8 +194,9 @@ class SampleSizeOption {
   /// resolved from the catalog after loading.
   Map<String, dynamic> toJson() {
     return {
-      'numSets': groupSize,
-      'setSize': numGroups,
+      'numFactors': numFactors,
+      'numSets': numSets,
+      'setSize': groupSize,
       'family': family.name,
     };
   }
@@ -199,13 +205,13 @@ class SampleSizeOption {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is SampleSizeOption &&
-        other.groupSize == groupSize &&
-        other.numGroups == numGroups &&
+        other.numFactors == numFactors &&
+        other.numSets == numSets &&
         other.family == family;
   }
 
   @override
-  int get hashCode => Object.hash(groupSize, numGroups, family);
+  int get hashCode => Object.hash(numFactors, numSets, family);
 
   /// Formats a detectable-difference fraction as a `±NN%` display string.
   ///
@@ -217,6 +223,11 @@ class SampleSizeOption {
         ? percent.round().toString()
         : percent.toStringAsFixed(1);
     return '±$rendered%';
+  }
+
+  static int _numFactorsForGroupSize(int groupSize) {
+    if (groupSize <= 0 || (groupSize & (groupSize - 1)) != 0) return 0;
+    return groupSize.bitLength - 1;
   }
 
   static String _formatSampleValue(num value) {
@@ -238,7 +249,7 @@ class ProjectFormModel extends ChangeNotifier {
   }) : sampleSizeOption =
            sampleSizeOption ??
            SampleSizeCatalog.optionsFor(
-             structure: experimentStructure,
+             factorCount: experimentStructure.factorCount,
              riskLevel: riskLevel,
            ).first,
        _factorDefinitions = _normalizedFactorDefinitions(
@@ -272,7 +283,7 @@ class ProjectFormModel extends ChangeNotifier {
       riskLevel: risk,
       sampleSizeOption: SampleSizeCatalog.resolveFromJson(
         json: sampleSizeJson,
-        structure: structure,
+        factorCount: structure.factorCount,
         riskLevel: risk,
       ),
       factorDefinitions: _factorDefinitionsFromJson(json['factorDefinitions']),
@@ -371,7 +382,7 @@ class ProjectFormModel extends ChangeNotifier {
 
   void _ensureSampleSizeOptionIsValid() {
     final validOptions = SampleSizeCatalog.optionsFor(
-      structure: experimentStructure,
+      factorCount: experimentStructure.factorCount,
       riskLevel: riskLevel,
     );
     if (validOptions.contains(sampleSizeOption)) {

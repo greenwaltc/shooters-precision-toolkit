@@ -3,6 +3,12 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+
+// 32 obs, 0.1, 0.780-1.220
+// 32 obs, 0.05, 0.739-1.261
+// 32 obs, 0.01, 0.659-1.341
+
+
 import 'model/project_form_model.dart';
 
 // =============================================================================

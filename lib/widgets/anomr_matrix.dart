@@ -91,11 +91,22 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                     ),
                   ),
                   Expanded(
-                    child: AnomrMatrixGrid(
-                      key: ValueKey(
-                        '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
+                    child: Padding(
+                      padding: layout.pagePadding,
+                      child: Align(
+                        alignment: Alignment.topLeft,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: layout.matrixHeaderMaxWidth,
+                          ),
+                          child: AnomrMatrixGrid(
+                            key: ValueKey(
+                              '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
+                            ),
+                            project: project,
+                          ),
+                        ),
                       ),
-                      project: project,
                     ),
                   ),
                 ],
@@ -137,6 +148,108 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   /// Default range column width.
   static const double _rangeColumnWidth = 150;
+
+  /// Matches [PlutoGridSettings.rowBorderWidth].
+  static const double _rowBorderWidth = 1;
+
+  double _columnTotalWidth() {
+    final columns = _stateManager?.columns ?? _columns;
+    return columns.fold<double>(0, (total, column) => total + column.width);
+  }
+
+  double _gridContentWidth({required bool includeVerticalScrollbar}) {
+    final plutoTheme =
+        Theme.of(context).extension<PlutoGridStyleTheme>() ??
+        const PlutoGridStyleTheme.standard();
+    final scrollbarWidth =
+        includeVerticalScrollbar ? plutoTheme.scrollbarThickness : 0;
+    return _columnTotalWidth() +
+        PlutoGridSettings.gridInnerSpacing +
+        scrollbarWidth;
+  }
+
+  double _gridContentHeight({
+    required PlutoGridStyleTheme plutoTheme,
+    required bool includeHorizontalScrollbar,
+  }) {
+    final scrollbarHeight =
+        includeHorizontalScrollbar ? plutoTheme.scrollbarThickness : 0;
+    final columnGroupHeight =
+        _columnGroups.isEmpty ? 0 : plutoTheme.columnHeight;
+
+    return PlutoGridSettings.gridInnerSpacing +
+        columnGroupHeight +
+        plutoTheme.columnHeight +
+        (_rows.length * (plutoTheme.rowHeight + _rowBorderWidth)) +
+        scrollbarHeight;
+  }
+
+  bool _shouldUseCompactGrid({
+    required AppLayoutMetrics layout,
+    required double availableWidth,
+    required double availableHeight,
+    required PlutoGridStyleTheme plutoTheme,
+  }) {
+    if (layout.isMobile) return false;
+
+    final contentWidth = _gridContentWidth(includeVerticalScrollbar: false);
+    final contentHeight = _gridContentHeight(
+      plutoTheme: plutoTheme,
+      includeHorizontalScrollbar: false,
+    );
+
+    return contentWidth <= availableWidth && contentHeight <= availableHeight;
+  }
+
+  Widget _buildPlutoGrid({
+    required PlutoGridStyleTheme plutoTheme,
+    required bool showScrollbars,
+  }) {
+    return PlutoGrid(
+      columns: _columns,
+      rows: _rows,
+      columnGroups: _columnGroups,
+      onChanged: _handleOnChanged,
+      onLoaded: (PlutoGridOnLoadedEvent event) {
+        setState(() => _stateManager = event.stateManager);
+        _stateManager?.setSelectingMode(PlutoGridSelectingMode.cell);
+      },
+      configuration: PlutoGridConfiguration(
+        style: PlutoGridStyleConfig(
+          gridBorderColor: plutoTheme.borderColor,
+          gridBorderRadius: plutoTheme.borderRadius,
+          columnTextStyle: AppTextStyles.plutoColumn,
+          enableColumnBorderVertical: true,
+          rowHeight: plutoTheme.rowHeight,
+          columnHeight: plutoTheme.columnHeight,
+          gridBackgroundColor: plutoTheme.backgroundColor,
+        ),
+        scrollbar: PlutoGridScrollbarConfig(
+          isAlwaysShown: showScrollbars,
+          scrollbarThickness: plutoTheme.scrollbarThickness,
+          scrollbarRadius: plutoTheme.scrollbarRadius,
+        ),
+        columnSize: const PlutoGridColumnSizeConfig(
+          autoSizeMode: PlutoAutoSizeMode.none,
+        ),
+        shortcut: PlutoGridShortcut(
+          actions: {
+            ...PlutoGridShortcut.defaultActions,
+            LogicalKeySet(
+              LogicalKeyboardKey.meta,
+              LogicalKeyboardKey.keyC,
+            ): const PlutoGridActionCopyValues(),
+            LogicalKeySet(
+              LogicalKeyboardKey.meta,
+              LogicalKeyboardKey.keyV,
+            ): const PlutoGridActionPasteValues(),
+          },
+        ),
+        enterKeyAction: PlutoGridEnterKeyAction.editingAndMoveDown,
+        tabKeyAction: PlutoGridTabKeyAction.moveToNextOnEdge,
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -251,6 +364,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
       // Autofit the column on change to accommodate new data
       _stateManager?.autoFitColumn(context, event.column);
+      setState(() {});
     }
   }
 
@@ -300,94 +414,80 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         const PlutoGridStyleTheme.standard();
     final scheme = Theme.of(context).colorScheme;
 
-    return Column(
-      children: [
-        Expanded(
-          child: PlutoGrid(
-            columns: _columns,
-            rows: _rows,
-            columnGroups: _columnGroups,
-            onChanged: _handleOnChanged,
-            onLoaded: (PlutoGridOnLoadedEvent event) {
-              setState(() => _stateManager = event.stateManager);
-              // Enable cell selection mode to support range copy/paste
-              _stateManager?.setSelectingMode(PlutoGridSelectingMode.cell);
-            },
-            configuration: PlutoGridConfiguration(
-              style: PlutoGridStyleConfig(
-                gridBorderColor: plutoTheme.borderColor,
-                gridBorderRadius: plutoTheme.borderRadius,
-                columnTextStyle: AppTextStyles.plutoColumn,
-                enableColumnBorderVertical: true,
-                rowHeight: plutoTheme.rowHeight,
-                columnHeight: plutoTheme.columnHeight,
-                gridBackgroundColor: plutoTheme.backgroundColor,
-              ),
-              scrollbar: PlutoGridScrollbarConfig(
-                isAlwaysShown: true,
-                scrollbarThickness: plutoTheme.scrollbarThickness,
-                scrollbarRadius: plutoTheme.scrollbarRadius,
-              ),
-              columnSize: const PlutoGridColumnSizeConfig(
-                autoSizeMode: PlutoAutoSizeMode.none,
-              ),
-              // // Standard copy config, allowPaste: true is default but we
-              // // explicitly enable it to be certain.
-              // copyConfig: const PlutoGridCopyConfig(
-              //   allowCopy: true,
-              //   allowPaste: true,
-              // ),
-              // Excel-like navigation and selection
-              shortcut: PlutoGridShortcut(
-                actions: {
-                  ...PlutoGridShortcut.defaultActions,
-                  // Add Command shortcuts for macOS support
-                  LogicalKeySet(
-                    LogicalKeyboardKey.meta,
-                    LogicalKeyboardKey.keyC,
-                  ): const PlutoGridActionCopyValues(),
-                  LogicalKeySet(
-                    LogicalKeyboardKey.meta,
-                    LogicalKeyboardKey.keyV,
-                  ): const PlutoGridActionPasteValues(),
+    return AppLayoutBuilder(
+      builder: (context, layout) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final useCompactGrid = _shouldUseCompactGrid(
+                    layout: layout,
+                    availableWidth: constraints.maxWidth,
+                    availableHeight: constraints.maxHeight,
+                    plutoTheme: plutoTheme,
+                  );
+
+                  final grid = _buildPlutoGrid(
+                    plutoTheme: plutoTheme,
+                    showScrollbars: !useCompactGrid,
+                  );
+
+                  if (useCompactGrid) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: SizedBox(
+                        width: _gridContentWidth(includeVerticalScrollbar: false),
+                        height: _gridContentHeight(
+                          plutoTheme: plutoTheme,
+                          includeHorizontalScrollbar: false,
+                        ),
+                        child: grid,
+                      ),
+                    );
+                  }
+
+                  return grid;
                 },
               ),
-              enterKeyAction: PlutoGridEnterKeyAction.editingAndMoveDown,
-              tabKeyAction: PlutoGridTabKeyAction.moveToNextOnEdge,
             ),
-          ),
-        ),
-        AppLayoutBuilder(
-          builder: (context, layout) => Padding(
-            padding: layout.toolPadding,
-            child: AppResponsiveActions(
-              layout: layout,
-              desktopAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _stateManager == null
-                      ? null
-                      : () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.anomrResults,
-                          arguments: _stateManager,
-                        ),
-                  icon: const Icon(Icons.analytics),
-                  label: const Text('Show Results'),
+            Padding(
+              padding: EdgeInsets.only(
+                top: layout.isMobile ? AppSpacing.md : AppSpacing.lg,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: layout.matrixHeaderMaxWidth),
+                child: AppResponsiveActions(
+                  layout: layout,
+                  desktopAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _stateManager == null
+                          ? null
+                          : () => Navigator.pushNamed(
+                              context,
+                              AppRoutes.anomrResults,
+                              arguments: _stateManager,
+                            ),
+                      icon: const Icon(Icons.analytics),
+                      label: const Text('Show Results'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _clearRanges,
+                      icon: const Icon(Icons.clear_all),
+                      label: const Text('Clear All Ranges'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: scheme.error,
+                      ),
+                    ),
+                  ],
                 ),
-                OutlinedButton.icon(
-                  onPressed: _clearRanges,
-                  icon: const Icon(Icons.clear_all),
-                  label: const Text('Clear All Ranges'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: scheme.error,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }

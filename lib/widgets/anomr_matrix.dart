@@ -88,6 +88,11 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             actions: [
               ...helpAppBarActionsFor(layout, preferAppBar: true),
               IconButton(
+                tooltip: 'Projects',
+                onPressed: () => _goHome(context, store),
+                icon: const Icon(Icons.home_outlined),
+              ),
+              IconButton(
                 tooltip: 'Project setup',
                 onPressed: () => _goToProjectSetup(context, store),
                 icon: const Icon(Icons.tune),
@@ -125,7 +130,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                     child: Padding(
                       padding: layout.pagePadding,
                       child: Align(
-                        alignment: Alignment.topLeft,
+                        alignment: Alignment.topCenter,
                         child: ConstrainedBox(
                           constraints: BoxConstraints(
                             maxWidth: layout.matrixHeaderMaxWidth,
@@ -147,6 +152,12 @@ class _AnomrMatrixScaffold extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _goHome(BuildContext context, ProjectStore store) async {
+    final navigator = Navigator.of(context);
+    await store.persistSelectedProject();
+    navigator.pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
   }
 
   Future<void> _goToProjectSetup(
@@ -215,21 +226,44 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         scrollbarHeight;
   }
 
-  bool _shouldUseCompactGrid({
-    required AppLayoutMetrics layout,
-    required double availableWidth,
-    required double availableHeight,
+  ({double width, double height, bool showScrollbars}) _displaySize({
+    required double maxWidth,
+    required double maxHeight,
     required PlutoGridStyleTheme plutoTheme,
   }) {
-    if (layout.isMobile) return false;
-
+    final scrollbar = plutoTheme.scrollbarThickness;
     final contentWidth = _gridContentWidth(includeVerticalScrollbar: false);
     final contentHeight = _gridContentHeight(
       plutoTheme: plutoTheme,
       includeHorizontalScrollbar: false,
     );
 
-    return contentWidth <= availableWidth && contentHeight <= availableHeight;
+    final overflowHeight = contentHeight > maxHeight;
+    final overflowWidth = contentWidth > maxWidth;
+
+    final width = overflowWidth
+        ? maxWidth
+        : contentWidth + (overflowHeight ? scrollbar : 0);
+    final height = overflowHeight
+        ? maxHeight
+        : contentHeight + (overflowWidth ? scrollbar : 0);
+
+    return (
+      width: width,
+      height: height,
+      showScrollbars: overflowWidth || overflowHeight,
+    );
+  }
+
+  void _handleGridResize() {
+    if (mounted) setState(() {});
+  }
+
+  void _attachStateManager(PlutoGridStateManager manager) {
+    _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
+    _stateManager = manager;
+    _stateManager!.resizingChangeNotifier.addListener(_handleGridResize);
+    _stateManager!.setSelectingMode(PlutoGridSelectingMode.cell);
   }
 
   Widget _buildPlutoGrid({
@@ -242,8 +276,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       columnGroups: _columnGroups,
       onChanged: _handleOnChanged,
       onLoaded: (PlutoGridOnLoadedEvent event) {
-        setState(() => _stateManager = event.stateManager);
-        _stateManager?.setSelectingMode(PlutoGridSelectingMode.cell);
+        setState(() => _attachStateManager(event.stateManager));
       },
       configuration: PlutoGridConfiguration(
         style: PlutoGridStyleConfig(
@@ -286,6 +319,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   void initState() {
     super.initState();
     _initializeGridData();
+  }
+
+  @override
+  void dispose() {
+    _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
+    super.dispose();
   }
 
   void _initializeGridData() {
@@ -341,6 +380,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         type: PlutoColumnType.text(),
         enableColumnDrag: false,
         enableContextMenu: false,
+        enableDropToResize: true,
         width: _rangeColumnWidth,
       ),
     ];
@@ -448,47 +488,36 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     return AppLayoutBuilder(
       builder: (context, layout) {
         return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final useCompactGrid = _shouldUseCompactGrid(
-                    layout: layout,
-                    availableWidth: constraints.maxWidth,
-                    availableHeight: constraints.maxHeight,
-                    plutoTheme: plutoTheme,
-                  );
+              child: Center(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final displaySize = _displaySize(
+                      maxWidth: constraints.maxWidth,
+                      maxHeight: constraints.maxHeight,
+                      plutoTheme: plutoTheme,
+                    );
 
-                  final grid = _buildPlutoGrid(
-                    plutoTheme: plutoTheme,
-                    showScrollbars: !useCompactGrid,
-                  );
-
-                  if (useCompactGrid) {
-                    return Align(
-                      alignment: Alignment.topLeft,
-                      child: SizedBox(
-                        width: _gridContentWidth(includeVerticalScrollbar: false),
-                        height: _gridContentHeight(
-                          plutoTheme: plutoTheme,
-                          includeHorizontalScrollbar: false,
-                        ),
-                        child: grid,
+                    return SizedBox(
+                      width: displaySize.width,
+                      height: displaySize.height,
+                      child: _buildPlutoGrid(
+                        plutoTheme: plutoTheme,
+                        showScrollbars: displaySize.showScrollbars,
                       ),
                     );
-                  }
-
-                  return grid;
-                },
+                  },
+                ),
               ),
             ),
             Padding(
               padding: EdgeInsets.only(
                 top: layout.isMobile ? AppSpacing.md : AppSpacing.lg,
               ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: layout.matrixHeaderMaxWidth),
+              child: SizedBox(
+                width: double.infinity,
                 child: AppResponsiveActions(
                   layout: layout,
                   desktopAlignment: MainAxisAlignment.spaceBetween,

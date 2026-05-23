@@ -41,13 +41,22 @@ class ChartXAxis {
               padding: EdgeInsets.only(
                 top: scale.stateLabelRowHeight + scale.factorLabelGap,
               ),
-              child: Text(
-                factorMatch.displayName,
-                style: textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: scale.factorLabelFontSize,
-                  color: scheme.onSurface,
-                  letterSpacing: 0.2,
+              child: SizedBox(
+                width: scale.factorLabelMaxWidth,
+                child: Text(
+                  scale.isCompact
+                      ? 'F${factorMatch.index + 1}'
+                      : factorMatch.displayName,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: scale.factorLabelFontSize,
+                    color: scheme.onSurface,
+                    letterSpacing: 0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  textAlign: TextAlign.center,
                 ),
               ),
             );
@@ -56,14 +65,40 @@ class ChartXAxis {
           if (stateLabel != null) {
             return Padding(
               padding: EdgeInsets.only(top: scale.stateLabelTopPad),
-              child: Text(
-                stateLabel,
-                style: textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  fontSize: scale.stateLabelFontSize,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
+              child: scale.isCompact
+                  ? RotatedBox(
+                      quarterTurns: 3,
+                      child: SizedBox(
+                        width: scale.stateLabelMaxWidth,
+                        child: Text(
+                          stateLabel,
+                          style: textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: scale.stateLabelFontSize,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: false,
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    )
+                  : SizedBox(
+                      width: scale.stateLabelMaxWidth,
+                      child: Text(
+                        stateLabel,
+                        style: textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: scale.stateLabelFontSize,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
             );
           }
           return const SizedBox.shrink();

@@ -10,6 +10,7 @@ import '../help/help_instructions.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
@@ -33,13 +34,11 @@ class ProjectHomePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text("Shooter's Precision Test Kit")),
-      body: SafeArea(
-        child: Padding(
-          padding: AppSpacing.page,
-          child: !store.isLoaded
-              ? const Center(child: CircularProgressIndicator())
-              : _buildBody(context, store),
-        ),
+      body: AppResponsiveBody(
+        maxWidth: (layout) => layout.homeMaxWidth,
+        builder: (context, layout) => !store.isLoaded
+            ? const Center(child: CircularProgressIndicator())
+            : _buildBody(context, store, layout),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showHelp(context),
@@ -49,7 +48,11 @@ class ProjectHomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(BuildContext context, ProjectStore store) {
+  Widget _buildBody(
+    BuildContext context,
+    ProjectStore store,
+    AppLayoutMetrics _,
+  ) {
     if (store.projects.isEmpty) {
       return Center(
         child: ConstrainedBox(
@@ -113,10 +116,19 @@ class ProjectHomePage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       builder: (context) {
-        return SizedBox(
-          height: MediaQuery.of(context).size.height * _helpSheetHeightFactor,
-          width: MediaQuery.of(context).size.width,
-          child: const HelpInstructions(),
+        return AppLayoutBuilder(
+          builder: (context, layout) => Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: layout.formMaxWidth),
+              child: SizedBox(
+                height:
+                    MediaQuery.of(context).size.height * _helpSheetHeightFactor,
+                width: double.infinity,
+                child: const HelpInstructions(),
+              ),
+            ),
+          ),
         );
       },
       isScrollControlled: true,

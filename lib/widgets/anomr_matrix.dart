@@ -12,6 +12,7 @@ import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/layout/app_layout.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
@@ -59,32 +60,42 @@ class _AnomrMatrixScaffold extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: AppSpacing.page,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Analysis of Mean Ranges (ANOMR)',
-                    style: Theme.of(context).textTheme.titleLarge,
+        child: AppLayoutBuilder(
+          builder: (context, layout) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: layout.pagePadding,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: layout.matrixHeaderMaxWidth,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Analysis of Mean Ranges (ANOMR)',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(formModel.experimentStructure.label),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(formModel.experimentStructure.label),
-                ],
-              ),
-            ),
-            Expanded(
-              child: AnomrMatrixGrid(
-                key: ValueKey(
-                  '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
                 ),
-                project: project,
               ),
-            ),
-          ],
+              Expanded(
+                child: AnomrMatrixGrid(
+                  key: ValueKey(
+                    '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
+                  ),
+                  project: project,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -156,7 +167,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             // don't violate the "no inherited lookups in initState" rule.
             final plutoTheme =
                 Theme.of(context).extension<PlutoGridStyleTheme>() ??
-                    const PlutoGridStyleTheme.standard();
+                const PlutoGridStyleTheme.standard();
             return Container(
               color: plutoTheme.factorCellBackground,
               alignment: Alignment.centerLeft,
@@ -175,9 +186,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       PlutoColumn(
         title: 'Ranges',
         field: 'range',
-        type: PlutoColumnType.number(
-          format: '#.##########', // Support high precision decimals
-        ),
+        // Using text type to avoid any rounding/precision issues during paste.
+        // The results view parses this back to double.
+        type: PlutoColumnType.text(),
         enableColumnDrag: false,
         enableContextMenu: false,
         width: _rangeColumnWidth,
@@ -278,7 +289,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final plutoTheme = Theme.of(context).extension<PlutoGridStyleTheme>() ??
+    final plutoTheme =
+        Theme.of(context).extension<PlutoGridStyleTheme>() ??
         const PlutoGridStyleTheme.standard();
     final scheme = Theme.of(context).colorScheme;
 
@@ -291,7 +303,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             columnGroups: _columnGroups,
             onChanged: _handleOnChanged,
             onLoaded: (PlutoGridOnLoadedEvent event) {
-              _stateManager = event.stateManager;
+              setState(() => _stateManager = event.stateManager);
               // Enable cell selection mode to support range copy/paste
               _stateManager?.setSelectingMode(PlutoGridSelectingMode.cell);
             },
@@ -313,6 +325,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               columnSize: const PlutoGridColumnSizeConfig(
                 autoSizeMode: PlutoAutoSizeMode.none,
               ),
+              // // Standard copy config, allowPaste: true is default but we
+              // // explicitly enable it to be certain.
+              // copyConfig: const PlutoGridCopyConfig(
+              //   allowCopy: true,
+              //   allowPaste: true,
+              // ),
               // Excel-like navigation and selection
               shortcut: PlutoGridShortcut(
                 actions: {
@@ -333,27 +351,34 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             ),
           ),
         ),
-        Padding(
-          padding: AppSpacing.page,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pushNamed(
-                  context,
-                  AppRoutes.anomrResults,
-                  arguments: _stateManager,
+        AppLayoutBuilder(
+          builder: (context, layout) => Padding(
+            padding: layout.toolPadding,
+            child: AppResponsiveActions(
+              layout: layout,
+              desktopAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _stateManager == null
+                      ? null
+                      : () => Navigator.pushNamed(
+                          context,
+                          AppRoutes.anomrResults,
+                          arguments: _stateManager,
+                        ),
+                  icon: const Icon(Icons.analytics),
+                  label: const Text('Show Results'),
                 ),
-                icon: const Icon(Icons.analytics),
-                label: const Text('Show Results'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _clearRanges,
-                icon: const Icon(Icons.clear_all),
-                label: const Text('Clear All Ranges'),
-                style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
-              ),
-            ],
+                OutlinedButton.icon(
+                  onPressed: _clearRanges,
+                  icon: const Icon(Icons.clear_all),
+                  label: const Text('Clear All Ranges'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: scheme.error,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],

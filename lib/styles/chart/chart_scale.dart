@@ -5,6 +5,8 @@
 
 import 'package:flutter/widgets.dart';
 
+import '../layout/app_layout.dart';
+
 /// Screen-adaptive sizing used throughout the results chart.
 ///
 /// All measurements derive from a single [scale] factor, computed from the
@@ -15,7 +17,7 @@ import 'package:flutter/widgets.dart';
 /// system: tweaking it changes only sizing/typography of the chart, never
 /// behavior.
 class ChartScale {
-  const ChartScale._(this.scale);
+  const ChartScale._({required this.scale, required this.isCompact});
 
   factory ChartScale.of(BuildContext context, BoxConstraints constraints) {
     final width = constraints.hasBoundedWidth
@@ -23,7 +25,10 @@ class ChartScale {
         : MediaQuery.of(context).size.width;
     final raw = width / _baseWidth;
     final clamped = raw.clamp(_minScale, _maxScale);
-    return ChartScale._(clamped);
+    return ChartScale._(
+      scale: clamped,
+      isCompact: width < AppLayoutMetrics.mobileBreakpoint,
+    );
   }
 
   /// Width (in logical pixels) at which [scale] equals 1.0.
@@ -34,15 +39,26 @@ class ChartScale {
   static const double _maxScale = 1.45;
 
   final double scale;
+  final bool isCompact;
 
   // Layout sizes
-  double get chartHeight => (340 * scale).clamp(280.0, 540.0);
-  double get chartOuterPadding => (18 * scale).clamp(14.0, 28.0);
+  double get chartHeight => isCompact
+      ? (360 * scale).clamp(300.0, 390.0)
+      : (340 * scale).clamp(280.0, 540.0);
+  double get chartOuterPadding => isCompact
+      ? (14 * scale).clamp(10.0, 18.0)
+      : (18 * scale).clamp(14.0, 28.0);
 
   // Font sizes
-  double get axisLabelFontSize => (11 * scale).clamp(10.5, 15.0);
-  double get stateLabelFontSize => (12 * scale).clamp(11.0, 16.0);
-  double get factorLabelFontSize => (13 * scale).clamp(12.0, 17.0);
+  double get axisLabelFontSize => isCompact
+      ? (10.5 * scale).clamp(9.5, 11.5)
+      : (11 * scale).clamp(10.5, 15.0);
+  double get stateLabelFontSize => isCompact
+      ? (11 * scale).clamp(10.0, 12.0)
+      : (12 * scale).clamp(11.0, 16.0);
+  double get factorLabelFontSize => isCompact
+      ? (12 * scale).clamp(11.0, 13.0)
+      : (13 * scale).clamp(12.0, 17.0);
 
   // Stroke / dot sizes
   double get dotRadius => (5.5 * scale).clamp(4.5, 8.0);
@@ -51,13 +67,18 @@ class ChartScale {
   double get meanLineWidth => (1.5 * scale).clamp(1.2, 2.4);
 
   // Axis reserves
-  double get leftAxisReserve => (52 * scale).clamp(46.0, 72.0);
-  double get yAxisNameReserve => (26 * scale).clamp(22.0, 36.0);
+  double get leftAxisReserve => isCompact ? 42 : (52 * scale).clamp(46.0, 72.0);
+  double get yAxisNameReserve => isCompact ? 0 : (26 * scale).clamp(22.0, 36.0);
 
   // Bottom axis is two stacked rows: state labels on top, factor names below.
   double get stateLabelTopPad => 6.0;
-  double get stateLabelRowHeight =>
-      stateLabelFontSize + stateLabelTopPad + 6;
+  double get stateLabelMaxWidth =>
+      isCompact ? 68 : (92 * scale).clamp(78.0, 130.0);
+  double get factorLabelMaxWidth =>
+      isCompact ? 34 : (128 * scale).clamp(96.0, 160.0);
+  double get stateLabelRowHeight => isCompact
+      ? stateLabelMaxWidth + stateLabelTopPad + 4
+      : stateLabelFontSize + stateLabelTopPad + 6;
   double get factorLabelGap => (10 * scale).clamp(8.0, 14.0);
   double get factorLabelRowHeight => factorLabelFontSize + 6;
   double get bottomStateLabelReserve =>
@@ -67,8 +88,8 @@ class ChartScale {
   double get legendIconWidth => (28 * scale).clamp(24.0, 38.0);
   double get legendIconHeight => 14;
   double get legendIconLabelGap => 6;
-  double get legendItemSpacing => 18;
-  double get legendRunSpacing => 10;
+  double get legendItemSpacing => isCompact ? 10 : 18;
+  double get legendRunSpacing => isCompact ? 8 : 10;
 
   // Conclusion row
   double get conclusionRowFactorGap => 10;

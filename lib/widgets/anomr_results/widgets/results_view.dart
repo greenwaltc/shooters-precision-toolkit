@@ -9,7 +9,9 @@ import 'package:provider/provider.dart';
 
 import '../../../model/project_form_model.dart';
 import '../../../model/project_store.dart';
+import '../../../styles/chart/chart_layout.dart';
 import '../../../styles/chart/chart_scale.dart';
+import '../../../styles/layout/app_layout.dart';
 import '../../../styles/tokens/app_spacing.dart';
 import '../../project_drawer.dart';
 import '../models/anomr_summary.dart';
@@ -41,7 +43,7 @@ class _ResultsViewState extends State<ResultsView> {
     final formModel = context.watch<ProjectFormModel>();
     final project = context.read<ProjectStore>().selectedProject!;
 
-    final summary = AnomrCalculator.summarize(
+    final previewSummary = AnomrCalculator.summarize(
       formModel: formModel,
       stateManager: stateManager,
     );
@@ -49,13 +51,13 @@ class _ResultsViewState extends State<ResultsView> {
     return Scaffold(
       drawer: const ProjectDrawer(),
       appBar: _ResultsAppBar(displayName: project.displayName),
-      body: summary.hasEnoughData
+      body: previewSummary.hasEnoughData
           ? _ResultsBody(
-              summary: summary,
               formModel: formModel,
+              stateManager: stateManager,
               chartKey: _chartKey,
               isExporting: _isExporting,
-              onExportPressed: () => _onExportPressed(
+              onExportPressed: (summary) => _onExportPressed(
                 summary: summary,
                 formModel: formModel,
                 stateManager: stateManager,
@@ -146,63 +148,86 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
 
 class _ResultsBody extends StatelessWidget {
   const _ResultsBody({
-    required this.summary,
     required this.formModel,
+    required this.stateManager,
     required this.chartKey,
     required this.isExporting,
     required this.onExportPressed,
   });
 
-  final AnomrSummary summary;
   final ProjectFormModel formModel;
+  final PlutoGridStateManager stateManager;
   final GlobalKey chartKey;
   final bool isExporting;
-  final VoidCallback onExportPressed;
+  final ValueChanged<AnomrSummary> onExportPressed;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scale = ChartScale.of(context, constraints);
-        final horizontalPad = scale.chartOuterPadding + AppSpacing.md;
-        return SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPad,
-            scale.chartOuterPadding,
-            horizontalPad,
-            scale.chartOuterPadding + AppSpacing.xl,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              HeaderSummary(
-                grandMean: summary.grandMean,
-                riskLevel: formModel.riskLevel,
-                detectableDiffPercent: summary.detectableDiffPercent,
-                sampleSizeLabel: formModel.sampleSizeOption.label,
-              ),
-              SizedBox(height: scale.chartOuterPadding),
-              ExportActionButton(
-                onPressed: onExportPressed,
-                isExporting: isExporting,
-              ),
-              SizedBox(height: scale.chartOuterPadding + AppSpacing.sm),
-              RepaintBoundary(
-                key: chartKey,
-                child: ResultsChartCard(
-                  factorRows: summary.factorRows,
-                  grandMean: summary.grandMean,
-                  lowerBound: summary.lowerBound,
-                  upperBound: summary.upperBound,
-                  detectableDiffPercent: summary.detectableDiffPercent,
-                  riskLevel: formModel.riskLevel,
-                  scale: scale,
+    return SafeArea(
+      child: AppLayoutBuilder(
+        builder: (context, layout) {
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              layout.pageGutter,
+              layout.pageGutter,
+              layout.pageGutter,
+              layout.pageGutter + AppSpacing.xl,
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: layout.resultsMaxWidth),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final scale = ChartScale.of(context, constraints);
+                    final chartLayout = scale.isCompact
+                        ? ChartLayout.compact
+                        : ChartLayout.standard;
+                    final summary = AnomrCalculator.summarize(
+                      formModel: formModel,
+                      stateManager: stateManager,
+                      layout: chartLayout,
+                    );
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        HeaderSummary(
+                          grandMean: summary.grandMean,
+                          riskLevel: formModel.riskLevel,
+                          detectableDiffPercent: summary.detectableDiffPercent,
+                          sampleSizeLabel: formModel.sampleSizeOption.label,
+                        ),
+                        SizedBox(height: scale.chartOuterPadding),
+                        ExportActionButton(
+                          onPressed: () => onExportPressed(summary),
+                          isExporting: isExporting,
+                        ),
+                        SizedBox(
+                          height: scale.chartOuterPadding + AppSpacing.sm,
+                        ),
+                        RepaintBoundary(
+                          key: chartKey,
+                          child: ResultsChartCard(
+                            factorRows: summary.factorRows,
+                            grandMean: summary.grandMean,
+                            lowerBound: summary.lowerBound,
+                            upperBound: summary.upperBound,
+                            detectableDiffPercent:
+                                summary.detectableDiffPercent,
+                            riskLevel: formModel.riskLevel,
+                            scale: scale,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }

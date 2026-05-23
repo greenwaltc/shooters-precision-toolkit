@@ -10,6 +10,7 @@ import '../sample_size_catalog.dart';
 import '../styles/components/app_text_field_decoration.dart';
 import '../styles/components/grouped_field_panel.dart';
 import '../styles/components/section_title.dart';
+import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
 
@@ -129,22 +130,15 @@ class _ProjectFormState extends State<ProjectForm> {
     return Form(
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
-      child: SingleChildScrollView(
-        padding: AppSpacing.scrollBottom,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Center(
-              child: Text(
-                'Analysis of Mean Ranges Project Setup',
-                style: theme.textTheme.titleLarge,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
+      child: AppLayoutBuilder(
+        builder: (context, layout) {
+          final setupFields = <Widget>[
             _buildProjectNameInput(),
             const SectionTitle('Choose the Structure of Your Experiment'),
             _buildExperimentStructureOptions(),
             _buildFactorDefinitionContainer(),
+          ];
+          final sampleFields = <Widget>[
             const SectionTitle(
               'Choose Your Risk Level (chance of being wrong if test indicates '
               'a real difference in factor states)',
@@ -153,9 +147,51 @@ class _ProjectFormState extends State<ProjectForm> {
             const SectionTitle('Choose your sample size'),
             _buildSampleSizeOptions(),
             _buildImputeMissingDataCheckbox(),
-            _buildSubmitButton(),
-          ],
-        ),
+            _buildSubmitButton(layout),
+          ];
+
+          return SingleChildScrollView(
+            padding: AppSpacing.scrollBottom,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Center(
+                  child: Text(
+                    'Analysis of Mean Ranges Project Setup',
+                    style: theme.textTheme.titleLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                if (layout.useTwoColumnForms)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: setupFields,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xxxxl),
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: sampleFields,
+                        ),
+                      ),
+                    ],
+                  )
+                else ...[
+                  ...setupFields,
+                  ...sampleFields,
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -362,13 +398,23 @@ class _ProjectFormState extends State<ProjectForm> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(AppLayoutMetrics layout) {
+    final button = ElevatedButton(
+      onPressed: _onSubmitClicked,
+      child: const Text('Submit'),
+    );
+
     return Padding(
       padding: AppSpacing.fieldPadding,
-      child: ElevatedButton(
-        onPressed: _onSubmitClicked,
-        child: const Text('Submit'),
-      ),
+      child: layout.useStackedActions
+          ? SizedBox(width: double.infinity, child: button)
+          : Align(
+              alignment: Alignment.centerRight,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 160),
+                child: button,
+              ),
+            ),
     );
   }
 

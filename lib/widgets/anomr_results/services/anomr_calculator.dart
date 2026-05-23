@@ -26,8 +26,7 @@ class AnomrCalculator {
   static List<double> collectRanges(PlutoGridStateManager manager) {
     return manager.rows
         .map(
-          (row) =>
-              double.tryParse(row.cells['range']?.value?.toString() ?? ''),
+          (row) => double.tryParse(row.cells['range']?.value?.toString() ?? ''),
         )
         .whereType<double>()
         .toList(growable: false);
@@ -94,6 +93,7 @@ class AnomrCalculator {
     required PlutoGridStateManager manager,
     required double lowerBound,
     required double upperBound,
+    ChartLayoutGeometry layout = ChartLayout.standard,
   }) {
     return List.generate(factors.length, (i) {
       final factor = factors[i];
@@ -115,8 +115,8 @@ class AnomrCalculator {
           lowerBound: lowerBound,
           upperBound: upperBound,
         ),
-        firstX: ChartLayout.firstXFor(i),
-        secondX: ChartLayout.secondXFor(i),
+        firstX: layout.firstXFor(i),
+        secondX: layout.secondXFor(i),
         firstLabel: firstLabel,
         secondLabel: secondLabel,
         displayName: factorDisplayName(factor, i),
@@ -129,6 +129,7 @@ class AnomrCalculator {
   static AnomrSummary summarize({
     required ProjectFormModel formModel,
     required PlutoGridStateManager stateManager,
+    ChartLayoutGeometry layout = ChartLayout.standard,
   }) {
     final ranges = collectRanges(stateManager);
     final grandMean = mean(ranges);
@@ -141,6 +142,7 @@ class AnomrCalculator {
       manager: stateManager,
       lowerBound: lowerBound,
       upperBound: upperBound,
+      layout: layout,
     );
 
     return AnomrSummary(

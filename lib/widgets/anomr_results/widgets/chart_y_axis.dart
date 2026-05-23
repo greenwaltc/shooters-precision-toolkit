@@ -25,18 +25,20 @@ class ChartYAxis {
 
     return AxisTitles(
       axisNameSize: scale.yAxisNameReserve,
-      axisNameWidget: Padding(
-        padding: scale.axisNamePadding,
-        child: Text(
-          'Range',
-          style: textTheme.labelLarge?.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-            fontSize: scale.factorLabelFontSize,
-            letterSpacing: 0.4,
-          ),
-        ),
-      ),
+      axisNameWidget: scale.isCompact
+          ? const SizedBox.shrink()
+          : Padding(
+              padding: scale.axisNamePadding,
+              child: Text(
+                'Range',
+                style: textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  fontSize: scale.factorLabelFontSize,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
       sideTitles: SideTitles(
         showTitles: true,
         reservedSize: scale.leftAxisReserve,

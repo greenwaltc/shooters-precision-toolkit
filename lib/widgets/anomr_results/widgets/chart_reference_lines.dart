@@ -24,13 +24,16 @@ class ChartReferenceLines {
   }) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+    final chartTheme =
+        Theme.of(context).extension<AnomrChartTheme>() ??
         const AnomrChartTheme.standard();
-    final grandMeanColor =
-        scheme.onSurface.withValues(alpha: chartTheme.referenceLineOpacity);
+    final grandMeanColor = scheme.onSurface.withValues(
+      alpha: chartTheme.referenceLineOpacity,
+    );
     final boundColor = scheme.error;
 
     final percentLabel = (detectableDiffPercent * 100).toStringAsFixed(0);
+    final boundsCollapsed = (upperBound - lowerBound).abs() < 0.0000001;
 
     return ExtraLinesData(
       horizontalLines: [
@@ -39,7 +42,7 @@ class ChartReferenceLines {
           color: grandMeanColor,
           strokeWidth: scale.meanLineWidth,
           label: HorizontalLineLabel(
-            show: true,
+            show: !scale.isCompact,
             alignment: Alignment.topRight,
             padding: scale.topRefLabelPadding,
             style: textTheme.bodySmall?.copyWith(
@@ -47,7 +50,8 @@ class ChartReferenceLines {
               fontWeight: FontWeight.w600,
               fontSize: scale.axisLabelFontSize,
             ),
-            labelResolver: (_) => 'Grand mean',
+            labelResolver: (_) =>
+                boundsCollapsed ? 'Mean / ±$percentLabel%' : 'Grand mean',
           ),
         ),
         HorizontalLine(
@@ -56,7 +60,7 @@ class ChartReferenceLines {
           strokeWidth: scale.meanLineWidth,
           dashArray: chartTheme.boundLineDashArray,
           label: HorizontalLineLabel(
-            show: true,
+            show: !boundsCollapsed,
             alignment: Alignment.topRight,
             padding: scale.topRefLabelPadding,
             style: textTheme.bodySmall?.copyWith(
@@ -73,7 +77,7 @@ class ChartReferenceLines {
           strokeWidth: scale.meanLineWidth,
           dashArray: chartTheme.boundLineDashArray,
           label: HorizontalLineLabel(
-            show: true,
+            show: !boundsCollapsed,
             alignment: Alignment.bottomRight,
             padding: scale.bottomRefLabelPadding,
             style: textTheme.bodySmall?.copyWith(

@@ -30,33 +30,46 @@ class ChartLegend extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Wrap(
-      spacing: scale.legendItemSpacing,
-      runSpacing: scale.legendRunSpacing,
-      children: [
-        for (final row in factorRows)
-          LegendChip(
-            label: row.displayName,
-            color: row.color,
-            style: LegendStyle.solidDots,
-            scale: scale,
-            onSurfaceVariant: scheme.onSurfaceVariant,
-          ),
-        LegendChip(
-          label: 'Grand mean',
-          color: grandMeanColor,
-          style: LegendStyle.solid,
-          scale: scale,
-          onSurfaceVariant: scheme.onSurfaceVariant,
-        ),
-        LegendChip(
-          label: 'Risk bounds',
-          color: boundColor,
-          style: LegendStyle.dashed,
-          scale: scale,
-          onSurfaceVariant: scheme.onSurfaceVariant,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxChipWidth = scale.isCompact
+            ? constraints.maxWidth
+            : constraints.maxWidth / 2;
+
+        return Wrap(
+          spacing: scale.legendItemSpacing,
+          runSpacing: scale.legendRunSpacing,
+          children: [
+            for (final row in factorRows)
+              LegendChip(
+                label: scale.isCompact
+                    ? 'F${row.index + 1}: ${row.displayName}'
+                    : row.displayName,
+                color: row.color,
+                style: LegendStyle.solidDots,
+                scale: scale,
+                onSurfaceVariant: scheme.onSurfaceVariant,
+                maxWidth: maxChipWidth,
+              ),
+            LegendChip(
+              label: 'Grand mean',
+              color: grandMeanColor,
+              style: LegendStyle.solid,
+              scale: scale,
+              onSurfaceVariant: scheme.onSurfaceVariant,
+              maxWidth: maxChipWidth,
+            ),
+            LegendChip(
+              label: 'Risk bounds',
+              color: boundColor,
+              style: LegendStyle.dashed,
+              scale: scale,
+              onSurfaceVariant: scheme.onSurfaceVariant,
+              maxWidth: maxChipWidth,
+            ),
+          ],
+        );
+      },
     );
   }
 }

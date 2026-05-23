@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/components/outlined_surface_card.dart';
 import '../../../styles/components/stat_tile.dart';
+import '../../../styles/layout/app_layout.dart';
 import '../../../styles/tokens/app_spacing.dart';
 import '../../../styles/tokens/app_text_styles.dart';
 
@@ -27,9 +28,6 @@ class HeaderSummary extends StatelessWidget {
   final double detectableDiffPercent;
   final String sampleSizeLabel;
 
-  /// Width below which the stat tiles wrap to a single column.
-  static const double _stackBreakpoint = 520;
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -48,6 +46,7 @@ class HeaderSummary extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           LayoutBuilder(
             builder: (context, constraints) {
+              final layout = AppLayoutMetrics(width: constraints.maxWidth);
               final stats = [
                 StatTile(
                   label: 'Grand Mean',
@@ -56,12 +55,10 @@ class HeaderSummary extends StatelessWidget {
                 StatTile(label: 'Risk Level', value: riskLevel.label),
                 StatTile(
                   label: 'Detectable Difference',
-                  value: SampleSizeOption.formatFraction(
-                    detectableDiffPercent,
-                  ),
+                  value: SampleSizeOption.formatFraction(detectableDiffPercent),
                 ),
               ];
-              if (constraints.maxWidth < _stackBreakpoint) {
+              if (layout.useStackedActions) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

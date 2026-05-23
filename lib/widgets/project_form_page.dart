@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../navigation/app_routes.dart';
-import '../styles/tokens/app_spacing.dart';
+import '../styles/layout/app_layout.dart';
 import 'project_drawer.dart';
 import 'project_form.dart';
 
@@ -43,13 +43,11 @@ class ProjectFormPage extends StatelessWidget {
                 ),
               ],
             ),
-            body: SafeArea(
-              child: Padding(
-                padding: AppSpacing.screenInsetMd,
-                child: ProjectForm(
-                  formModel: formModel,
-                  onSubmit: () => _goToMatrix(context, store),
-                ),
+            body: AppResponsiveBody(
+              maxWidth: (layout) => layout.formMaxWidth,
+              builder: (context, _) => ProjectForm(
+                formModel: formModel,
+                onSubmit: () => _goToMatrix(context, store),
               ),
             ),
           );

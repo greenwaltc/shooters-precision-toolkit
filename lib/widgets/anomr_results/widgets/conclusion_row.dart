@@ -9,6 +9,7 @@ import '../../../styles/chart/chart_scale.dart';
 import '../../../styles/components/status_pill.dart';
 import '../../../styles/tokens/app_opacity.dart';
 import '../../../styles/tokens/app_radius.dart';
+import '../../../styles/tokens/app_spacing.dart';
 import '../models/effect_status.dart';
 import '../models/factor_row.dart';
 import 'legend_painter.dart';
@@ -26,6 +27,41 @@ class ConclusionRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final (statusColor, statusIcon) = _statusVisuals(scheme, row.status);
+    final marker = SizedBox(
+      width: scale.legendIconWidth,
+      height: scale.legendIconHeight,
+      child: CustomPaint(
+        painter: LegendPainter(color: row.color, style: LegendStyle.solidDots),
+      ),
+    );
+    final label = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          row.displayName,
+          style: textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+            fontSize: scale.stateLabelFontSize + 1,
+          ),
+        ),
+        SizedBox(height: scale.conclusionRowLabelGap),
+        Text(
+          '${row.firstLabel} → ${row.secondLabel}',
+          style: textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+            fontSize: scale.axisLabelFontSize,
+          ),
+        ),
+      ],
+    );
+    final pill = StatusPill(
+      label: row.status.label,
+      color: statusColor,
+      icon: statusIcon,
+      scale: scale.scale,
+      iconSize: scale.stateLabelFontSize + 4,
+      fontSize: scale.axisLabelFontSize + 1,
+    );
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -39,52 +75,30 @@ class ConclusionRow extends StatelessWidget {
           color: row.color.withValues(alpha: AppOpacity.rowBorder),
         ),
       ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: scale.legendIconWidth,
-            height: scale.legendIconHeight,
-            child: CustomPaint(
-              painter: LegendPainter(
-                color: row.color,
-                style: LegendStyle.solidDots,
-              ),
-            ),
-          ),
-          SizedBox(width: scale.conclusionRowFactorGap),
-          Expanded(
-            child: Column(
+      child: scale.isCompact
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  row.displayName,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: scale.stateLabelFontSize + 1,
-                  ),
+                Row(
+                  children: [
+                    marker,
+                    SizedBox(width: scale.conclusionRowFactorGap),
+                    Expanded(child: label),
+                  ],
                 ),
-                SizedBox(height: scale.conclusionRowLabelGap),
-                Text(
-                  '${row.firstLabel} → ${row.secondLabel}',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: scale.axisLabelFontSize,
-                  ),
-                ),
+                const SizedBox(height: AppSpacing.md),
+                pill,
+              ],
+            )
+          : Row(
+              children: [
+                marker,
+                SizedBox(width: scale.conclusionRowFactorGap),
+                Expanded(child: label),
+                SizedBox(width: scale.conclusionRowPillGap),
+                pill,
               ],
             ),
-          ),
-          SizedBox(width: scale.conclusionRowPillGap),
-          StatusPill(
-            label: row.status.label,
-            color: statusColor,
-            icon: statusIcon,
-            scale: scale.scale,
-            iconSize: scale.stateLabelFontSize + 4,
-            fontSize: scale.axisLabelFontSize + 1,
-          ),
-        ],
-      ),
     );
   }
 

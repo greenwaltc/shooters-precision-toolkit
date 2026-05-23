@@ -17,6 +17,7 @@ class LegendChip extends StatelessWidget {
     required this.style,
     required this.scale,
     required this.onSurfaceVariant,
+    this.maxWidth,
   });
 
   final String label;
@@ -24,11 +25,12 @@ class LegendChip extends StatelessWidget {
   final LegendStyle style;
   final ChartScale scale;
   final Color onSurfaceVariant;
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Row(
+    final content = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
@@ -39,15 +41,28 @@ class LegendChip extends StatelessWidget {
           ),
         ),
         SizedBox(width: scale.legendIconLabelGap),
-        Text(
-          label,
-          style: textTheme.bodySmall?.copyWith(
-            color: onSurfaceVariant,
-            fontSize: scale.axisLabelFontSize,
-            fontWeight: FontWeight.w500,
+        Flexible(
+          child: Text(
+            label,
+            style: textTheme.bodySmall?.copyWith(
+              color: onSurfaceVariant,
+              fontSize: scale.axisLabelFontSize,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
           ),
         ),
       ],
+    );
+
+    final maxWidth = this.maxWidth;
+    if (maxWidth == null) return content;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: content,
     );
   }
 }

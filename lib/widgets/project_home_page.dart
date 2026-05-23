@@ -164,7 +164,7 @@ class _ProjectListTile extends StatelessWidget {
 
     await store.persistSelectedProject();
     await store.selectProject(project.id);
-    navigator.pushNamed(AppRoutes.anomrMatrix);
+    navigator.pushNamed(AppRoutes.destinationForProject(project));
   }
 
   Future<void> _deleteProject(BuildContext context) async {

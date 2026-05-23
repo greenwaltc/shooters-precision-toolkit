@@ -72,6 +72,7 @@ class ProjectFormPage extends StatelessWidget {
 
   Future<void> _goToMatrix(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
+    await store.completeProjectSetup();
     await store.persistSelectedProject();
     navigator.pushReplacementNamed(AppRoutes.anomrMatrix);
   }

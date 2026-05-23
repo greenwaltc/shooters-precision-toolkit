@@ -123,6 +123,25 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (markModified) notifyListeners();
   }
 
+  /// Marks the selected project's setup form as submitted, unlocking the
+  /// ANOMR matrix for that project.
+  Future<void> completeProjectSetup() async {
+    final project = selectedProject;
+    if (project == null || project.setupComplete) return;
+    if (!project.formModel.isSetupValid) return;
+
+    project.setupComplete = true;
+    project.touch();
+    await _saveProjects();
+    notifyListeners();
+  }
+
+  void _syncSetupComplete(SavedProject project) {
+    if (!project.setupComplete || project.formModel.isSetupValid) return;
+
+    project.setupComplete = false;
+  }
+
   Future<void> persistAllProjects() async {
     await _saveProjects();
   }
@@ -178,6 +197,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
     void listener() {
       project.touch();
+      _syncSetupComplete(project);
       unawaited(_saveProjects());
       notifyListeners();
     }

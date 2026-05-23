@@ -31,9 +31,40 @@ class AnomrMatrix extends StatelessWidget {
       return const _NoSelectedProjectPage();
     }
 
+    if (!project.setupComplete) {
+      return const _ProjectSetupRequiredRedirect();
+    }
+
     return ChangeNotifierProvider<ProjectFormModel>.value(
       value: project.formModel,
       child: _AnomrMatrixScaffold(project: project),
+    );
+  }
+}
+
+class _ProjectSetupRequiredRedirect extends StatefulWidget {
+  const _ProjectSetupRequiredRedirect();
+
+  @override
+  State<_ProjectSetupRequiredRedirect> createState() =>
+      _ProjectSetupRequiredRedirectState();
+}
+
+class _ProjectSetupRequiredRedirectState
+    extends State<_ProjectSetupRequiredRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacementNamed(AppRoutes.projectForm);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

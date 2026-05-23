@@ -295,6 +295,35 @@ class ProjectFormModel extends ChangeNotifier {
     return List.unmodifiable(_factorDefinitions);
   }
 
+  /// Whether the form satisfies the same requirements enforced by submit
+  /// validation on [ProjectForm].
+  bool get isSetupValid {
+    if (projectTitle.trim().isEmpty) return false;
+
+    final normalizedFactorNames = <String>{};
+    for (final factor in factorDefinitions) {
+      final name = factor.name.trim();
+      final firstState = factor.firstState.trim();
+      final secondState = factor.secondState.trim();
+
+      if (name.isEmpty || firstState.isEmpty || secondState.isEmpty) {
+        return false;
+      }
+
+      if (firstState.toLowerCase() == secondState.toLowerCase()) {
+        return false;
+      }
+
+      final normalizedName = name.toLowerCase();
+      if (normalizedFactorNames.contains(normalizedName)) {
+        return false;
+      }
+      normalizedFactorNames.add(normalizedName);
+    }
+
+    return true;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'projectTitle': projectTitle,

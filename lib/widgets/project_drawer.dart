@@ -93,7 +93,10 @@ class _ProjectDrawerTile extends StatelessWidget {
     navigator.pop();
     await store.persistSelectedProject();
     await store.selectProject(project.id);
-    navigator.pushNamedAndRemoveUntil(AppRoutes.anomrMatrix, (_) => false);
+    navigator.pushNamedAndRemoveUntil(
+      AppRoutes.destinationForProject(project),
+      (_) => false,
+    );
   }
 
   Future<void> _deleteProject(BuildContext context, ProjectStore store) async {

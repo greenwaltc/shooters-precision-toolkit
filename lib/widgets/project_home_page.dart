@@ -6,7 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../help/help_instructions.dart';
+import '../help/help_access.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
@@ -25,26 +25,27 @@ class ProjectHomePage extends StatelessWidget {
   /// Size of the leading hero icon on the empty state.
   static const double _emptyStateIconSize = 56;
 
-  /// Help bottom sheet height as a fraction of the screen.
-  static const double _helpSheetHeightFactor = 0.75;
-
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ProjectStore>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Shooter's Precision Test Kit")),
-      body: AppResponsiveBody(
-        maxWidth: (layout) => layout.homeMaxWidth,
-        builder: (context, layout) => !store.isLoaded
-            ? const Center(child: CircularProgressIndicator())
-            : _buildBody(context, store, layout),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showHelp(context),
-        child: const Icon(Icons.question_mark_outlined),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.miniStartFloat,
+    return AppLayoutBuilder(
+      builder: (context, layout) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text("Shooter's Precision Test Kit"),
+            actions: helpAppBarActionsFor(layout),
+          ),
+          body: AppResponsiveBody(
+            maxWidth: (layout) => layout.homeMaxWidth,
+            builder: (context, layout) => !store.isLoaded
+                ? const Center(child: CircularProgressIndicator())
+                : _buildBody(context, store, layout),
+          ),
+          floatingActionButton: helpFabFor(layout),
+          floatingActionButtonLocation: helpFabLocation,
+        );
+      },
     );
   }
 
@@ -110,29 +111,6 @@ class ProjectHomePage extends StatelessWidget {
     final navigator = Navigator.of(context);
     await store.createProject();
     navigator.pushNamed(AppRoutes.projectForm);
-  }
-
-  void _showHelp(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return AppLayoutBuilder(
-          builder: (context, layout) => Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: layout.formMaxWidth),
-              child: SizedBox(
-                height:
-                    MediaQuery.of(context).size.height * _helpSheetHeightFactor,
-                width: double.infinity,
-                child: const HelpInstructions(),
-              ),
-            ),
-          ),
-        );
-      },
-      isScrollControlled: true,
-    );
   }
 }
 

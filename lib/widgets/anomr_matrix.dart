@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import 'package:provider/provider.dart';
 
+import '../help/help_access.dart';
 import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
@@ -47,57 +48,62 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     final formModel = context.watch<ProjectFormModel>();
     final store = context.read<ProjectStore>();
 
-    return Scaffold(
-      drawer: const ProjectDrawer(),
-      appBar: AppBar(
-        title: Text(project.displayName),
-        actions: [
-          IconButton(
-            tooltip: 'Project setup',
-            onPressed: () => _goToProjectSetup(context, store),
-            icon: const Icon(Icons.tune),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: AppLayoutBuilder(
-          builder: (context, layout) => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: layout.pagePadding,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: layout.matrixHeaderMaxWidth,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Analysis of Mean Ranges (ANOMR)',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Text(formModel.experimentStructure.label),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: AnomrMatrixGrid(
-                  key: ValueKey(
-                    '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
-                  ),
-                  project: project,
-                ),
+    return AppLayoutBuilder(
+      builder: (context, layout) {
+        return Scaffold(
+          drawer: const ProjectDrawer(),
+          appBar: AppBar(
+            title: Text(project.displayName),
+            actions: [
+              ...helpAppBarActionsFor(layout, preferAppBar: true),
+              IconButton(
+                tooltip: 'Project setup',
+                onPressed: () => _goToProjectSetup(context, store),
+                icon: const Icon(Icons.tune),
               ),
             ],
           ),
-        ),
-      ),
+          body: SafeArea(
+            child: AppLayoutBuilder(
+              builder: (context, layout) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: layout.pagePadding,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: layout.matrixHeaderMaxWidth,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Analysis of Mean Ranges (ANOMR)',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(formModel.experimentStructure.label),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: AnomrMatrixGrid(
+                      key: ValueKey(
+                        '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
+                      ),
+                      project: project,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -391,19 +397,28 @@ class _NoSelectedProjectPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('ANOMR Matrix')),
-      body: Center(
-        child: FilledButton.icon(
-          onPressed: () {
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
-          },
-          icon: const Icon(Icons.home_outlined),
-          label: const Text('Projects'),
-        ),
-      ),
+    return AppLayoutBuilder(
+      builder: (context, layout) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('ANOMR Matrix'),
+            actions: helpAppBarActionsFor(layout),
+          ),
+          body: Center(
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
+              },
+              icon: const Icon(Icons.home_outlined),
+              label: const Text('Projects'),
+            ),
+          ),
+          floatingActionButton: helpFabFor(layout),
+          floatingActionButtonLocation: helpFabLocation,
+        );
+      },
     );
   }
 }

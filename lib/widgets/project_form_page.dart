@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../help/help_access.dart';
 import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../navigation/app_routes.dart';
@@ -31,25 +32,32 @@ class ProjectFormPage extends StatelessWidget {
         builder: (context) {
           final formModel = context.watch<ProjectFormModel>();
 
-          return Scaffold(
-            drawer: const ProjectDrawer(),
-            appBar: AppBar(
-              title: Text(project.displayName),
-              actions: [
-                IconButton(
-                  tooltip: 'Projects',
-                  onPressed: () => _goHome(context, store),
-                  icon: const Icon(Icons.home_outlined),
+          return AppLayoutBuilder(
+            builder: (context, layout) {
+              return Scaffold(
+                drawer: const ProjectDrawer(),
+                appBar: AppBar(
+                  title: Text(project.displayName),
+                  actions: [
+                    ...helpAppBarActionsFor(layout),
+                    IconButton(
+                      tooltip: 'Projects',
+                      onPressed: () => _goHome(context, store),
+                      icon: const Icon(Icons.home_outlined),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            body: AppResponsiveBody(
-              maxWidth: (layout) => layout.formMaxWidth,
-              builder: (context, _) => ProjectForm(
-                formModel: formModel,
-                onSubmit: () => _goToMatrix(context, store),
-              ),
-            ),
+                body: AppResponsiveBody(
+                  maxWidth: (layout) => layout.formMaxWidth,
+                  builder: (context, _) => ProjectForm(
+                    formModel: formModel,
+                    onSubmit: () => _goToMatrix(context, store),
+                  ),
+                ),
+                floatingActionButton: helpFabFor(layout),
+                floatingActionButtonLocation: helpFabLocation,
+              );
+            },
           );
         },
       ),
@@ -74,19 +82,28 @@ class _NoSelectedProjectPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Project Setup')),
-      body: Center(
-        child: FilledButton.icon(
-          onPressed: () {
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
-          },
-          icon: const Icon(Icons.home_outlined),
-          label: const Text('Projects'),
-        ),
-      ),
+    return AppLayoutBuilder(
+      builder: (context, layout) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Project Setup'),
+            actions: helpAppBarActionsFor(layout),
+          ),
+          body: Center(
+            child: FilledButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
+              },
+              icon: const Icon(Icons.home_outlined),
+              label: const Text('Projects'),
+            ),
+          ),
+          floatingActionButton: helpFabFor(layout),
+          floatingActionButtonLocation: helpFabLocation,
+        );
+      },
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import 'package:provider/provider.dart';
 
+import '../../../help/help_access.dart';
 import '../../../model/project_form_model.dart';
 import '../../../model/project_store.dart';
 import '../../../styles/chart/chart_layout.dart';
@@ -48,22 +49,28 @@ class _ResultsViewState extends State<ResultsView> {
       stateManager: stateManager,
     );
 
-    return Scaffold(
-      drawer: const ProjectDrawer(),
-      appBar: _ResultsAppBar(displayName: project.displayName),
-      body: previewSummary.hasEnoughData
-          ? _ResultsBody(
-              formModel: formModel,
-              stateManager: stateManager,
-              chartKey: _chartKey,
-              isExporting: _isExporting,
-              onExportPressed: (summary) => _onExportPressed(
-                summary: summary,
-                formModel: formModel,
-                stateManager: stateManager,
-              ),
-            )
-          : const EmptyResultsState(),
+    return AppLayoutBuilder(
+      builder: (context, layout) {
+        return Scaffold(
+          drawer: const ProjectDrawer(),
+          appBar: _ResultsAppBar(displayName: project.displayName, layout: layout),
+          body: previewSummary.hasEnoughData
+              ? _ResultsBody(
+                  formModel: formModel,
+                  stateManager: stateManager,
+                  chartKey: _chartKey,
+                  isExporting: _isExporting,
+                  onExportPressed: (summary) => _onExportPressed(
+                    summary: summary,
+                    formModel: formModel,
+                    stateManager: stateManager,
+                  ),
+                )
+              : const EmptyResultsState(),
+          floatingActionButton: helpFabFor(layout),
+          floatingActionButtonLocation: helpFabLocation,
+        );
+      },
     );
   }
 
@@ -118,9 +125,10 @@ class _ResultsViewState extends State<ResultsView> {
 }
 
 class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ResultsAppBar({required this.displayName});
+  const _ResultsAppBar({required this.displayName, required this.layout});
 
   final String displayName;
+  final AppLayoutMetrics layout;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -134,6 +142,7 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: () => Navigator.of(context).pop(),
       ),
       actions: [
+        ...helpAppBarActionsFor(layout),
         Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),

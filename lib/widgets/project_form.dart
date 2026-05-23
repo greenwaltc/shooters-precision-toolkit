@@ -388,7 +388,7 @@ class _ProjectFormState extends State<ProjectForm> {
   Widget _buildImputeMissingDataCheckbox() {
     return CheckboxListTile(
       value: widget.formModel.imputeMissingData,
-      title: const Text('Impute missing data'),
+      title: const Text('Impute missing data with the grand mean'),
       controlAffinity: ListTileControlAffinity.leading,
       onChanged: (value) {
         setState(() {

@@ -23,13 +23,38 @@ class AnomrCalculator {
     return values.reduce((a, b) => a + b) / values.length;
   }
 
-  static List<double> collectRanges(PlutoGridStateManager manager) {
-    return manager.rows
-        .map(
-          (row) => double.tryParse(row.cells['range']?.value?.toString() ?? ''),
-        )
+  static double? _parseRangeValue(Object? rawValue) {
+    return double.tryParse(rawValue?.toString() ?? '');
+  }
+
+  static List<double> collectRanges(
+    PlutoGridStateManager manager, {
+    bool imputeMissingData = false,
+  }) {
+    if (!imputeMissingData) {
+      return manager.rows
+          .map((row) => _parseRangeValue(row.cells['range']?.value))
+          .whereType<double>()
+          .toList(growable: false);
+    }
+
+    final observed = manager.rows
+        .map((row) => _parseRangeValue(row.cells['range']?.value))
         .whereType<double>()
         .toList(growable: false);
+    if (observed.isEmpty) return const [];
+
+    final grandMean = mean(observed);
+    return manager.rows
+        .map((row) => _parseRangeValue(row.cells['range']?.value) ?? grandMean)
+        .toList(growable: false);
+  }
+
+  static double? _rangeValueForRow(
+    PlutoRow row, {
+    double? imputeWith,
+  }) {
+    return _parseRangeValue(row.cells['range']?.value) ?? imputeWith;
   }
 
   static FactorStats statsFor({
@@ -37,14 +62,13 @@ class AnomrCalculator {
     required String factorField,
     required String firstState,
     required String secondState,
+    double? imputeWith,
   }) {
     final firstRanges = <double>[];
     final secondRanges = <double>[];
 
     for (final row in manager.rows) {
-      final rangeValue = double.tryParse(
-        row.cells['range']?.value?.toString() ?? '',
-      );
+      final rangeValue = _rangeValueForRow(row, imputeWith: imputeWith);
       if (rangeValue == null) continue;
 
       final factorValue = row.cells[factorField]?.value?.toString();
@@ -93,6 +117,7 @@ class AnomrCalculator {
     required PlutoGridStateManager manager,
     required double lowerBound,
     required double upperBound,
+    double? imputeWith,
     ChartLayoutGeometry layout = ChartLayout.standard,
   }) {
     return List.generate(factors.length, (i) {
@@ -104,6 +129,7 @@ class AnomrCalculator {
         factorField: 'factor_$i',
         firstState: firstLabel,
         secondState: secondLabel,
+        imputeWith: imputeWith,
       );
       return FactorRow(
         index: i,
@@ -131,8 +157,16 @@ class AnomrCalculator {
     required PlutoGridStateManager stateManager,
     ChartLayoutGeometry layout = ChartLayout.standard,
   }) {
-    final ranges = collectRanges(stateManager);
-    final grandMean = mean(ranges);
+    final observedRanges = collectRanges(stateManager);
+    final grandMean = mean(observedRanges);
+    final imputeWith =
+        formModel.imputeMissingData && observedRanges.isNotEmpty
+        ? grandMean
+        : null;
+    final ranges = collectRanges(
+      stateManager,
+      imputeMissingData: imputeWith != null,
+    );
     final detectableDiffPercent = formModel.sampleSizeOption
         .detectableDifferenceFor(formModel.riskLevel);
     final upperBound = grandMean * (1 + detectableDiffPercent);
@@ -142,6 +176,7 @@ class AnomrCalculator {
       manager: stateManager,
       lowerBound: lowerBound,
       upperBound: upperBound,
+      imputeWith: imputeWith,
       layout: layout,
     );
 

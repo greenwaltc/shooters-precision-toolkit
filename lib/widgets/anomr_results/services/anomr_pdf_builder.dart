@@ -64,7 +64,7 @@ class AnomrPdfBuilder {
         style: PdfStyles.title(),
       ),
       pw.SizedBox(height: PdfStyles.gapSm),
-      pw.Text('Analysis of Mean Ranges', style: PdfStyles.subtitle()),
+      pw.Text('Project Parameters', style: PdfStyles.subtitle()),
       pw.SizedBox(height: PdfStyles.gapLg),
       pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

@@ -149,10 +149,10 @@ class SampleSizeOption {
   /// Number of replicate ranges per group.
   num get rangesPerGroup => numSets;
 
-  /// Display label, e.g. `"16 total samples in 4 groups of 4 ranges each"`.
+  /// Display label, e.g. `"16 total ranges in 4 replicates of 4 ranges each"`.
   String get label {
-    final ranges = _formatSampleValue(rangesPerGroup);
-    return '$totalSamples total samples in $ranges groups of '
+    final replicates = _formatSampleValue(rangesPerGroup);
+    return '$totalSamples total ranges in $replicates replicates of '
         '$groupSize ranges each';
   }
 

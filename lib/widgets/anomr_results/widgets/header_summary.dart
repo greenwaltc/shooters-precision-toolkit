@@ -38,7 +38,7 @@ class HeaderSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Analysis of Mean Ranges',
+            'Project Parameters',
             style: AppTextStyles.headerSummaryTitle(context),
           ),
           const SizedBox(height: AppSpacing.sm),

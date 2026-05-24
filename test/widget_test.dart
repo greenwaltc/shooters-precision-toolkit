@@ -34,7 +34,7 @@ void main() {
     );
     expect(find.text('Impute missing data with the grand mean'), findsOneWidget);
     expect(
-      find.text('8 total samples in 2 groups of 4 ranges each'),
+      find.text('8 total ranges in 4 replicates of 2 ranges each'),
       findsOneWidget,
     );
   });
@@ -82,7 +82,7 @@ void main() {
 
     expect(find.text('Factor 3'), findsOneWidget);
     expect(
-      find.text('16 total samples in 8 groups of 2 ranges each'),
+      find.text('16 total ranges in 2 replicates of 8 ranges each'),
       findsOneWidget,
     );
   });

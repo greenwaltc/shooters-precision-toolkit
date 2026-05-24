@@ -3,6 +3,8 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pluto_grid/pluto_grid.dart';
@@ -107,7 +109,12 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: layout.pagePadding,
+                    padding: EdgeInsets.fromLTRB(
+                      layout.pageGutter,
+                      layout.isMobile ? AppSpacing.sm : AppSpacing.md,
+                      layout.pageGutter,
+                      AppSpacing.lg,
+                    ),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: ConstrainedBox(
@@ -118,10 +125,10 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Analysis of Mean Ranges',
+                              'Factors and Ranges',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
-                            const SizedBox(height: AppSpacing.md),
+                            const SizedBox(height: AppSpacing.sm),
                             Text(formModel.experimentStructure.label),
                           ],
                         ),
@@ -130,7 +137,9 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                   ),
                   Expanded(
                     child: Padding(
-                      padding: layout.pagePadding,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: layout.pageGutter,
+                      ),
                       child: Align(
                         alignment: Alignment.topCenter,
                         child: ConstrainedBox(
@@ -186,6 +195,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   late List<PlutoRow> _rows;
   late List<PlutoColumnGroup> _columnGroups;
   PlutoGridStateManager? _stateManager;
+  _ScrollCueState _scrollCues = const _ScrollCueState();
+
+  static const double _scrollEpsilon = 1;
+
+  /// Minimum width for read-only index columns before autofit runs.
+  static const double _indexColumnMinWidth = 52;
 
   /// Default factor column width.
   static const double _factorColumnWidth = 120;
@@ -258,14 +273,70 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   void _handleGridResize() {
-    if (mounted) setState(() {});
+    if (mounted) {
+      _updateScrollCues();
+      setState(() {});
+    }
+  }
+
+  void _handleScroll() {
+    _updateScrollCues();
+  }
+
+  void _updateScrollCues() {
+    final manager = _stateManager;
+    if (manager == null || !mounted) return;
+
+    final horizontalScroll = manager.scroll.bodyRowsHorizontal;
+    final verticalScroll = manager.scroll.bodyRowsVertical;
+    if (horizontalScroll?.hasClients != true ||
+        verticalScroll?.hasClients != true) {
+      return;
+    }
+
+    final maxHorizontal = horizontalScroll!.position.maxScrollExtent;
+    final maxVertical = verticalScroll!.position.maxScrollExtent;
+    final offsetHorizontal = horizontalScroll.offset;
+    final offsetVertical = verticalScroll.offset;
+
+    final hasHorizontalOverflow = maxHorizontal > _scrollEpsilon;
+    final hasVerticalOverflow = maxVertical > _scrollEpsilon;
+
+    final next = _ScrollCueState(
+      showLeft: hasHorizontalOverflow && offsetHorizontal > _scrollEpsilon,
+      showRight: hasHorizontalOverflow &&
+          offsetHorizontal < maxHorizontal - _scrollEpsilon,
+      showTop: hasVerticalOverflow && offsetVertical > _scrollEpsilon,
+      showBottom:
+          hasVerticalOverflow && offsetVertical < maxVertical - _scrollEpsilon,
+    );
+
+    if (next != _scrollCues) {
+      setState(() => _scrollCues = next);
+    }
+  }
+
+  void _detachScrollListeners() {
+    _stateManager?.scroll.bodyRowsHorizontal?.removeListener(_handleScroll);
+    _stateManager?.scroll.bodyRowsVertical?.removeListener(_handleScroll);
+  }
+
+  void _attachScrollListeners() {
+    _detachScrollListeners();
+    _stateManager?.scroll.bodyRowsHorizontal?.addListener(_handleScroll);
+    _stateManager?.scroll.bodyRowsVertical?.addListener(_handleScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateScrollCues();
+    });
   }
 
   void _attachStateManager(PlutoGridStateManager manager) {
+    _detachScrollListeners();
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
     _stateManager = manager;
     _stateManager!.resizingChangeNotifier.addListener(_handleGridResize);
     _stateManager!.setSelectingMode(PlutoGridSelectingMode.cell);
+    _attachScrollListeners();
   }
 
   Widget _buildPlutoGrid({
@@ -279,6 +350,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       onChanged: _handleOnChanged,
       onLoaded: (PlutoGridOnLoadedEvent event) {
         setState(() => _attachStateManager(event.stateManager));
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _fitIndexColumns();
+        });
       },
       configuration: PlutoGridConfiguration(
         style: PlutoGridStyleConfig(
@@ -317,6 +392,195 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
   }
 
+  double _bodyRowsTopInset(PlutoGridStyleTheme plutoTheme) {
+    final manager = _stateManager;
+    if (manager != null) {
+      return manager.rowsTopOffset + PlutoGridSettings.gridBorderWidth;
+    }
+
+    final columnGroupHeight =
+        _columnGroups.isEmpty ? 0 : plutoTheme.columnHeight;
+    return PlutoGridSettings.gridInnerSpacing +
+        columnGroupHeight +
+        plutoTheme.columnHeight;
+  }
+
+  Widget _buildGridViewport({
+    required double width,
+    required double height,
+    required PlutoGridStyleTheme plutoTheme,
+    required bool showScrollbars,
+    required ColorScheme scheme,
+  }) {
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Stack(
+        clipBehavior: Clip.hardEdge,
+        children: [
+          Positioned.fill(
+            child: _buildPlutoGrid(
+              plutoTheme: plutoTheme,
+              showScrollbars: showScrollbars,
+            ),
+          ),
+          if (_scrollCues.showLeft)
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: _GridScrollCue(
+                edge: _ScrollCueEdge.left,
+                scheme: scheme,
+              ),
+            ),
+          if (_scrollCues.showRight)
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: _GridScrollCue(
+                edge: _ScrollCueEdge.right,
+                scheme: scheme,
+              ),
+            ),
+          if (_scrollCues.showTop)
+            Positioned(
+              left: 0,
+              right: 0,
+              top: _bodyRowsTopInset(plutoTheme),
+              child: _GridScrollCue(
+                edge: _ScrollCueEdge.top,
+                scheme: scheme,
+              ),
+            ),
+          if (_scrollCues.showBottom)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _GridScrollCue(
+                edge: _ScrollCueEdge.bottom,
+                scheme: scheme,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  PlutoColumn _readOnlyIndexColumn({
+    required String title,
+    required String field,
+    required int maxValue,
+  }) {
+    return PlutoColumn(
+      title: title,
+      field: field,
+      type: PlutoColumnType.text(),
+      readOnly: true,
+      enableEditingMode: false,
+      enableColumnDrag: false,
+      enableContextMenu: false,
+      enableDropToResize: false,
+      width: _initialIndexColumnWidth(title: title, maxValue: maxValue),
+      textAlign: PlutoColumnTextAlign.center,
+      titleTextAlign: PlutoColumnTextAlign.center,
+      renderer: (rendererContext) {
+        final plutoTheme =
+            Theme.of(context).extension<PlutoGridStyleTheme>() ??
+            const PlutoGridStyleTheme.standard();
+        return _readOnlyCell(
+          rendererContext: rendererContext,
+          plutoTheme: plutoTheme,
+          alignment: Alignment.center,
+          fadeOverflow: false,
+        );
+      },
+    );
+  }
+
+  double _initialIndexColumnWidth({
+    required String title,
+    required int maxValue,
+  }) {
+    final titleWidth = _measureText(title, AppTextStyles.plutoColumn);
+    final cellWidth = _measureText(
+      maxValue.toString(),
+      AppTextStyles.plutoColumn,
+    );
+    return (math.max(titleWidth, cellWidth) +
+            AppSpacing.plutoFactorCell.horizontal +
+            AppSpacing.lg)
+        .clamp(_indexColumnMinWidth, double.infinity);
+  }
+
+  double _measureText(String text, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    return painter.width;
+  }
+
+  void _fitIndexColumns() {
+    final manager = _stateManager;
+    if (manager == null || !mounted) return;
+
+    var changed = false;
+    for (final column in manager.columns) {
+      if (column.field != 'row' && column.field != 'group') continue;
+
+      final widthBefore = column.width;
+      _autoFitReadOnlyColumn(column);
+      if (column.width != widthBefore) changed = true;
+    }
+
+    if (changed) {
+      setState(() {});
+    }
+  }
+
+  void _autoFitReadOnlyColumn(PlutoColumn column) {
+    final manager = _stateManager;
+    if (manager == null) return;
+
+    manager.autoFitColumn(context, column);
+
+    final cellPadding =
+        column.cellPadding ?? manager.configuration.style.defaultCellPadding;
+    final minForTitle =
+        _measureText(column.title, AppTextStyles.plutoColumn) +
+        cellPadding.left +
+        cellPadding.right +
+        2;
+
+    if (column.width < minForTitle) {
+      manager.resizeColumn(column, minForTitle - column.width);
+    }
+  }
+
+  Widget _readOnlyCell({
+    required PlutoColumnRendererContext rendererContext,
+    required PlutoGridStyleTheme plutoTheme,
+    required Alignment alignment,
+    bool fadeOverflow = true,
+  }) {
+    return Container(
+      color: plutoTheme.factorCellBackground,
+      alignment: alignment,
+      padding: AppSpacing.plutoFactorCell,
+      child: Text(
+        rendererContext.cell.value?.toString() ?? '',
+        style: AppTextStyles.plutoFactorCell(context),
+        softWrap: false,
+        maxLines: fadeOverflow ? 2 : 1,
+        overflow: fadeOverflow ? TextOverflow.fade : TextOverflow.clip,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -325,6 +589,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   @override
   void dispose() {
+    _detachScrollListeners();
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
     super.dispose();
   }
@@ -334,11 +599,22 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final factors = formModel.factorDefinitions;
     final combinations = _generateCombinations(factors);
     final n = formModel.sampleSizeOption.rangesPerGroup.toInt();
+    final totalSamples = formModel.sampleSizeOption.totalSamples;
 
     final factorFields = <String>[];
 
     // 1. Generate Columns
     _columns = [
+      _readOnlyIndexColumn(
+        title: 'Row',
+        field: 'row',
+        maxValue: totalSamples,
+      ),
+      _readOnlyIndexColumn(
+        title: 'Replicate',
+        field: 'group',
+        maxValue: n,
+      ),
       ...factors.asMap().entries.map((entry) {
         final idx = entry.key;
         final factor = entry.value;
@@ -359,17 +635,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             final plutoTheme =
                 Theme.of(context).extension<PlutoGridStyleTheme>() ??
                 const PlutoGridStyleTheme.standard();
-            return Container(
-              color: plutoTheme.factorCellBackground,
+            return _readOnlyCell(
+              rendererContext: rendererContext,
+              plutoTheme: plutoTheme,
               alignment: Alignment.centerLeft,
-              padding: AppSpacing.plutoFactorCell,
-              child: Text(
-                rendererContext.cell.value?.toString() ?? '',
-                style: AppTextStyles.plutoFactorCell(context),
-                softWrap: false,
-                maxLines: 2,
-                overflow: TextOverflow.fade,
-              ),
             );
           },
         );
@@ -405,6 +674,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         final absoluteIdx = blockIdx * combinations.length + comboIdx;
         final savedValue = widget.project.matrixState['range_$absoluteIdx'];
 
+        cells['group'] = PlutoCell(value: blockIdx + 1);
+        cells['row'] = PlutoCell(value: absoluteIdx + 1);
         cells['range'] = PlutoCell(value: savedValue);
         _rows.add(PlutoRow(cells: cells));
       }
@@ -493,7 +764,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
-              child: Center(
+              child: Align(
+                alignment: Alignment.topCenter,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final displaySize = _displaySize(
@@ -502,13 +774,16 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                       plutoTheme: plutoTheme,
                     );
 
-                    return SizedBox(
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) _updateScrollCues();
+                    });
+
+                    return _buildGridViewport(
                       width: displaySize.width,
                       height: displaySize.height,
-                      child: _buildPlutoGrid(
-                        plutoTheme: plutoTheme,
-                        showScrollbars: displaySize.showScrollbars,
-                      ),
+                      plutoTheme: plutoTheme,
+                      showScrollbars: displaySize.showScrollbars,
+                      scheme: scheme,
                     );
                   },
                 ),
@@ -551,6 +826,163 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         );
       },
     );
+  }
+}
+
+class _ScrollCueState {
+  const _ScrollCueState({
+    this.showLeft = false,
+    this.showRight = false,
+    this.showTop = false,
+    this.showBottom = false,
+  });
+
+  final bool showLeft;
+  final bool showRight;
+  final bool showTop;
+  final bool showBottom;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _ScrollCueState &&
+        showLeft == other.showLeft &&
+        showRight == other.showRight &&
+        showTop == other.showTop &&
+        showBottom == other.showBottom;
+  }
+
+  @override
+  int get hashCode => Object.hash(showLeft, showRight, showTop, showBottom);
+}
+
+enum _ScrollCueEdge { left, right, top, bottom }
+
+class _GridScrollCue extends StatelessWidget {
+  const _GridScrollCue({required this.edge, required this.scheme});
+
+  final _ScrollCueEdge edge;
+  final ColorScheme scheme;
+
+  static const double _extent = 52;
+
+  @override
+  Widget build(BuildContext context) {
+    final isHorizontal =
+        edge == _ScrollCueEdge.left || edge == _ScrollCueEdge.right;
+
+    return IgnorePointer(
+      child: SizedBox(
+        width: isHorizontal ? _extent : double.infinity,
+        height: isHorizontal ? double.infinity : _extent,
+        child: DecoratedBox(
+          decoration: BoxDecoration(gradient: _gradient()),
+          child: Align(
+            alignment: _iconAlignment(),
+            child: Padding(
+              padding: _iconPadding(),
+              child: Icon(
+                _icon(),
+                size: 22,
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  LinearGradient _gradient() {
+    const fade = 0.96;
+    const mid = 0.72;
+    final surface = scheme.surface;
+    final transparent = surface.withValues(alpha: 0);
+
+    switch (edge) {
+      case _ScrollCueEdge.left:
+        return LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            surface.withValues(alpha: fade),
+            surface.withValues(alpha: mid),
+            transparent,
+          ],
+          stops: const [0, 0.45, 1],
+        );
+      case _ScrollCueEdge.right:
+        return LinearGradient(
+          begin: Alignment.centerRight,
+          end: Alignment.centerLeft,
+          colors: [
+            surface.withValues(alpha: fade),
+            surface.withValues(alpha: mid),
+            transparent,
+          ],
+          stops: const [0, 0.45, 1],
+        );
+      case _ScrollCueEdge.top:
+        return LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            surface.withValues(alpha: fade),
+            surface.withValues(alpha: mid),
+            transparent,
+          ],
+          stops: const [0, 0.45, 1],
+        );
+      case _ScrollCueEdge.bottom:
+        return LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [
+            surface.withValues(alpha: fade),
+            surface.withValues(alpha: mid),
+            transparent,
+          ],
+          stops: const [0, 0.45, 1],
+        );
+    }
+  }
+
+  IconData _icon() {
+    switch (edge) {
+      case _ScrollCueEdge.left:
+        return Icons.keyboard_double_arrow_left_rounded;
+      case _ScrollCueEdge.right:
+        return Icons.keyboard_double_arrow_right_rounded;
+      case _ScrollCueEdge.top:
+        return Icons.keyboard_double_arrow_up_rounded;
+      case _ScrollCueEdge.bottom:
+        return Icons.keyboard_double_arrow_down_rounded;
+    }
+  }
+
+  Alignment _iconAlignment() {
+    switch (edge) {
+      case _ScrollCueEdge.left:
+        return Alignment.centerLeft;
+      case _ScrollCueEdge.right:
+        return Alignment.centerRight;
+      case _ScrollCueEdge.top:
+        return Alignment.topCenter;
+      case _ScrollCueEdge.bottom:
+        return Alignment.bottomCenter;
+    }
+  }
+
+  EdgeInsets _iconPadding() {
+    switch (edge) {
+      case _ScrollCueEdge.left:
+        return const EdgeInsets.only(left: AppSpacing.sm);
+      case _ScrollCueEdge.right:
+        return const EdgeInsets.only(right: AppSpacing.sm);
+      case _ScrollCueEdge.top:
+        return const EdgeInsets.only(top: AppSpacing.sm);
+      case _ScrollCueEdge.bottom:
+        return const EdgeInsets.only(bottom: AppSpacing.sm);
+    }
   }
 }
 

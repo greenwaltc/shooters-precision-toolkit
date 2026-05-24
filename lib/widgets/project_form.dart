@@ -158,7 +158,7 @@ class _ProjectFormState extends State<ProjectForm> {
               children: <Widget>[
                 Center(
                   child: Text(
-                    'Analysis of Mean Ranges Project Setup',
+                    'Project Setup',
                     style: theme.textTheme.titleLarge,
                     textAlign: TextAlign.center,
                   ),

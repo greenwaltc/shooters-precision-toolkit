@@ -62,7 +62,7 @@ class AnomrExportService {
   static String sanitizeFileName(String name) {
     final cleaned = name.replaceAll(RegExp(r'[^\w\s.-]'), '').trim();
     final collapsed = cleaned.replaceAll(RegExp(r'\s+'), '_');
-    return collapsed.isEmpty ? 'anomr_results' : collapsed;
+    return collapsed.isEmpty ? 'results' : collapsed;
   }
 
   /// JPEG quality used by [_reencodeAsJpeg].

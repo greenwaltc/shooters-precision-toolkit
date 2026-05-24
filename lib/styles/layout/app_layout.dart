@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'app_viewport.dart';
 import '../tokens/app_spacing.dart';
 
 typedef AppLayoutWidgetBuilder =
@@ -80,6 +81,7 @@ class AppResponsiveBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      minimum: AppViewport.safeAreaMinimum,
       child: AppLayoutBuilder(
         builder: (context, layout) {
           return Padding(

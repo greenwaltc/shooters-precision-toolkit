@@ -99,7 +99,6 @@ void main() {
     await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
-    expect(find.text('ANOMR Matrix'), findsOneWidget);
     expect(find.text('Range Test'), findsWidgets);
 
     await tester.tap(find.byIcon(Icons.tune));

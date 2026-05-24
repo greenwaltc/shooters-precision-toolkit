@@ -68,11 +68,11 @@ class ExportController {
       );
 
       final defaultName = AnomrExportService.sanitizeFileName(
-        project.displayName.isEmpty ? 'anomr_results' : project.displayName,
+        project.displayName.isEmpty ? 'results' : project.displayName,
       );
 
       final savedPath = await FilePicker.saveFile(
-        dialogTitle: 'Export ANOMR Results',
+        dialogTitle: 'Export Results',
         fileName: '$defaultName.${artifact.extension}',
         bytes: artifact.bytes,
         type: FileType.custom,

@@ -37,7 +37,7 @@ class EmptyResultsState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Enter at least one range value in the ANOMR matrix to see results.',
+              'Enter at least one range value in the data matrix to see results.',
               style: textTheme.bodyMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),

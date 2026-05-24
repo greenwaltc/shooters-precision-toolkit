@@ -60,7 +60,7 @@ class AnomrPdfBuilder {
   }) {
     return [
       pw.Text(
-        projectTitle.isEmpty ? 'ANOMR Results' : projectTitle,
+        projectTitle.isEmpty ? 'Results' : projectTitle,
         style: PdfStyles.title(),
       ),
       pw.SizedBox(height: PdfStyles.gapSm),
@@ -85,7 +85,7 @@ class AnomrPdfBuilder {
 
   static List<pw.Widget> _matrixSection(PlutoGridStateManager manager) {
     return [
-      pw.Text('ANOMR Data Matrix', style: PdfStyles.sectionHeader()),
+      pw.Text('Data Matrix', style: PdfStyles.sectionHeader()),
       pw.SizedBox(height: PdfStyles.gapMd),
       _matrixTable(manager),
       pw.SizedBox(height: PdfStyles.gapXxl),

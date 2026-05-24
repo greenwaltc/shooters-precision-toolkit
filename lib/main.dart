@@ -12,6 +12,7 @@ import 'model/project_store.dart';
 import 'navigation/app_routes.dart';
 import 'storage/project_storage.dart';
 import 'styles/app_theme.dart';
+import 'styles/layout/app_viewport.dart';
 import 'widgets/anomr_matrix.dart';
 import 'widgets/anomr_results_page.dart';
 import 'widgets/project_form_page.dart';
@@ -62,6 +63,12 @@ class _MyAppState extends State<MyApp> {
         title: 'Shooter\'s Precision Test Kit',
         theme: AppTheme.light(),
         initialRoute: AppRoutes.projects,
+        builder: (context, child) {
+          return MediaQuery(
+            data: AppViewport.applyWebSafeArea(MediaQuery.of(context)),
+            child: child ?? const SizedBox.shrink(),
+          );
+        },
         routes: {
           AppRoutes.projects: (_) => const ProjectHomePage(),
           AppRoutes.projectForm: (_) => const ProjectFormPage(),

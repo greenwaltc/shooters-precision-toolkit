@@ -85,7 +85,7 @@ class _ExportDialogState extends State<ExportDialog> {
                     : null,
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                title: const Text('Include ANOMR data matrix'),
+                title: const Text('Include data matrix'),
                 subtitle: Text(
                   _pdfSelected
                       ? 'Matrix will be placed before the graph.'

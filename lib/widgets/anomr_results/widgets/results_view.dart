@@ -13,6 +13,7 @@ import '../../../model/project_store.dart';
 import '../../../styles/chart/chart_layout.dart';
 import '../../../styles/chart/chart_scale.dart';
 import '../../../styles/layout/app_layout.dart';
+import '../../../styles/layout/app_viewport.dart';
 import '../../../styles/tokens/app_spacing.dart';
 import '../../project_drawer.dart';
 import '../models/anomr_summary.dart';
@@ -66,7 +67,10 @@ class _ResultsViewState extends State<ResultsView> {
                     stateManager: stateManager,
                   ),
                 )
-              : const EmptyResultsState(),
+              : SafeArea(
+                  minimum: AppViewport.safeAreaMinimum,
+                  child: const EmptyResultsState(),
+                ),
           floatingActionButton: helpFabFor(layout),
           floatingActionButtonLocation: helpFabLocation,
         );
@@ -173,6 +177,7 @@ class _ResultsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      minimum: AppViewport.safeAreaMinimum,
       child: AppLayoutBuilder(
         builder: (context, layout) {
           return SingleChildScrollView(

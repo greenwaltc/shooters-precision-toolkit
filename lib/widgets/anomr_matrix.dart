@@ -14,6 +14,7 @@ import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
+import '../styles/layout/app_viewport.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
@@ -100,6 +101,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             ],
           ),
           body: SafeArea(
+            minimum: AppViewport.safeAreaMinimum,
             child: AppLayoutBuilder(
               builder: (context, layout) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,7 +118,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Analysis of Mean Ranges (ANOMR)',
+                              'Analysis of Mean Ranges',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: AppSpacing.md),
@@ -561,7 +563,7 @@ class _NoSelectedProjectPage extends StatelessWidget {
       builder: (context, layout) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('ANOMR Matrix'),
+            title: const Text('Data Matrix'),
             actions: helpAppBarActionsFor(layout),
           ),
           body: Center(

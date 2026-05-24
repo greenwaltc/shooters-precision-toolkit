@@ -11,6 +11,7 @@ import '../styles/components/app_text_field_decoration.dart';
 import '../styles/components/grouped_field_panel.dart';
 import '../styles/components/section_title.dart';
 import '../styles/layout/app_layout.dart';
+import '../styles/layout/app_viewport.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
 
@@ -151,7 +152,7 @@ class _ProjectFormState extends State<ProjectForm> {
           ];
 
           return SingleChildScrollView(
-            padding: AppSpacing.scrollBottom,
+            padding: AppViewport.scrollBottomPadding(context),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[

@@ -21,6 +21,7 @@ import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
 import 'project_drawer.dart';
+import 'no_selected_project_page.dart';
 
 class AnomrMatrix extends StatelessWidget {
   const AnomrMatrix({super.key});
@@ -31,7 +32,7 @@ class AnomrMatrix extends StatelessWidget {
     final project = store.selectedProject;
 
     if (project == null) {
-      return const _NoSelectedProjectPage();
+      return const NoSelectedProjectPage(title: 'Data Matrix');
     }
 
     if (!project.setupComplete) {
@@ -104,10 +105,9 @@ class _AnomrMatrixScaffold extends StatelessWidget {
           ),
           body: SafeArea(
             minimum: AppViewport.safeAreaMinimum,
-            child: AppLayoutBuilder(
-              builder: (context, layout) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                   Padding(
                     padding: EdgeInsets.fromLTRB(
                       layout.pageGutter,
@@ -159,7 +159,6 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                 ],
               ),
             ),
-          ),
         );
       },
     );
@@ -376,14 +375,15 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         shortcut: PlutoGridShortcut(
           actions: {
             ...PlutoGridShortcut.defaultActions,
-            LogicalKeySet(
+            for (final modifier in [
               LogicalKeyboardKey.meta,
-              LogicalKeyboardKey.keyC,
-            ): const PlutoGridActionCopyValues(),
-            LogicalKeySet(
-              LogicalKeyboardKey.meta,
-              LogicalKeyboardKey.keyV,
-            ): const PlutoGridActionPasteValues(),
+              LogicalKeyboardKey.control,
+            ]) ...{
+              LogicalKeySet(modifier, LogicalKeyboardKey.keyC):
+                  const PlutoGridActionCopyValues(),
+              LogicalKeySet(modifier, LogicalKeyboardKey.keyV):
+                  const PlutoGridActionPasteValues(),
+            },
           },
         ),
         enterKeyAction: PlutoGridEnterKeyAction.editingAndMoveDown,
@@ -774,10 +774,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                       plutoTheme: plutoTheme,
                     );
 
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) _updateScrollCues();
-                    });
-
                     return _buildGridViewport(
                       width: displaySize.width,
                       height: displaySize.height,
@@ -983,36 +979,5 @@ class _GridScrollCue extends StatelessWidget {
       case _ScrollCueEdge.bottom:
         return const EdgeInsets.only(bottom: AppSpacing.sm);
     }
-  }
-}
-
-class _NoSelectedProjectPage extends StatelessWidget {
-  const _NoSelectedProjectPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return AppLayoutBuilder(
-      builder: (context, layout) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Data Matrix'),
-            actions: helpAppBarActionsFor(layout),
-          ),
-          body: Center(
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
-              },
-              icon: const Icon(Icons.home_outlined),
-              label: const Text('Projects'),
-            ),
-          ),
-          floatingActionButton: helpFabFor(layout),
-          floatingActionButtonLocation: helpFabLocation,
-        );
-      },
-    );
   }
 }

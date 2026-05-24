@@ -13,6 +13,9 @@ import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 
+final Future<String> _helpInstructionsFuture =
+    rootBundle.loadString('assets/help_instructions.md');
+
 /// Presents the help markdown in a draggable, scrollable bottom sheet.
 Future<void> showHelpInstructionsSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -98,7 +101,7 @@ class HelpInstructions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<String>(
-      future: rootBundle.loadString('assets/help_instructions.md'),
+      future: _helpInstructionsFuture,
       builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
         if (snapshot.hasData) {
           return SingleChildScrollView(

@@ -35,17 +35,18 @@ class SavedProject {
     final matrixState = json['matrixState'] is Map
         ? Map<String, dynamic>.from(json['matrixState'] as Map)
         : <String, dynamic>{};
+    final formModel = json['formModel'] is Map<String, dynamic>
+        ? ProjectFormModel.fromJson(json['formModel'] as Map<String, dynamic>)
+        : ProjectFormModel();
 
     return SavedProject(
       id: json['id'] as String? ?? now.microsecondsSinceEpoch.toString(),
       createdAt: _dateFromJson(json['createdAt'], now),
       updatedAt: _dateFromJson(json['updatedAt'], now),
-      formModel: json['formModel'] is Map<String, dynamic>
-          ? ProjectFormModel.fromJson(json['formModel'] as Map<String, dynamic>)
-          : ProjectFormModel(),
+      formModel: formModel,
       setupComplete:
           json['setupComplete'] as bool? ??
-          matrixState.isNotEmpty,
+          (matrixState.isNotEmpty && formModel.isSetupValid),
       matrixState: matrixState,
     );
   }

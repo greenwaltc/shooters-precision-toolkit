@@ -22,6 +22,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   final List<SavedProject> _projects = [];
   final Map<String, VoidCallback> _projectListeners = {};
   Future<void> _saveOperation = Future.value();
+  Timer? _saveDebounceTimer;
   bool _isLoaded = false;
   String? _selectedProjectId;
 
@@ -54,6 +55,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
     for (final project in _projects) {
       _attachProjectListener(project);
+      _syncSetupComplete(project);
     }
 
     final selectedProjectExists = _projects.any(
@@ -124,16 +126,17 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Marks the selected project's setup form as submitted, unlocking the
-  /// ANOMR matrix for that project.
-  Future<void> completeProjectSetup() async {
+  /// ANOMR matrix for that project. Returns whether setup was completed.
+  Future<bool> completeProjectSetup() async {
     final project = selectedProject;
-    if (project == null || project.setupComplete) return;
-    if (!project.formModel.isSetupValid) return;
+    if (project == null || project.setupComplete) return false;
+    if (!project.formModel.isSetupValid) return false;
 
     project.setupComplete = true;
     project.touch();
     await _saveProjects();
     notifyListeners();
+    return true;
   }
 
   void _syncSetupComplete(SavedProject project) {
@@ -157,6 +160,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _saveDebounceTimer?.cancel();
     for (final project in _projects) {
       final listener = _projectListeners[project.id];
       if (listener != null) project.formModel.removeListener(listener);
@@ -198,12 +202,19 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     void listener() {
       project.touch();
       _syncSetupComplete(project);
-      unawaited(_saveProjects());
       notifyListeners();
+      _scheduleSave();
     }
 
     project.formModel.addListener(listener);
     _projectListeners[project.id] = listener;
+  }
+
+  void _scheduleSave() {
+    _saveDebounceTimer?.cancel();
+    _saveDebounceTimer = Timer(const Duration(milliseconds: 400), () {
+      unawaited(_saveProjects());
+    });
   }
 
   Future<void> _saveProjects() {
@@ -214,7 +225,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     });
 
     _saveOperation = _saveOperation
-        .catchError((_) {})
+        .catchError((Object error, StackTrace stackTrace) {
+          debugPrint('ProjectStore: failed to save projects: $error');
+        })
         .then((_) => storage.writeProjectsJson(payload));
     return _saveOperation;
   }

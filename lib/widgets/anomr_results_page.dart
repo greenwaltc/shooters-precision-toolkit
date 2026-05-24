@@ -22,8 +22,11 @@ class AnomrResultsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stateManager =
-        ModalRoute.of(context)!.settings.arguments as PlutoGridStateManager;
+    final arguments = ModalRoute.of(context)?.settings.arguments;
+    if (arguments is! PlutoGridStateManager) {
+      return const NoSelectedProjectPage(title: 'Results');
+    }
+    final stateManager = arguments;
 
     final store = context.watch<ProjectStore>();
     final project = store.selectedProject;

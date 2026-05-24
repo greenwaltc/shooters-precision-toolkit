@@ -13,6 +13,7 @@ import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
 import 'project_drawer.dart';
 import 'project_form.dart';
+import 'no_selected_project_page.dart';
 
 class ProjectFormPage extends StatelessWidget {
   const ProjectFormPage({super.key});
@@ -23,7 +24,7 @@ class ProjectFormPage extends StatelessWidget {
     final project = store.selectedProject;
 
     if (project == null) {
-      return const _NoSelectedProjectPage();
+      return const NoSelectedProjectPage(title: 'Project Setup');
     }
 
     return ChangeNotifierProvider<ProjectFormModel>.value(
@@ -72,39 +73,8 @@ class ProjectFormPage extends StatelessWidget {
 
   Future<void> _goToMatrix(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
-    await store.completeProjectSetup();
+    if (!await store.completeProjectSetup()) return;
     await store.persistSelectedProject();
     navigator.pushReplacementNamed(AppRoutes.anomrMatrix);
-  }
-}
-
-class _NoSelectedProjectPage extends StatelessWidget {
-  const _NoSelectedProjectPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return AppLayoutBuilder(
-      builder: (context, layout) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Project Setup'),
-            actions: helpAppBarActionsFor(layout),
-          ),
-          body: Center(
-            child: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
-              },
-              icon: const Icon(Icons.home_outlined),
-              label: const Text('Projects'),
-            ),
-          ),
-          floatingActionButton: helpFabFor(layout),
-          floatingActionButtonLocation: helpFabLocation,
-        );
-      },
-    );
   }
 }

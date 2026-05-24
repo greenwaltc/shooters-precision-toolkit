@@ -21,6 +21,7 @@ import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
 import 'project_drawer.dart';
+import 'range_entry_sheet.dart';
 import 'no_selected_project_page.dart';
 
 class AnomrMatrix extends StatelessWidget {
@@ -148,9 +149,10 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                           ),
                           child: AnomrMatrixGrid(
                             key: ValueKey(
-                              '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}',
+                              '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}_${layout.isMobile}',
                             ),
                             project: project,
+                            isMobile: layout.isMobile,
                           ),
                         ),
                       ),
@@ -181,9 +183,14 @@ class _AnomrMatrixScaffold extends StatelessWidget {
 }
 
 class AnomrMatrixGrid extends StatefulWidget {
-  const AnomrMatrixGrid({super.key, required this.project});
+  const AnomrMatrixGrid({
+    super.key,
+    required this.project,
+    required this.isMobile,
+  });
 
   final SavedProject project;
+  final bool isMobile;
 
   @override
   State<AnomrMatrixGrid> createState() => _AnomrMatrixGridState();
@@ -649,10 +656,13 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         // Using text type to avoid any rounding/precision issues during paste.
         // The results view parses this back to double.
         type: PlutoColumnType.text(),
+        readOnly: widget.isMobile,
+        enableEditingMode: !widget.isMobile,
         enableColumnDrag: false,
         enableContextMenu: false,
         enableDropToResize: true,
         width: _rangeColumnWidth,
+        renderer: widget.isMobile ? _mobileRangeCellRenderer : null,
       ),
     ];
 
@@ -698,17 +708,92 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     return results;
   }
 
+  Widget _mobileRangeCellRenderer(PlutoColumnRendererContext rendererContext) {
+    final value = rendererContext.cell.value?.toString() ?? '';
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openRangeEntrySheet(rendererContext),
+        child: Container(
+          alignment: Alignment.centerLeft,
+          padding: AppSpacing.plutoFactorCell,
+          child: Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium,
+            softWrap: false,
+            overflow: TextOverflow.fade,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openRangeEntrySheet(
+    PlutoColumnRendererContext rendererContext,
+  ) async {
+    _stateManager?.setEditing(false);
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    final formModel = context.read<ProjectFormModel>();
+    final row = rendererContext.row;
+    final factorStates = <FactorStateEntry>[
+      for (var i = 0; i < formModel.factorDefinitions.length; i++)
+        FactorStateEntry(
+          factorName: _factorLabel(formModel.factorDefinitions[i], i),
+          state: row.cells['factor_$i']?.value?.toString() ?? '',
+        ),
+    ];
+
+    final result = await showRangeEntrySheet(
+      context,
+      entry: RangeEntryContext(
+        rowIndex: _cellIntValue(row.cells['row']) ?? rendererContext.rowIdx + 1,
+        replicateIndex:
+            _cellIntValue(row.cells['group']) ?? rendererContext.rowIdx + 1,
+        factorStates: factorStates,
+        initialValue: rendererContext.cell.value?.toString(),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    _applyRangeValue(
+      rowIdx: rendererContext.rowIdx,
+      value: result.isEmpty ? null : result,
+    );
+  }
+
+  int? _cellIntValue(PlutoCell? cell) {
+    final value = cell?.value;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  String _factorLabel(FactorDefinition factor, int index) {
+    final name = factor.name.trim();
+    return name.isEmpty ? 'Factor ${index + 1}' : name;
+  }
+
+  void _applyRangeValue({required int rowIdx, required Object? value}) {
+    final manager = _stateManager;
+    if (manager == null) return;
+
+    manager.rows[rowIdx].cells['range']!.value = value;
+    widget.project.matrixState['range_$rowIdx'] = value;
+    context.read<ProjectStore>().persistSelectedProject(markModified: true);
+
+    final rangeColumn = manager.columns.firstWhere(
+      (column) => column.field == 'range',
+    );
+    manager.autoFitColumn(context, rangeColumn);
+    manager.notifyListeners();
+    setState(() {});
+  }
+
   void _handleOnChanged(PlutoGridOnChangedEvent event) {
     if (event.column.field == 'range') {
-      // Persist the range value to the project's matrix state
-      widget.project.matrixState['range_${event.rowIdx}'] = event.value;
-
-      // Mark the project as modified and save it
-      context.read<ProjectStore>().persistSelectedProject(markModified: true);
-
-      // Autofit the column on change to accommodate new data
-      _stateManager?.autoFitColumn(context, event.column);
-      setState(() {});
+      _applyRangeValue(rowIdx: event.rowIdx, value: event.value);
     }
   }
 

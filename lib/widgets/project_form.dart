@@ -26,6 +26,41 @@ class ProjectForm extends StatefulWidget {
   State<ProjectForm> createState() => _ProjectFormState();
 }
 
+class _FactorFieldHints {
+  const _FactorFieldHints({
+    required this.factorName,
+    required this.firstState,
+    required this.secondState,
+  });
+
+  final String factorName;
+  final String firstState;
+  final String secondState;
+}
+
+const _factorFieldHintsByIndex = <_FactorFieldHints>[
+  _FactorFieldHints(
+    factorName: 'Bullet Point Type',
+    firstState: 'Rounded',
+    secondState: 'Pointy',
+  ),
+  _FactorFieldHints(
+    factorName: 'Primer',
+    firstState: 'Magnum',
+    secondState: 'Regular',
+  ),
+  _FactorFieldHints(
+    factorName: 'Powder Charge',
+    firstState: 'Full',
+    secondState: '75%',
+  ),
+  _FactorFieldHints(
+    factorName: 'Shooting Position',
+    firstState: 'Kneeling',
+    secondState: 'Prone',
+  ),
+];
+
 class _ProjectFormState extends State<ProjectForm> {
   final _formKey = GlobalKey<FormState>();
   final projectTitleController = TextEditingController();
@@ -120,9 +155,51 @@ class _ProjectFormState extends State<ProjectForm> {
   Future<void> _onSubmitClicked() async {
     _syncFormModel(trimValues: true);
 
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _scrollToFirstInvalidField();
+      return;
+    }
 
     await widget.onSubmit?.call();
+  }
+
+  void _scrollToFirstInvalidField() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final invalidField = _findFirstInvalidField(_formKey.currentContext);
+      if (invalidField == null) return;
+
+      Scrollable.ensureVisible(
+        invalidField,
+        alignment: 0.2,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  Element? _findFirstInvalidField(BuildContext? root) {
+    if (root == null) return null;
+
+    Element? firstInvalidField;
+
+    void visit(Element element) {
+      if (firstInvalidField != null) return;
+
+      if (element is StatefulElement) {
+        final state = element.state;
+        if (state is FormFieldState<String> && !state.isValid) {
+          firstInvalidField = element;
+          return;
+        }
+      }
+
+      element.visitChildren(visit);
+    }
+
+    root.visitChildElements(visit);
+    return firstInvalidField;
   }
 
   @override
@@ -261,6 +338,7 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildFactorFields(int index) {
     final controllers = _factorControllers[index];
+    final hints = _factorFieldHintsByIndex[index];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -275,13 +353,13 @@ class _ProjectFormState extends State<ProjectForm> {
         _buildTextField(
           controller: controllers.factorName,
           labelText: 'Name Factor',
-          prefixIcon: Icons.tune,
+          hintText: hints.factorName,
           validator: (value) => _validateFactorName(index, value),
         ),
         _buildTextField(
           controller: controllers.firstStateName,
           labelText: 'Name one state of that factor',
-          prefixIcon: Icons.radio_button_checked,
+          hintText: hints.firstState,
           validator: (value) => _validateFactorState(
             value: value,
             comparedController: controllers.secondStateName,
@@ -290,7 +368,7 @@ class _ProjectFormState extends State<ProjectForm> {
         _buildTextField(
           controller: controllers.secondStateName,
           labelText: 'Name the other state of that factor',
-          prefixIcon: Icons.radio_button_unchecked,
+          hintText: hints.secondState,
           validator: (value) => _validateFactorState(
             value: value,
             comparedController: controllers.firstStateName,
@@ -342,7 +420,7 @@ class _ProjectFormState extends State<ProjectForm> {
       padding: AppSpacing.radioItemVertical,
       child: RadioListTile<SampleSizeOption>(
         value: option,
-        title: Text(option.label),
+        title: Text(option.labelFor(widget.formModel.experimentStructure)),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: AppSpacing.md),
           child: _buildDetectableDifferenceTable(option),
@@ -426,7 +504,8 @@ class _ProjectFormState extends State<ProjectForm> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String labelText,
-    required IconData prefixIcon,
+    String hintText = '',
+    IconData? prefixIcon,
     required FormFieldValidator<String> validator,
   }) {
     return Padding(
@@ -435,7 +514,8 @@ class _ProjectFormState extends State<ProjectForm> {
         controller: controller,
         decoration: buildAppTextFieldDecoration(
           labelText: labelText,
-          prefixIcon: Icon(prefixIcon),
+          hintText: hintText,
+          prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
           controller: controller,
         ),
         textInputAction: TextInputAction.next,

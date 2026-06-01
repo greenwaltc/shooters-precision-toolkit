@@ -33,7 +33,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('8 total ranges in 4 replicates of 2 ranges each'),
+      find.text('8 total ranges in 2 replicates of 4 ranges each'),
       findsOneWidget,
     );
   });
@@ -107,6 +107,12 @@ void main() {
       find.byType(TextFormField).first,
     );
     expect(titleField.controller?.text, 'Range Test');
+
+    await tester.ensureVisible(find.text('Submit'));
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.tune), findsOneWidget);
   });
 
   testWidgets('project state persists to storage and reloads on home page', (

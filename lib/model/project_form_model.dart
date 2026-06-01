@@ -151,10 +151,43 @@ class SampleSizeOption {
   num get rangesPerGroup => numSets;
 
   /// Display label, e.g. `"16 total ranges in 4 replicates of 4 ranges each"`.
+  ///
+  /// For [ExperimentStructure.simpleABComparison], replicates and ranges-per-
+  /// replicate are swapped in the label so the two factor states read as
+  /// replicates and [numSets] reads as ranges within each state.
+  String labelFor(ExperimentStructure structure) {
+    if (structure == ExperimentStructure.simpleABComparison) {
+      final replicates = _formatSampleValue(groupSize);
+      final rangesEach = _formatSampleValue(numSets);
+      return '$totalSamples total ranges in $replicates replicates of '
+          '$rangesEach ranges each';
+    }
+
+    return label;
+  }
+
+  /// Default factorial-style label shared by multi-factor experiment structures.
   String get label {
     final replicates = _formatSampleValue(rangesPerGroup);
     return '$totalSamples total ranges in $replicates replicates of '
         '$groupSize ranges each';
+  }
+
+  /// Linear index used to persist a matrix range cell for [comboIdx] at
+  /// replicate [blockIdx]. One-factor designs use state-major ordering; all
+  /// other structures use replicate-major ordering.
+  int matrixRangeIndex({
+    required int comboIdx,
+    required int blockIdx,
+    required int comboCount,
+    required ExperimentStructure structure,
+  }) {
+    final replicatesPerCombo = rangesPerGroup.toInt();
+    if (structure == ExperimentStructure.simpleABComparison) {
+      return comboIdx * replicatesPerCombo + blockIdx;
+    }
+
+    return blockIdx * comboCount + comboIdx;
   }
 
   /// Detectable-difference fraction of the grand mean for [riskLevel]

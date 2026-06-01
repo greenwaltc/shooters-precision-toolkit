@@ -126,11 +126,14 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Marks the selected project's setup form as submitted, unlocking the
-  /// ANOMR matrix for that project. Returns whether setup was completed.
+  /// ANOMR matrix for that project. Returns whether the project may proceed
+  /// to the matrix (including when setup was already complete and still valid).
   Future<bool> completeProjectSetup() async {
     final project = selectedProject;
-    if (project == null || project.setupComplete) return false;
+    if (project == null) return false;
     if (!project.formModel.isSetupValid) return false;
+
+    if (project.setupComplete) return true;
 
     project.setupComplete = true;
     project.touch();

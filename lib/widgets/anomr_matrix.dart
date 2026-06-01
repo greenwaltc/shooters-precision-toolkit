@@ -671,27 +671,133 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     // 2. Define Column Groups for Factors
     _columnGroups = [PlutoColumnGroup(title: 'Factors', fields: factorFields)];
 
-    // 3. Generate Rows (Cartesian product repeated n times)
+    // 3. Generate rows. One-factor designs group all rows for each state
+    // together; multi-factor designs interleave states within each replicate.
     _rows = [];
-    for (int blockIdx = 0; blockIdx < n; blockIdx++) {
+    final structure = formModel.experimentStructure;
+    final stateMajorOrder =
+        structure == ExperimentStructure.simpleABComparison;
+
+    if (stateMajorOrder) {
       for (int comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
-        final combo = combinations[comboIdx];
-        final cells = <String, PlutoCell>{};
-
-        for (int factorIdx = 0; factorIdx < factors.length; factorIdx++) {
-          cells['factor_$factorIdx'] = PlutoCell(value: combo[factorIdx]);
+        for (int blockIdx = 0; blockIdx < n; blockIdx++) {
+          _rows.add(
+            _buildMatrixRow(
+              formModel: formModel,
+              combo: combinations[comboIdx],
+              comboIdx: comboIdx,
+              blockIdx: blockIdx,
+              comboCount: combinations.length,
+              factors: factors,
+            ),
+          );
         }
-
-        // Use a consistent key for range value persistence
-        final absoluteIdx = blockIdx * combinations.length + comboIdx;
-        final savedValue = widget.project.matrixState['range_$absoluteIdx'];
-
-        cells['group'] = PlutoCell(value: blockIdx + 1);
-        cells['row'] = PlutoCell(value: absoluteIdx + 1);
-        cells['range'] = PlutoCell(value: savedValue);
-        _rows.add(PlutoRow(cells: cells));
+      }
+    } else {
+      for (int blockIdx = 0; blockIdx < n; blockIdx++) {
+        for (int comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
+          _rows.add(
+            _buildMatrixRow(
+              formModel: formModel,
+              combo: combinations[comboIdx],
+              comboIdx: comboIdx,
+              blockIdx: blockIdx,
+              comboCount: combinations.length,
+              factors: factors,
+            ),
+          );
+        }
       }
     }
+  }
+
+  PlutoRow _buildMatrixRow({
+    required ProjectFormModel formModel,
+    required List<String> combo,
+    required int comboIdx,
+    required int blockIdx,
+    required int comboCount,
+    required List<FactorDefinition> factors,
+  }) {
+    final cells = <String, PlutoCell>{};
+
+    for (int factorIdx = 0; factorIdx < factors.length; factorIdx++) {
+      cells['factor_$factorIdx'] = PlutoCell(value: combo[factorIdx]);
+    }
+
+    final rangeIndex = formModel.sampleSizeOption.matrixRangeIndex(
+      comboIdx: comboIdx,
+      blockIdx: blockIdx,
+      comboCount: comboCount,
+      structure: formModel.experimentStructure,
+    );
+    final savedValue = _loadSavedRangeValue(
+      rangeIndex: rangeIndex,
+      comboIdx: comboIdx,
+      blockIdx: blockIdx,
+      comboCount: comboCount,
+      structure: formModel.experimentStructure,
+    );
+
+    cells['group'] = PlutoCell(value: blockIdx + 1);
+    cells['row'] = PlutoCell(value: rangeIndex + 1);
+    cells['range'] = PlutoCell(value: savedValue);
+    return PlutoRow(cells: cells);
+  }
+
+  Object? _loadSavedRangeValue({
+    required int rangeIndex,
+    required int comboIdx,
+    required int blockIdx,
+    required int comboCount,
+    required ExperimentStructure structure,
+  }) {
+    final primaryKey = 'range_$rangeIndex';
+    final primaryValue = widget.project.matrixState[primaryKey];
+    if (primaryValue != null) return primaryValue;
+
+    if (structure != ExperimentStructure.simpleABComparison) {
+      return null;
+    }
+
+    // Projects saved before state-major ordering used replicate-major indices.
+    final legacyIndex = blockIdx * comboCount + comboIdx;
+    return widget.project.matrixState['range_$legacyIndex'];
+  }
+
+  int? _comboIndexForRow(PlutoRow row, List<List<String>> combinations) {
+    for (var comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
+      final combo = combinations[comboIdx];
+      var matches = true;
+      for (var factorIdx = 0; factorIdx < combo.length; factorIdx++) {
+        if (row.cells['factor_$factorIdx']?.value?.toString() != combo[factorIdx]) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) return comboIdx;
+    }
+    return null;
+  }
+
+  String _rangeStorageKeyForRow(PlutoRow row) {
+    final formModel = context.read<ProjectFormModel>();
+    final combinations = _generateCombinations(formModel.factorDefinitions);
+    final comboIdx = _comboIndexForRow(row, combinations);
+    final blockIdx = (_cellIntValue(row.cells['group']) ?? 1) - 1;
+
+    if (comboIdx == null || blockIdx < 0) {
+      final rowIndex = _cellIntValue(row.cells['row']);
+      return 'range_${(rowIndex ?? 1) - 1}';
+    }
+
+    final rangeIndex = formModel.sampleSizeOption.matrixRangeIndex(
+      comboIdx: comboIdx,
+      blockIdx: blockIdx,
+      comboCount: combinations.length,
+      structure: formModel.experimentStructure,
+    );
+    return 'range_$rangeIndex';
   }
 
   List<List<String>> _generateCombinations(List<FactorDefinition> factors) {
@@ -782,7 +888,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     if (manager == null) return;
 
     manager.rows[rowIdx].cells['range']!.value = value;
-    widget.project.matrixState['range_$rowIdx'] = value;
+    widget.project.matrixState[_rangeStorageKeyForRow(manager.rows[rowIdx])] =
+        value;
     context.read<ProjectStore>().persistSelectedProject(markModified: true);
 
     final rangeColumn = manager.columns.firstWhere(
@@ -846,7 +953,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                 setState(() {
                   for (int i = 0; i < _stateManager!.rows.length; i++) {
                     _stateManager!.rows[i].cells['range']!.value = null;
-                    widget.project.matrixState.remove('range_$i');
+                    widget.project.matrixState.remove(
+                      _rangeStorageKeyForRow(_stateManager!.rows[i]),
+                    );
                   }
                   _stateManager!.notifyListeners();
                   context.read<ProjectStore>().persistSelectedProject(

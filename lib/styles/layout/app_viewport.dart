@@ -50,9 +50,7 @@ class AppViewport {
 
   /// Extra padding for the last item in a scroll view.
   static EdgeInsets scrollBottomPadding(BuildContext context) {
-    return EdgeInsets.only(
-      bottom: AppSpacing.xxxl + bottomInset(context),
-    );
+    return EdgeInsets.only(bottom: AppSpacing.xxxl + bottomInset(context));
   }
 
   /// Minimum [SafeArea] insets for page bodies on Windows web.

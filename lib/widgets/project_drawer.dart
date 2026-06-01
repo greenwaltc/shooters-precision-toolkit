@@ -13,12 +13,14 @@ import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
 import 'confirm_delete_project_dialog.dart';
 
+/// Drawer navigation for switching, creating, and deleting projects.
 class ProjectDrawer extends StatelessWidget {
   const ProjectDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ProjectStore>();
+    final projects = store.projects;
 
     return Drawer(
       child: SafeArea(
@@ -31,12 +33,12 @@ class ProjectDrawer extends StatelessWidget {
             ),
             const Divider(height: 1.0),
             Expanded(
-              child: store.projects.isEmpty
+              child: projects.isEmpty
                   ? const Center(child: Text('No projects yet'))
                   : ListView.builder(
-                      itemCount: store.projects.length,
+                      itemCount: projects.length,
                       itemBuilder: (context, index) {
-                        final project = store.projects[index];
+                        final project = projects[index];
                         return _ProjectDrawerTile(project: project);
                       },
                     ),

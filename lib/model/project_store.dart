@@ -4,6 +4,7 @@
 // Unauthorized use or reproduction of this source code is prohibited.
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
@@ -12,6 +13,7 @@ import '../storage/project_storage.dart';
 import 'project_form_model.dart';
 import 'saved_project.dart';
 
+/// Coordinates project selection, persistence, and form-model listeners.
 class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   ProjectStore({required this.storage}) {
     WidgetsBinding.instance.addObserver(this);
@@ -21,19 +23,21 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   final List<SavedProject> _projects = [];
   final Map<String, VoidCallback> _projectListeners = {};
+  UnmodifiableListView<SavedProject>? _sortedProjects;
   Future<void> _saveOperation = Future.value();
   Timer? _saveDebounceTimer;
   bool _isLoaded = false;
   String? _selectedProjectId;
 
+  /// Whether projects have been loaded from storage.
   bool get isLoaded => _isLoaded;
 
+  /// Projects sorted by most recently updated first.
   List<SavedProject> get projects {
-    return [..._projects]..sort((first, second) {
-      return second.updatedAt.compareTo(first.updatedAt);
-    });
+    return _sortedProjects ??= UnmodifiableListView(_projectsByRecentUpdate());
   }
 
+  /// Currently selected project, if one is available.
   SavedProject? get selectedProject {
     final selectedProjectId = _selectedProjectId;
     if (selectedProjectId == null) return null;
@@ -45,6 +49,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return null;
   }
 
+  /// Loads persisted projects once and selects the newest available project.
   Future<void> load() async {
     if (_isLoaded) return;
 
@@ -52,6 +57,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _projects
       ..clear()
       ..addAll(_decodeProjects(projectsJson));
+    _invalidateProjectOrder();
 
     for (final project in _projects) {
       _attachProjectListener(project);
@@ -68,6 +74,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Creates, selects, persists, and returns a new project.
   Future<SavedProject> createProject() async {
     final now = DateTime.now().toUtc();
     final project = SavedProject(
@@ -78,6 +85,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     );
 
     _projects.add(project);
+    _invalidateProjectOrder();
     _selectedProjectId = project.id;
     _attachProjectListener(project);
     await _saveProjects();
@@ -86,6 +94,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return project;
   }
 
+  /// Selects an existing project by id.
   Future<void> selectProject(String projectId) async {
     final projectExists = _projects.any((project) => project.id == projectId);
     if (!projectExists || _selectedProjectId == projectId) return;
@@ -94,6 +103,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Deletes a project and returns whether the selected project was removed.
   Future<bool> deleteProject(String projectId) async {
     final projectIndex = _projects.indexWhere(
       (project) => project.id == projectId,
@@ -101,6 +111,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (projectIndex == -1) return false;
 
     final deletedProject = _projects.removeAt(projectIndex);
+    _invalidateProjectOrder();
     final listener = _projectListeners.remove(deletedProject.id);
     if (listener != null) {
       deletedProject.formModel.removeListener(listener);
@@ -117,9 +128,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return deletedSelectedProject;
   }
 
+  /// Persists the selected project, optionally marking it modified first.
   Future<void> persistSelectedProject({bool markModified = false}) async {
     if (markModified) {
       selectedProject?.touch();
+      _invalidateProjectOrder();
     }
     await _saveProjects();
     if (markModified) notifyListeners();
@@ -137,17 +150,13 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
     project.setupComplete = true;
     project.touch();
+    _invalidateProjectOrder();
     await _saveProjects();
     notifyListeners();
     return true;
   }
 
-  void _syncSetupComplete(SavedProject project) {
-    if (!project.setupComplete || project.formModel.isSetupValid) return;
-
-    project.setupComplete = false;
-  }
-
+  /// Persists all projects immediately.
   Future<void> persistAllProjects() async {
     await _saveProjects();
   }
@@ -170,6 +179,22 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _syncSetupComplete(SavedProject project) {
+    if (!project.setupComplete || project.formModel.isSetupValid) return;
+
+    project.setupComplete = false;
+  }
+
+  List<SavedProject> _projectsByRecentUpdate() {
+    return [..._projects]..sort((first, second) {
+      return second.updatedAt.compareTo(first.updatedAt);
+    });
+  }
+
+  void _invalidateProjectOrder() {
+    _sortedProjects = null;
   }
 
   List<SavedProject> _decodeProjects(String? projectsJson) {
@@ -204,6 +229,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
     void listener() {
       project.touch();
+      _invalidateProjectOrder();
       _syncSetupComplete(project);
       notifyListeners();
       _scheduleSave();

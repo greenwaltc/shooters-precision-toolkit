@@ -5,6 +5,7 @@
 
 import 'project_form_model.dart';
 
+/// User-created project plus its setup and matrix entry state.
 class SavedProject {
   SavedProject({
     required this.id,
@@ -25,11 +26,13 @@ class SavedProject {
   bool setupComplete;
   final Map<String, dynamic> matrixState;
 
+  /// Display title with a stable fallback for incomplete projects.
   String get displayName {
     final title = formModel.projectTitle.trim();
     return title.isEmpty ? 'Untitled Project' : title;
   }
 
+  /// Rehydrates a project from persisted JSON.
   factory SavedProject.fromJson(Map<String, dynamic> json) {
     final now = DateTime.now().toUtc();
     final matrixState = json['matrixState'] is Map
@@ -51,6 +54,7 @@ class SavedProject {
     );
   }
 
+  /// Serializes the project for [ProjectStorage].
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -62,6 +66,7 @@ class SavedProject {
     };
   }
 
+  /// Marks the project as modified at the current UTC instant.
   void touch() {
     updatedAt = DateTime.now().toUtc();
   }

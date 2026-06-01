@@ -26,14 +26,14 @@ class PlutoGridStyleTheme extends ThemeExtension<PlutoGridStyleTheme> {
 
   /// Standard configuration matching the rest of the app's outlined surfaces.
   const PlutoGridStyleTheme.standard()
-      : borderColor = const Color(0xFFE0E0E0),
-        backgroundColor = const Color(0xFFFFFFFF),
-        factorCellBackground = const Color(0xFFF5F5F5),
-        borderRadius = AppRadius.smRadius,
-        rowHeight = 48,
-        columnHeight = 52,
-        scrollbarThickness = 8,
-        scrollbarRadius = const Radius.circular(10);
+    : borderColor = const Color(0xFFE0E0E0),
+      backgroundColor = const Color(0xFFFFFFFF),
+      factorCellBackground = const Color(0xFFF5F5F5),
+      borderRadius = AppRadius.smRadius,
+      rowHeight = 48,
+      columnHeight = 52,
+      scrollbarThickness = 8,
+      scrollbarRadius = const Radius.circular(10);
 
   final Color borderColor;
   final Color backgroundColor;
@@ -80,20 +80,23 @@ class PlutoGridStyleTheme extends ThemeExtension<PlutoGridStyleTheme> {
       borderColor: Color.lerp(borderColor, other.borderColor, t) ?? borderColor,
       backgroundColor:
           Color.lerp(backgroundColor, other.backgroundColor, t) ??
-              backgroundColor,
+          backgroundColor,
       factorCellBackground:
           Color.lerp(factorCellBackground, other.factorCellBackground, t) ??
-              factorCellBackground,
+          factorCellBackground,
       borderRadius:
           BorderRadius.lerp(borderRadius, other.borderRadius, t) ??
-              borderRadius,
+          borderRadius,
       rowHeight: _lerp(rowHeight, other.rowHeight, t),
       columnHeight: _lerp(columnHeight, other.columnHeight, t),
-      scrollbarThickness:
-          _lerp(scrollbarThickness, other.scrollbarThickness, t),
+      scrollbarThickness: _lerp(
+        scrollbarThickness,
+        other.scrollbarThickness,
+        t,
+      ),
       scrollbarRadius:
           Radius.lerp(scrollbarRadius, other.scrollbarRadius, t) ??
-              scrollbarRadius,
+          scrollbarRadius,
     );
   }
 

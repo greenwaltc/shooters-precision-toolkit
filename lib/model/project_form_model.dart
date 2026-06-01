@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../config/project_configuration.dart';
 import '../sample_size_catalog.dart';
 
+/// Supported experiment structures and their factor counts.
 enum ExperimentStructure {
   simpleABComparison(
     label: 'Test How One Factor (two states) Influences Precision',
@@ -15,8 +16,14 @@ enum ExperimentStructure {
     usesFactorialSamplePlan: false,
   ),
   twoFactors(label: 'Test How Two Factors Influence Precision', factorCount: 2),
-  threeFactors(label: 'Test How Three Factors Influence Precision', factorCount: 3),
-  fourFactors(label: 'Test How Four Factors Influence Precision', factorCount: 4);
+  threeFactors(
+    label: 'Test How Three Factors Influence Precision',
+    factorCount: 3,
+  ),
+  fourFactors(
+    label: 'Test How Four Factors Influence Precision',
+    factorCount: 4,
+  );
 
   const ExperimentStructure({
     required this.label,
@@ -28,6 +35,7 @@ enum ExperimentStructure {
   final int factorCount;
   final bool usesFactorialSamplePlan;
 
+  /// Resolves a persisted enum name to a valid experiment structure.
   static ExperimentStructure fromName(String? name) {
     return ExperimentStructure.values.firstWhere(
       (structure) => structure.name == name,
@@ -36,6 +44,7 @@ enum ExperimentStructure {
   }
 }
 
+/// Risk levels offered by the sample-size calculator.
 enum RiskLevel {
   tenPercent('10%'),
   fivePercent('5%'),
@@ -45,6 +54,7 @@ enum RiskLevel {
 
   final String label;
 
+  /// Resolves a persisted enum name to a valid risk level.
   static RiskLevel fromName(String? name) {
     return RiskLevel.values.firstWhere(
       (riskLevel) => riskLevel.name == name,
@@ -53,10 +63,12 @@ enum RiskLevel {
   }
 }
 
+/// Catalog family used to resolve comparable sample-size options.
 enum SampleSizeFamily {
   simpleComparison,
   factorial;
 
+  /// Resolves a persisted enum name to a valid sample-size family.
   static SampleSizeFamily fromName(String? name) {
     return SampleSizeFamily.values.firstWhere(
       (family) => family.name == name,
@@ -65,6 +77,7 @@ enum SampleSizeFamily {
   }
 }
 
+/// Name and state labels for one factor in the experiment design.
 @immutable
 class FactorDefinition {
   const FactorDefinition({
@@ -77,6 +90,7 @@ class FactorDefinition {
   final String firstState;
   final String secondState;
 
+  /// Rehydrates a factor definition from persisted JSON.
   factory FactorDefinition.fromJson(Map<String, dynamic> json) {
     return FactorDefinition(
       name: json['name'] as String? ?? '',
@@ -85,6 +99,7 @@ class FactorDefinition {
     );
   }
 
+  /// Serializes this factor definition to JSON.
   Map<String, dynamic> toJson() {
     return {'name': name, 'firstState': firstState, 'secondState': secondState};
   }
@@ -214,8 +229,11 @@ class SampleSizeOption {
   factory SampleSizeOption.fromJson(Map<String, dynamic> json) {
     final persistedGroupSize = (json['setSize'] as int?) ?? 0;
     final numFactorsFromJson = json['numFactors'] as int?;
-    final numFactors = numFactorsFromJson ??
-        (persistedGroupSize > 0 ? _numFactorsForGroupSize(persistedGroupSize) : 0);
+    final numFactors =
+        numFactorsFromJson ??
+        (persistedGroupSize > 0
+            ? _numFactorsForGroupSize(persistedGroupSize)
+            : 0);
 
     return SampleSizeOption(
       numFactors: numFactors,
@@ -272,6 +290,7 @@ class SampleSizeOption {
   }
 }
 
+/// Mutable project setup state used by the form and downstream matrix.
 class ProjectFormModel extends ChangeNotifier {
   ProjectFormModel({
     this.projectTitle = '',
@@ -301,6 +320,7 @@ class ProjectFormModel extends ChangeNotifier {
 
   final List<FactorDefinition> _factorDefinitions;
 
+  /// Rehydrates form state from persisted JSON.
   factory ProjectFormModel.fromJson(Map<String, dynamic> json) {
     final structure = ExperimentStructure.fromName(
       json['experimentStructure'] as String?,
@@ -325,6 +345,7 @@ class ProjectFormModel extends ChangeNotifier {
     );
   }
 
+  /// Immutable view of the active factor definitions.
   List<FactorDefinition> get factorDefinitions {
     return List.unmodifiable(_factorDefinitions);
   }
@@ -365,6 +386,7 @@ class ProjectFormModel extends ChangeNotifier {
     return true;
   }
 
+  /// Serializes this form state to JSON.
   Map<String, dynamic> toJson() {
     return {
       'projectTitle': projectTitle,
@@ -378,6 +400,7 @@ class ProjectFormModel extends ChangeNotifier {
     };
   }
 
+  /// Updates the project title and notifies listeners when it changes.
   void setProjectTitle(String title) {
     if (projectTitle == title) return;
 
@@ -385,6 +408,7 @@ class ProjectFormModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates the experiment structure and resizes factor definitions.
   void setExperimentStructure(ExperimentStructure structure) {
     if (experimentStructure == structure) return;
 
@@ -394,6 +418,7 @@ class ProjectFormModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates one factor definition by index.
   void setFactorDefinition({
     required int index,
     required String name,
@@ -418,6 +443,7 @@ class ProjectFormModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates the selected risk level and reconciles sample-size options.
   void setRiskLevel(RiskLevel level) {
     if (riskLevel == level) return;
 
@@ -426,6 +452,7 @@ class ProjectFormModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Updates the selected sample-size option.
   void setSampleSizeOption(SampleSizeOption option) {
     if (sampleSizeOption == option) return;
 
@@ -433,6 +460,7 @@ class ProjectFormModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Enables or disables missing-data imputation when the feature is active.
   void setImputeMissingData(bool shouldImpute) {
     if (!canImputeMissingData) {
       shouldImpute = false;

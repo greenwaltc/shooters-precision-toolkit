@@ -98,13 +98,6 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final labelStyle = textTheme.labelSmall?.copyWith(
-      color: scheme.onSurfaceVariant,
-      letterSpacing: 0.6,
-    );
-
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: ConstrainedBox(
@@ -120,93 +113,126 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text('Enter Range', style: textTheme.titleMedium),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'Save',
-                    onPressed: _submit,
-                    icon: const Icon(Icons.check),
-                  ),
-                ],
-              ),
-              GroupedFieldPanel(
-                outerPadding: EdgeInsets.zero,
-                innerPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        _CompactStat(
-                          label: 'Row',
-                          value: widget.entry.rowIndex.toString(),
-                          labelStyle: labelStyle,
-                          valueStyle: textTheme.titleSmall,
-                        ),
-                        const SizedBox(width: AppSpacing.lg),
-                        _CompactStat(
-                          label: 'Replicate',
-                          value: widget.entry.replicateIndex.toString(),
-                          labelStyle: labelStyle,
-                          valueStyle: textTheme.titleSmall,
-                        ),
-                      ],
-                    ),
-                    if (widget.entry.factorStates.isNotEmpty) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      const Divider(height: 1),
-                      const SizedBox(height: AppSpacing.sm),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (
-                            var i = 0;
-                            i < widget.entry.factorStates.length;
-                            i++
-                          ) ...[
-                            if (i > 0) const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: _CompactStat(
-                                label: widget.entry.factorStates[i].factorName,
-                                value: widget.entry.factorStates[i].state,
-                                labelStyle: AppTextStyles.factorLabel(context),
-                                valueStyle: textTheme.bodySmall,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              _buildHeader(context),
+              _buildEntryContextPanel(context),
               const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: _controller,
-                focusNode: _fieldFocusNode,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                  signed: true,
-                ),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                decoration: const InputDecoration(
-                  labelText: 'Range',
-                  isDense: true,
-                  hintText: 'Enter range value',
-                ),
-              ),
+              _buildRangeInput(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Enter Range',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          tooltip: 'Save',
+          onPressed: _submit,
+          icon: const Icon(Icons.check),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEntryContextPanel(BuildContext context) {
+    return GroupedFieldPanel(
+      outerPadding: EdgeInsets.zero,
+      innerPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildRowSummary(context),
+          if (widget.entry.factorStates.isNotEmpty) _buildFactorStates(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRowSummary(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final labelStyle = _labelStyle(context);
+    return Row(
+      children: [
+        _CompactStat(
+          label: 'Row',
+          value: widget.entry.rowIndex.toString(),
+          labelStyle: labelStyle,
+          valueStyle: textTheme.titleSmall,
+        ),
+        const SizedBox(width: AppSpacing.lg),
+        _CompactStat(
+          label: 'Replicate',
+          value: widget.entry.replicateIndex.toString(),
+          labelStyle: labelStyle,
+          valueStyle: textTheme.titleSmall,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFactorStates(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: AppSpacing.sm),
+        const Divider(height: 1),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var i = 0; i < widget.entry.factorStates.length; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.md),
+              Expanded(child: _buildFactorState(context, i)),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFactorState(BuildContext context, int index) {
+    final factorState = widget.entry.factorStates[index];
+    return _CompactStat(
+      label: factorState.factorName,
+      value: factorState.state,
+      labelStyle: AppTextStyles.factorLabel(context),
+      valueStyle: Theme.of(context).textTheme.bodySmall,
+    );
+  }
+
+  Widget _buildRangeInput() {
+    return TextField(
+      controller: _controller,
+      focusNode: _fieldFocusNode,
+      keyboardType: const TextInputType.numberWithOptions(
+        decimal: true,
+        signed: true,
+      ),
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) => _submit(),
+      decoration: const InputDecoration(
+        labelText: 'Range',
+        isDense: true,
+        hintText: 'Enter range value',
+      ),
+    );
+  }
+
+  TextStyle? _labelStyle(BuildContext context) {
+    return Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      letterSpacing: 0.6,
     );
   }
 }

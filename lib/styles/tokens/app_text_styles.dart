@@ -33,28 +33,25 @@ class AppTextStyles {
   }
 
   /// Bold value styling used by stat tiles (paired with [statLabel]).
-  static TextStyle? statValue(BuildContext context) =>
-      Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-      );
+  static TextStyle? statValue(BuildContext context) => Theme.of(
+    context,
+  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700);
 
   /// Heading inside the header summary card.
-  static TextStyle? headerSummaryTitle(BuildContext context) =>
-      Theme.of(context).textTheme.titleLarge?.copyWith(
-        fontWeight: FontWeight.w600,
-      );
+  static TextStyle? headerSummaryTitle(BuildContext context) => Theme.of(
+    context,
+  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600);
 
   /// Subtitle paragraph beneath a chart / card title.
-  static TextStyle? cardSubtitle(BuildContext context) =>
-      Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      );
+  static TextStyle? cardSubtitle(BuildContext context) => Theme.of(context)
+      .textTheme
+      .bodySmall
+      ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
 
   /// Header style for the form's risk-level / detection table.
-  static TextStyle? formTableHeader(BuildContext context) =>
-      Theme.of(context).textTheme.labelMedium?.copyWith(
-        fontWeight: FontWeight.bold,
-      );
+  static TextStyle? formTableHeader(BuildContext context) => Theme.of(
+    context,
+  ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold);
 
   /// Renderer text style for non-editable factor cells in [PlutoGrid].
   static TextStyle plutoFactorCell(BuildContext context) {

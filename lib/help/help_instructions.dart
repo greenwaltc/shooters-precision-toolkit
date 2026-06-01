@@ -13,8 +13,9 @@ import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 
-final Future<String> _helpInstructionsFuture =
-    rootBundle.loadString('assets/help_instructions.md');
+final Future<String> _helpInstructionsFuture = rootBundle.loadString(
+  'assets/help_instructions.md',
+);
 
 /// Presents the help markdown in a draggable, scrollable bottom sheet.
 Future<void> showHelpInstructionsSheet(BuildContext context) {
@@ -53,6 +54,7 @@ Future<void> showHelpInstructionsSheet(BuildContext context) {
   );
 }
 
+/// Bottom-sheet shell that hosts the scrollable help content.
 class HelpInstructionsSheet extends StatelessWidget {
   const HelpInstructionsSheet({super.key, required this.scrollController});
 
@@ -85,14 +87,13 @@ class HelpInstructionsSheet extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
-        Expanded(
-          child: HelpInstructions(scrollController: scrollController),
-        ),
+        Expanded(child: HelpInstructions(scrollController: scrollController)),
       ],
     );
   }
 }
 
+/// Markdown renderer for bundled help instructions.
 class HelpInstructions extends StatelessWidget {
   const HelpInstructions({super.key, this.scrollController});
 
@@ -102,72 +103,86 @@ class HelpInstructions extends StatelessWidget {
   Widget build(BuildContext context) {
     return FutureBuilder<String>(
       future: _helpInstructionsFuture,
-      builder: (BuildContext context, AsyncSnapshot<String> snapshot) {
-        if (snapshot.hasData) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xl,
-              AppSpacing.lg,
-              AppSpacing.xl,
-              AppSpacing.xxxxl,
-            ),
-            child: Markdown(
-              data: snapshot.data!,
-              selectable: true,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              onTapLink: (text, url, title) {
-                if (url != null) {
-                  launchUrl(Uri.parse(url));
-                }
-              },
-              styleSheet: MarkdownStyleSheet(
-                a: TextStyle(
-                  color: Colors.blue,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-              imageBuilder: (uri, title, alt) {
-                if (uri.path.endsWith('.svg')) {
-                  return SvgPicture.network(
-                    uri.path,
-                    placeholderBuilder: (context) =>
-                        const CircularProgressIndicator(),
-                  );
-                }
-
-                return Image.network(
-                  uri.toString(),
-                  errorBuilder: (context, error, stack) =>
-                      const Icon(Icons.broken_image, color: Colors.grey),
-                  loadingBuilder: (
-                    BuildContext context,
-                    Widget child,
-                    ImageChunkEvent? loadingProgress,
-                  ) {
-                    if (loadingProgress == null) return child;
-                    return Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                            : null,
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return const Center(child: Text('Error loading markdown'));
-        }
-
-        return const Center(child: CircularProgressIndicator());
-      },
+      builder: _buildSnapshot,
     );
+  }
+
+  Widget _buildSnapshot(BuildContext context, AsyncSnapshot<String> snapshot) {
+    if (snapshot.hasData) return _buildMarkdown(snapshot.data!);
+    if (snapshot.hasError) {
+      return const Center(child: Text('Error loading markdown'));
+    }
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  Widget _buildMarkdown(String data) {
+    return SingleChildScrollView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.xxxxl,
+      ),
+      child: Markdown(
+        data: data,
+        selectable: true,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        onTapLink: _openLink,
+        styleSheet: _markdownStyleSheet(),
+        imageBuilder: _buildMarkdownImage,
+      ),
+    );
+  }
+
+  MarkdownStyleSheet _markdownStyleSheet() {
+    return MarkdownStyleSheet(
+      a: const TextStyle(
+        color: Colors.blue,
+        decoration: TextDecoration.underline,
+      ),
+    );
+  }
+
+  Widget _buildMarkdownImage(Uri uri, String? title, String? alt) {
+    if (uri.path.endsWith('.svg')) {
+      return SvgPicture.network(
+        uri.path,
+        placeholderBuilder: (context) => const CircularProgressIndicator(),
+      );
+    }
+
+    return Image.network(
+      uri.toString(),
+      errorBuilder: (context, error, stack) =>
+          const Icon(Icons.broken_image, color: Colors.grey),
+      loadingBuilder: _buildImageLoadingState,
+    );
+  }
+
+  Widget _buildImageLoadingState(
+    BuildContext context,
+    Widget child,
+    ImageChunkEvent? loadingProgress,
+  ) {
+    if (loadingProgress == null) return child;
+    return Center(
+      child: CircularProgressIndicator(
+        value: _imageLoadingValue(loadingProgress),
+      ),
+    );
+  }
+
+  double? _imageLoadingValue(ImageChunkEvent loadingProgress) {
+    final expectedTotalBytes = loadingProgress.expectedTotalBytes;
+    if (expectedTotalBytes == null) return null;
+    return loadingProgress.cumulativeBytesLoaded / expectedTotalBytes;
+  }
+
+  void _openLink(String text, String? url, String? title) {
+    if (url != null) {
+      launchUrl(Uri.parse(url));
+    }
   }
 }

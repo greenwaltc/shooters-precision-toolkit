@@ -43,114 +43,97 @@ class AppTheme {
   }
 
   static ThemeData _build(ColorScheme colorScheme) {
-    final base = ThemeData(
-      colorScheme: colorScheme,
-      useMaterial3: true,
-    );
+    final base = ThemeData(colorScheme: colorScheme, useMaterial3: true);
 
     return base.copyWith(
-      // -- Cards ---------------------------------------------------------
-      cardTheme: CardThemeData(
-        elevation: 0,
-        color: colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.smRadius,
-          side: BorderSide(color: colorScheme.outlineVariant),
-        ),
-      ),
-
-      // -- Dialogs -------------------------------------------------------
-      dialogTheme: DialogThemeData(
-        shape: const RoundedRectangleBorder(
-          borderRadius: AppRadius.xlRadius,
-        ),
-      ),
-
-      // -- Bottom sheet --------------------------------------------------
-      bottomSheetTheme: const BottomSheetThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.bottomSheetRadius,
-        ),
-      ),
-
-      // -- Inputs --------------------------------------------------------
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: colorScheme.surfaceContainerLowest,
-        border: const OutlineInputBorder(
-          borderRadius: AppRadius.mdRadius,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdRadius,
-          borderSide: BorderSide(
-            color: colorScheme.outline,
-            width: AppBorders.regular,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdRadius,
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: AppBorders.focus,
-          ),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdRadius,
-          borderSide: BorderSide(
-            color: colorScheme.error,
-            width: AppBorders.regular,
-          ),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdRadius,
-          borderSide: BorderSide(
-            color: colorScheme.error,
-            width: AppBorders.focus,
-          ),
-        ),
-      ),
-
-      // -- Snackbar ------------------------------------------------------
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: AppRadius.mdRadius,
-        ),
-        backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
-      ),
-
-      // -- Drawer --------------------------------------------------------
-      drawerTheme: DrawerThemeData(
-        backgroundColor: colorScheme.surface,
-      ),
-
-      // -- App bar -------------------------------------------------------
-      appBarTheme: AppBarTheme(
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-      ),
-
-      // -- Divider -------------------------------------------------------
-      dividerTheme: DividerThemeData(
-        color: colorScheme.outlineVariant,
-        space: 1,
-        thickness: 1,
-      ),
-
-      // -- Page padding helper -------------------------------------------
-      // Page-level padding is provided as a token (`AppSpacing.page`) so it
-      // can be applied per-route without forcing it on every Scaffold.
+      cardTheme: _cardTheme(colorScheme),
+      dialogTheme: _dialogTheme(),
+      bottomSheetTheme: _bottomSheetTheme(),
+      inputDecorationTheme: _inputDecorationTheme(colorScheme),
+      snackBarTheme: _snackBarTheme(colorScheme),
+      drawerTheme: _drawerTheme(colorScheme),
+      appBarTheme: _appBarTheme(colorScheme),
+      dividerTheme: _dividerTheme(colorScheme),
       visualDensity: VisualDensity.standard,
-
-      // -- Theme extensions ----------------------------------------------
-      extensions: const <ThemeExtension<dynamic>>[
-        FactorPaletteTheme.standard(),
-        AnomrChartTheme.standard(),
-        PlutoGridStyleTheme.standard(),
-      ],
+      extensions: _extensions,
     );
   }
+
+  static CardThemeData _cardTheme(ColorScheme colorScheme) {
+    return CardThemeData(
+      elevation: 0,
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadius.smRadius,
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
+    );
+  }
+
+  static DialogThemeData _dialogTheme() {
+    return const DialogThemeData(
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.xlRadius),
+    );
+  }
+
+  static BottomSheetThemeData _bottomSheetTheme() {
+    return const BottomSheetThemeData(
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.bottomSheetRadius),
+    );
+  }
+
+  static InputDecorationTheme _inputDecorationTheme(ColorScheme colorScheme) {
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: colorScheme.surfaceContainerLowest,
+      border: const OutlineInputBorder(borderRadius: AppRadius.mdRadius),
+      enabledBorder: _inputBorder(colorScheme.outline, AppBorders.regular),
+      focusedBorder: _inputBorder(colorScheme.primary, AppBorders.focus),
+      errorBorder: _inputBorder(colorScheme.error, AppBorders.regular),
+      focusedErrorBorder: _inputBorder(colorScheme.error, AppBorders.focus),
+    );
+  }
+
+  static OutlineInputBorder _inputBorder(Color color, double width) {
+    return OutlineInputBorder(
+      borderRadius: AppRadius.mdRadius,
+      borderSide: BorderSide(color: color, width: width),
+    );
+  }
+
+  static SnackBarThemeData _snackBarTheme(ColorScheme colorScheme) {
+    return SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: AppRadius.mdRadius),
+      backgroundColor: colorScheme.inverseSurface,
+      contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
+    );
+  }
+
+  static DrawerThemeData _drawerTheme(ColorScheme colorScheme) {
+    return DrawerThemeData(backgroundColor: colorScheme.surface);
+  }
+
+  static AppBarTheme _appBarTheme(ColorScheme colorScheme) {
+    return AppBarTheme(
+      elevation: 0,
+      scrolledUnderElevation: 0.5,
+      backgroundColor: colorScheme.surface,
+      foregroundColor: colorScheme.onSurface,
+    );
+  }
+
+  static DividerThemeData _dividerTheme(ColorScheme colorScheme) {
+    return DividerThemeData(
+      color: colorScheme.outlineVariant,
+      space: 1,
+      thickness: 1,
+    );
+  }
+
+  static const List<ThemeExtension<dynamic>> _extensions = [
+    FactorPaletteTheme.standard(),
+    AnomrChartTheme.standard(),
+    PlutoGridStyleTheme.standard(),
+  ];
 }

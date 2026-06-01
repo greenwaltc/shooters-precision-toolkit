@@ -38,82 +38,97 @@ class _ExportDialogState extends State<ExportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Export Results'),
+      content: SizedBox(width: _contentWidth, child: _buildContent(context)),
+      actions: _buildActions(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return AlertDialog(
-      title: const Text('Export Results'),
-      content: SizedBox(
-        width: _contentWidth,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Format',
-              style: textTheme.labelLarge?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            RadioGroup<ExportFormat>(
-              groupValue: _format,
-              onChanged: _onFormatChanged,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final option in ExportFormat.values)
-                    RadioListTile<ExportFormat>(
-                      value: option,
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      title: Text(option.label),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Divider(),
-            const SizedBox(height: AppSpacing.md),
-            Opacity(
-              opacity: _pdfSelected ? 1 : AppOpacity.disabled,
-              child: CheckboxListTile(
-                value: _includeMatrix,
-                onChanged: _pdfSelected
-                    ? (value) =>
-                        setState(() => _includeMatrix = value ?? false)
-                    : null,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Include data matrix'),
-                subtitle: Text(
-                  _pdfSelected
-                      ? 'Matrix will be placed before the graph.'
-                      : 'Only available when exporting to PDF.',
-                  style: textTheme.bodySmall,
-                ),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Format',
+          style: textTheme.labelLarge?.copyWith(color: scheme.onSurfaceVariant),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton.icon(
-          onPressed: () => Navigator.of(context).pop(
-            ExportOptions(
-              format: _format,
-              includeMatrix: _includeMatrix && _pdfSelected,
-            ),
-          ),
-          icon: const Icon(Icons.download),
-          label: const Text('Export'),
-        ),
+        const SizedBox(height: AppSpacing.sm),
+        _buildFormatOptions(),
+        const SizedBox(height: AppSpacing.md),
+        const Divider(),
+        const SizedBox(height: AppSpacing.md),
+        _buildMatrixOption(textTheme),
       ],
     );
+  }
+
+  Widget _buildFormatOptions() {
+    return RadioGroup<ExportFormat>(
+      groupValue: _format,
+      onChanged: _onFormatChanged,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final option in ExportFormat.values)
+            RadioListTile<ExportFormat>(
+              value: option,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: Text(option.label),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMatrixOption(TextTheme textTheme) {
+    return Opacity(
+      opacity: _pdfSelected ? 1 : AppOpacity.disabled,
+      child: CheckboxListTile(
+        value: _includeMatrix,
+        onChanged: _pdfSelected ? _onIncludeMatrixChanged : null,
+        contentPadding: EdgeInsets.zero,
+        dense: true,
+        title: const Text('Include data matrix'),
+        subtitle: Text(_matrixOptionDescription, style: textTheme.bodySmall),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
+    );
+  }
+
+  List<Widget> _buildActions(BuildContext context) {
+    return [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton.icon(
+        onPressed: () => Navigator.of(context).pop(_exportOptions),
+        icon: const Icon(Icons.download),
+        label: const Text('Export'),
+      ),
+    ];
+  }
+
+  void _onIncludeMatrixChanged(bool? value) {
+    setState(() => _includeMatrix = value ?? false);
+  }
+
+  ExportOptions get _exportOptions {
+    return ExportOptions(
+      format: _format,
+      includeMatrix: _includeMatrix && _pdfSelected,
+    );
+  }
+
+  String get _matrixOptionDescription {
+    return _pdfSelected
+        ? 'Matrix will be placed before the graph.'
+        : 'Only available when exporting to PDF.';
   }
 }

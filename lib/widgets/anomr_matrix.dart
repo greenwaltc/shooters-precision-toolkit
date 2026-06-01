@@ -16,16 +16,20 @@ import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/components/matrix_grid_style.dart';
 import '../styles/layout/app_layout.dart';
 import '../styles/layout/app_viewport.dart';
-import 'anomr_results/services/anomr_calculator.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
+import 'anomr_matrix/services/matrix_grid_data_builder.dart';
+import 'anomr_matrix/widgets/grid_scroll_cue.dart';
+import 'anomr_results/services/anomr_calculator.dart';
+import 'no_selected_project_page.dart';
 import 'project_drawer.dart';
 import 'range_entry_sheet.dart';
-import 'no_selected_project_page.dart';
 
+/// Route that renders the selected project's ANOMR data-entry matrix.
 class AnomrMatrix extends StatelessWidget {
   const AnomrMatrix({super.key});
 
@@ -70,9 +74,7 @@ class _ProjectSetupRequiredRedirectState
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
 
@@ -87,84 +89,71 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     final store = context.read<ProjectStore>();
 
     return AppLayoutBuilder(
-      builder: (context, layout) {
-        return Scaffold(
-          drawer: const ProjectDrawer(),
-          appBar: AppBar(
-            title: Text(project.displayName),
-            actions: [
-              ...helpAppBarActionsFor(layout, preferAppBar: true),
-              IconButton(
-                tooltip: 'Projects',
-                onPressed: () => _goHome(context, store),
-                icon: const Icon(Icons.home_outlined),
-              ),
-              IconButton(
-                tooltip: 'Project setup',
-                onPressed: () => _goToProjectSetup(context, store),
-                icon: const Icon(Icons.tune),
-              ),
-            ],
-          ),
-          body: SafeArea(
-            minimum: AppViewport.safeAreaMinimum,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      layout.pageGutter,
-                      layout.isMobile ? AppSpacing.sm : AppSpacing.md,
-                      layout.pageGutter,
-                      AppSpacing.lg,
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth: layout.matrixHeaderMaxWidth,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Factors and Ranges',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: AppSpacing.sm),
-                            Text(formModel.experimentStructure.label),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: layout.pageGutter,
-                      ),
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            maxWidth: layout.matrixHeaderMaxWidth,
-                          ),
-                          child: AnomrMatrixGrid(
-                            key: ValueKey(
-                              '${project.id}_${formModel.experimentStructure}_${formModel.sampleSizeOption.totalSamples}_${layout.isMobile}',
-                            ),
-                            project: project,
-                            isMobile: layout.isMobile,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      builder: (context, layout) => Scaffold(
+        drawer: const ProjectDrawer(),
+        appBar: _buildAppBar(context, layout, store),
+        body: _buildBody(context, layout, formModel),
+      ),
+    );
+  }
+
+  AppBar _buildAppBar(
+    BuildContext context,
+    AppLayoutMetrics layout,
+    ProjectStore store,
+  ) {
+    return AppBar(
+      title: Text(project.displayName),
+      actions: [
+        ...helpAppBarActionsFor(layout, preferAppBar: true),
+        IconButton(
+          tooltip: 'Projects',
+          onPressed: () => _goHome(context, store),
+          icon: const Icon(Icons.home_outlined),
+        ),
+        IconButton(
+          tooltip: 'Project setup',
+          onPressed: () => _goToProjectSetup(context, store),
+          icon: const Icon(Icons.tune),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    AppLayoutMetrics layout,
+    ProjectFormModel formModel,
+  ) {
+    return SafeArea(
+      minimum: AppViewport.safeAreaMinimum,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _MatrixHeader(layout: layout, formModel: formModel),
+          Expanded(child: _buildGrid(layout, formModel)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGrid(AppLayoutMetrics layout, ProjectFormModel formModel) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: layout.pageGutter),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: layout.matrixHeaderMaxWidth),
+          child: AnomrMatrixGrid(
+            key: ValueKey(
+              '${project.id}_${formModel.experimentStructure}_'
+              '${formModel.sampleSizeOption.totalSamples}_${layout.isMobile}',
             ),
-        );
-      },
+            project: project,
+            isMobile: layout.isMobile,
+          ),
+        ),
+      ),
     );
   }
 
@@ -184,6 +173,47 @@ class _AnomrMatrixScaffold extends StatelessWidget {
   }
 }
 
+class _MatrixHeader extends StatelessWidget {
+  const _MatrixHeader({required this.layout, required this.formModel});
+
+  final AppLayoutMetrics layout;
+  final ProjectFormModel formModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        layout.pageGutter,
+        layout.isMobile ? AppSpacing.sm : AppSpacing.md,
+        layout.pageGutter,
+        AppSpacing.lg,
+      ),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: layout.matrixHeaderMaxWidth),
+          child: _buildTitle(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitle(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Factors and Ranges',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(formModel.experimentStructure.label),
+      ],
+    );
+  }
+}
+
+/// Interactive Pluto grid used to enter range values for each factor state.
 class AnomrMatrixGrid extends StatefulWidget {
   const AnomrMatrixGrid({
     super.key,
@@ -207,17 +237,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   static const double _scrollEpsilon = 1;
 
-  /// Minimum width for read-only index columns before autofit runs.
-  static const double _indexColumnMinWidth = 52;
-
-  /// Default factor column width.
-  static const double _factorColumnWidth = 120;
-
-  /// Default range column width.
-  static const double _rangeColumnWidth = 150;
-
-  /// Matches [PlutoGridSettings.rowBorderWidth].
-  static const double _rowBorderWidth = 1;
+  PlutoGridStyleTheme _plutoTheme() {
+    return Theme.of(context).extension<PlutoGridStyleTheme>() ??
+        const PlutoGridStyleTheme.standard();
+  }
 
   double _columnTotalWidth() {
     final columns = _stateManager?.columns ?? _columns;
@@ -225,11 +248,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   double _gridContentWidth({required bool includeVerticalScrollbar}) {
-    final plutoTheme =
-        Theme.of(context).extension<PlutoGridStyleTheme>() ??
-        const PlutoGridStyleTheme.standard();
-    final scrollbarWidth =
-        includeVerticalScrollbar ? plutoTheme.scrollbarThickness : 0;
+    final plutoTheme = _plutoTheme();
+    final scrollbarWidth = includeVerticalScrollbar
+        ? plutoTheme.scrollbarThickness
+        : 0;
     return _columnTotalWidth() +
         PlutoGridSettings.gridInnerSpacing +
         scrollbarWidth;
@@ -239,15 +261,18 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     required PlutoGridStyleTheme plutoTheme,
     required bool includeHorizontalScrollbar,
   }) {
-    final scrollbarHeight =
-        includeHorizontalScrollbar ? plutoTheme.scrollbarThickness : 0;
-    final columnGroupHeight =
-        _columnGroups.isEmpty ? 0 : plutoTheme.columnHeight;
+    final scrollbarHeight = includeHorizontalScrollbar
+        ? plutoTheme.scrollbarThickness
+        : 0;
+    final columnGroupHeight = _columnGroups.isEmpty
+        ? 0
+        : plutoTheme.columnHeight;
 
     return PlutoGridSettings.gridInnerSpacing +
         columnGroupHeight +
         plutoTheme.columnHeight +
-        (_rows.length * (plutoTheme.rowHeight + _rowBorderWidth)) +
+        (_rows.length *
+            (plutoTheme.rowHeight + MatrixGridStyle.rowBorderWidth)) +
         scrollbarHeight;
   }
 
@@ -312,7 +337,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     final next = _ScrollCueState(
       showLeft: hasHorizontalOverflow && offsetHorizontal > _scrollEpsilon,
-      showRight: hasHorizontalOverflow &&
+      showRight:
+          hasHorizontalOverflow &&
           offsetHorizontal < maxHorizontal - _scrollEpsilon,
       showTop: hasVerticalOverflow && offsetVertical > _scrollEpsilon,
       showBottom:
@@ -407,8 +433,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       return manager.rowsTopOffset + PlutoGridSettings.gridBorderWidth;
     }
 
-    final columnGroupHeight =
-        _columnGroups.isEmpty ? 0 : plutoTheme.columnHeight;
+    final columnGroupHeight = _columnGroups.isEmpty
+        ? 0
+        : plutoTheme.columnHeight;
     return PlutoGridSettings.gridInnerSpacing +
         columnGroupHeight +
         plutoTheme.columnHeight;
@@ -438,8 +465,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               left: 0,
               top: 0,
               bottom: 0,
-              child: _GridScrollCue(
-                edge: _ScrollCueEdge.left,
+              child: GridScrollCue(
+                edge: MatrixScrollCueEdge.left,
                 scheme: scheme,
               ),
             ),
@@ -448,8 +475,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               right: 0,
               top: 0,
               bottom: 0,
-              child: _GridScrollCue(
-                edge: _ScrollCueEdge.right,
+              child: GridScrollCue(
+                edge: MatrixScrollCueEdge.right,
                 scheme: scheme,
               ),
             ),
@@ -458,8 +485,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               left: 0,
               right: 0,
               top: _bodyRowsTopInset(plutoTheme),
-              child: _GridScrollCue(
-                edge: _ScrollCueEdge.top,
+              child: GridScrollCue(
+                edge: MatrixScrollCueEdge.top,
                 scheme: scheme,
               ),
             ),
@@ -468,8 +495,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: _GridScrollCue(
-                edge: _ScrollCueEdge.bottom,
+              child: GridScrollCue(
+                edge: MatrixScrollCueEdge.bottom,
                 scheme: scheme,
               ),
             ),
@@ -495,17 +522,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       width: _initialIndexColumnWidth(title: title, maxValue: maxValue),
       textAlign: PlutoColumnTextAlign.center,
       titleTextAlign: PlutoColumnTextAlign.center,
-      renderer: (rendererContext) {
-        final plutoTheme =
-            Theme.of(context).extension<PlutoGridStyleTheme>() ??
-            const PlutoGridStyleTheme.standard();
-        return _readOnlyCell(
-          rendererContext: rendererContext,
-          plutoTheme: plutoTheme,
-          alignment: Alignment.center,
-          fadeOverflow: false,
-        );
-      },
+      renderer: (rendererContext) => _readOnlyCell(
+        rendererContext: rendererContext,
+        plutoTheme: _plutoTheme(),
+        alignment: Alignment.center,
+        fadeOverflow: false,
+      ),
     );
   }
 
@@ -521,7 +543,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     return (math.max(titleWidth, cellWidth) +
             AppSpacing.plutoFactorCell.horizontal +
             AppSpacing.lg)
-        .clamp(_indexColumnMinWidth, double.infinity);
+        .clamp(MatrixGridStyle.indexColumnMinWidth, double.infinity);
   }
 
   double _measureText(String text, TextStyle style) {
@@ -605,215 +627,94 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   void _initializeGridData() {
     final formModel = context.read<ProjectFormModel>();
-    final factors = formModel.factorDefinitions;
-    final combinations = _generateCombinations(factors);
-    final n = formModel.sampleSizeOption.rangesPerGroup.toInt();
-    final totalSamples = formModel.sampleSizeOption.totalSamples;
+    final gridData = MatrixGridDataBuilder.build(
+      formModel: formModel,
+      project: widget.project,
+    );
 
-    final factorFields = <String>[];
+    _rows = gridData.rows;
+    _columns = _buildColumns(formModel, gridData.totalSamples);
+    _columnGroups = _buildColumnGroups(formModel);
+  }
 
-    // 1. Generate Columns
-    _columns = [
-      _readOnlyIndexColumn(
-        title: 'Row',
-        field: 'row',
-        maxValue: totalSamples,
-      ),
+  List<PlutoColumn> _buildColumns(
+    ProjectFormModel formModel,
+    int totalSamples,
+  ) {
+    return [
+      _readOnlyIndexColumn(title: 'Row', field: 'row', maxValue: totalSamples),
       _readOnlyIndexColumn(
         title: 'Replicate',
         field: 'group',
-        maxValue: n,
+        maxValue: formModel.sampleSizeOption.rangesPerGroup.toInt(),
       ),
-      ...factors.asMap().entries.map((entry) {
-        final idx = entry.key;
-        final factor = entry.value;
-        final field = 'factor_$idx';
-        factorFields.add(field);
-        return PlutoColumn(
-          title: factor.name.trim().isEmpty ? 'Factor ${idx + 1}' : factor.name,
-          field: field,
-          type: PlutoColumnType.text(),
-          enableEditingMode: false,
-          enableColumnDrag: false,
-          enableContextMenu: false,
-          enableDropToResize: true,
-          width: _factorColumnWidth,
-          renderer: (rendererContext) {
-            // Resolve the Pluto theme at render time (not initState) so we
-            // don't violate the "no inherited lookups in initState" rule.
-            final plutoTheme =
-                Theme.of(context).extension<PlutoGridStyleTheme>() ??
-                const PlutoGridStyleTheme.standard();
-            return _readOnlyCell(
-              rendererContext: rendererContext,
-              plutoTheme: plutoTheme,
-              alignment: Alignment.centerLeft,
-            );
-          },
-        );
-      }),
-      PlutoColumn(
-        title: 'Ranges',
-        field: 'range',
-        // Using text type to avoid any rounding/precision issues during paste.
-        // The results view parses this back to double.
-        type: PlutoColumnType.text(),
-        readOnly: widget.isMobile,
-        enableEditingMode: !widget.isMobile,
-        enableColumnDrag: false,
-        enableContextMenu: false,
-        enableDropToResize: true,
-        width: _rangeColumnWidth,
-        renderer: widget.isMobile ? _mobileRangeCellRenderer : null,
+      ..._buildFactorColumns(formModel),
+      _buildRangeColumn(),
+    ];
+  }
+
+  List<PlutoColumn> _buildFactorColumns(ProjectFormModel formModel) {
+    return [
+      for (final entry in formModel.factorDefinitions.asMap().entries)
+        _buildFactorColumn(index: entry.key, factor: entry.value),
+    ];
+  }
+
+  PlutoColumn _buildFactorColumn({
+    required int index,
+    required FactorDefinition factor,
+  }) {
+    return PlutoColumn(
+      title: MatrixGridDataBuilder.factorLabel(factor, index),
+      field: 'factor_$index',
+      type: PlutoColumnType.text(),
+      enableEditingMode: false,
+      enableColumnDrag: false,
+      enableContextMenu: false,
+      enableDropToResize: true,
+      width: MatrixGridStyle.factorColumnWidth,
+      renderer: (rendererContext) => _readOnlyCell(
+        rendererContext: rendererContext,
+        plutoTheme: _plutoTheme(),
+        alignment: Alignment.centerLeft,
+      ),
+    );
+  }
+
+  PlutoColumn _buildRangeColumn() {
+    return PlutoColumn(
+      title: 'Ranges',
+      field: 'range',
+      // Text avoids precision loss during paste; results parse back to double.
+      type: PlutoColumnType.text(),
+      readOnly: widget.isMobile,
+      enableEditingMode: !widget.isMobile,
+      enableColumnDrag: false,
+      enableContextMenu: false,
+      enableDropToResize: true,
+      width: MatrixGridStyle.rangeColumnWidth,
+      renderer: widget.isMobile ? _mobileRangeCellRenderer : null,
+    );
+  }
+
+  List<PlutoColumnGroup> _buildColumnGroups(ProjectFormModel formModel) {
+    return [
+      PlutoColumnGroup(
+        title: 'Factors',
+        fields: [
+          for (
+            var index = 0;
+            index < formModel.factorDefinitions.length;
+            index++
+          )
+            'factor_$index',
+        ],
       ),
     ];
-
-    // 2. Define Column Groups for Factors
-    _columnGroups = [PlutoColumnGroup(title: 'Factors', fields: factorFields)];
-
-    // 3. Generate rows. One-factor designs group all rows for each state
-    // together; multi-factor designs interleave states within each replicate.
-    _rows = [];
-    final structure = formModel.experimentStructure;
-    final stateMajorOrder =
-        structure == ExperimentStructure.simpleABComparison;
-
-    if (stateMajorOrder) {
-      for (int comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
-        for (int blockIdx = 0; blockIdx < n; blockIdx++) {
-          _rows.add(
-            _buildMatrixRow(
-              formModel: formModel,
-              combo: combinations[comboIdx],
-              comboIdx: comboIdx,
-              blockIdx: blockIdx,
-              comboCount: combinations.length,
-              factors: factors,
-            ),
-          );
-        }
-      }
-    } else {
-      for (int blockIdx = 0; blockIdx < n; blockIdx++) {
-        for (int comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
-          _rows.add(
-            _buildMatrixRow(
-              formModel: formModel,
-              combo: combinations[comboIdx],
-              comboIdx: comboIdx,
-              blockIdx: blockIdx,
-              comboCount: combinations.length,
-              factors: factors,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  PlutoRow _buildMatrixRow({
-    required ProjectFormModel formModel,
-    required List<String> combo,
-    required int comboIdx,
-    required int blockIdx,
-    required int comboCount,
-    required List<FactorDefinition> factors,
-  }) {
-    final cells = <String, PlutoCell>{};
-
-    for (int factorIdx = 0; factorIdx < factors.length; factorIdx++) {
-      cells['factor_$factorIdx'] = PlutoCell(value: combo[factorIdx]);
-    }
-
-    final rangeIndex = formModel.sampleSizeOption.matrixRangeIndex(
-      comboIdx: comboIdx,
-      blockIdx: blockIdx,
-      comboCount: comboCount,
-      structure: formModel.experimentStructure,
-    );
-    final savedValue = _loadSavedRangeValue(
-      rangeIndex: rangeIndex,
-      comboIdx: comboIdx,
-      blockIdx: blockIdx,
-      comboCount: comboCount,
-      structure: formModel.experimentStructure,
-    );
-
-    cells['group'] = PlutoCell(value: blockIdx + 1);
-    cells['row'] = PlutoCell(value: rangeIndex + 1);
-    cells['range'] = PlutoCell(value: savedValue);
-    return PlutoRow(cells: cells);
-  }
-
-  Object? _loadSavedRangeValue({
-    required int rangeIndex,
-    required int comboIdx,
-    required int blockIdx,
-    required int comboCount,
-    required ExperimentStructure structure,
-  }) {
-    final primaryKey = 'range_$rangeIndex';
-    final primaryValue = widget.project.matrixState[primaryKey];
-    if (primaryValue != null) return primaryValue;
-
-    if (structure != ExperimentStructure.simpleABComparison) {
-      return null;
-    }
-
-    // Projects saved before state-major ordering used replicate-major indices.
-    final legacyIndex = blockIdx * comboCount + comboIdx;
-    return widget.project.matrixState['range_$legacyIndex'];
-  }
-
-  int? _comboIndexForRow(PlutoRow row, List<List<String>> combinations) {
-    for (var comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
-      final combo = combinations[comboIdx];
-      var matches = true;
-      for (var factorIdx = 0; factorIdx < combo.length; factorIdx++) {
-        if (row.cells['factor_$factorIdx']?.value?.toString() != combo[factorIdx]) {
-          matches = false;
-          break;
-        }
-      }
-      if (matches) return comboIdx;
-    }
-    return null;
   }
 
   String _rangeStorageKeyForRow(PlutoRow row) {
-    final formModel = context.read<ProjectFormModel>();
-    final combinations = _generateCombinations(formModel.factorDefinitions);
-    final comboIdx = _comboIndexForRow(row, combinations);
-    final blockIdx = (_cellIntValue(row.cells['group']) ?? 1) - 1;
-
-    if (comboIdx == null || blockIdx < 0) {
-      final rowIndex = _cellIntValue(row.cells['row']);
-      return 'range_${(rowIndex ?? 1) - 1}';
-    }
-
-    final rangeIndex = formModel.sampleSizeOption.matrixRangeIndex(
-      comboIdx: comboIdx,
-      blockIdx: blockIdx,
-      comboCount: combinations.length,
-      structure: formModel.experimentStructure,
-    );
-    return 'range_$rangeIndex';
-  }
-
-  List<List<String>> _generateCombinations(List<FactorDefinition> factors) {
-    if (factors.isEmpty) return [[]];
-    List<List<String>> results = [[]];
-    for (final factor in factors) {
-      final List<List<String>> nextResults = [];
-      for (final res in results) {
-        final s1 = factor.firstState.trim().isEmpty ? '1' : factor.firstState;
-        final s2 = factor.secondState.trim().isEmpty ? '2' : factor.secondState;
-        nextResults.add([...res, s1]);
-        nextResults.add([...res, s2]);
-      }
-      results = nextResults;
-    }
-    return results;
+    return MatrixGridDataBuilder.storageKeyForRow(row);
   }
 
   Widget _mobileRangeCellRenderer(PlutoColumnRendererContext rendererContext) {
@@ -847,7 +748,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final factorStates = <FactorStateEntry>[
       for (var i = 0; i < formModel.factorDefinitions.length; i++)
         FactorStateEntry(
-          factorName: _factorLabel(formModel.factorDefinitions[i], i),
+          factorName: MatrixGridDataBuilder.factorLabel(
+            formModel.factorDefinitions[i],
+            i,
+          ),
           state: row.cells['factor_$i']?.value?.toString() ?? '',
         ),
     ];
@@ -855,9 +759,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final result = await showRangeEntrySheet(
       context,
       entry: RangeEntryContext(
-        rowIndex: _cellIntValue(row.cells['row']) ?? rendererContext.rowIdx + 1,
+        rowIndex:
+            MatrixGridDataBuilder.cellIntValue(row.cells['row']) ??
+            rendererContext.rowIdx + 1,
         replicateIndex:
-            _cellIntValue(row.cells['group']) ?? rendererContext.rowIdx + 1,
+            MatrixGridDataBuilder.cellIntValue(row.cells['group']) ??
+            rendererContext.rowIdx + 1,
         factorStates: factorStates,
         initialValue: rendererContext.cell.value?.toString(),
       ),
@@ -871,18 +778,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
   }
 
-  int? _cellIntValue(PlutoCell? cell) {
-    final value = cell?.value;
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '');
-  }
-
-  String _factorLabel(FactorDefinition factor, int index) {
-    final name = factor.name.trim();
-    return name.isEmpty ? 'Factor ${index + 1}' : name;
-  }
-
   void _applyRangeValue({required int rowIdx, required Object? value}) {
     final manager = _stateManager;
     if (manager == null) return;
@@ -892,10 +787,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         value;
     context.read<ProjectStore>().persistSelectedProject(markModified: true);
 
-    final rangeColumn = manager.columns.firstWhere(
-      (column) => column.field == 'range',
-    );
-    manager.autoFitColumn(context, rangeColumn);
     manager.notifyListeners();
     setState(() {});
   }
@@ -924,120 +815,137 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       return;
     }
 
-    Navigator.pushNamed(
-      context,
-      AppRoutes.anomrResults,
-      arguments: manager,
-    );
+    Navigator.pushNamed(context, AppRoutes.anomrResults, arguments: manager);
   }
 
   void _clearRanges() {
     if (_stateManager == null) return;
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        final scheme = Theme.of(context).colorScheme;
-        return AlertDialog(
-          title: const Text('Clear All Ranges?'),
-          content: const Text(
-            'Are you sure you want to clear all entered range values? This action cannot be undone.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  for (int i = 0; i < _stateManager!.rows.length; i++) {
-                    _stateManager!.rows[i].cells['range']!.value = null;
-                    widget.project.matrixState.remove(
-                      _rangeStorageKeyForRow(_stateManager!.rows[i]),
-                    );
-                  }
-                  _stateManager!.notifyListeners();
-                  context.read<ProjectStore>().persistSelectedProject(
-                    markModified: true,
-                  );
-                });
-                Navigator.pop(context);
-              },
-              child: Text('Clear All', style: TextStyle(color: scheme.error)),
-            ),
-          ],
-        );
-      },
+    showDialog(context: context, builder: _buildClearRangesDialog);
+  }
+
+  AlertDialog _buildClearRangesDialog(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: const Text('Clear All Ranges?'),
+      content: const Text(
+        'Are you sure you want to clear all entered range values? This action cannot be undone.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => _confirmClearRanges(context),
+          child: Text('Clear All', style: TextStyle(color: scheme.error)),
+        ),
+      ],
     );
+  }
+
+  void _confirmClearRanges(BuildContext dialogContext) {
+    setState(_clearAllRangeValues);
+    Navigator.pop(dialogContext);
+  }
+
+  void _clearAllRangeValues() {
+    final manager = _stateManager;
+    if (manager == null) return;
+
+    for (final row in manager.rows) {
+      row.cells['range']!.value = null;
+      widget.project.matrixState.remove(_rangeStorageKeyForRow(row));
+    }
+    manager.notifyListeners();
+    context.read<ProjectStore>().persistSelectedProject(markModified: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final plutoTheme =
-        Theme.of(context).extension<PlutoGridStyleTheme>() ??
-        const PlutoGridStyleTheme.standard();
+    final plutoTheme = _plutoTheme();
     final scheme = Theme.of(context).colorScheme;
 
     return AppLayoutBuilder(
-      builder: (context, layout) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final displaySize = _displaySize(
-                      maxWidth: constraints.maxWidth,
-                      maxHeight: constraints.maxHeight,
-                      plutoTheme: plutoTheme,
-                    );
+      builder: (context, layout) => Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: _buildGridArea(plutoTheme, scheme)),
+          _MatrixActions(
+            layout: layout,
+            canShowResults: _stateManager != null,
+            onShowResults: () => _showResults(context),
+            onClearRanges: _clearRanges,
+          ),
+        ],
+      ),
+    );
+  }
 
-                    return _buildGridViewport(
-                      width: displaySize.width,
-                      height: displaySize.height,
-                      plutoTheme: plutoTheme,
-                      showScrollbars: displaySize.showScrollbars,
-                      scheme: scheme,
-                    );
-                  },
-                ),
-              ),
+  Widget _buildGridArea(PlutoGridStyleTheme plutoTheme, ColorScheme scheme) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final displaySize = _displaySize(
+            maxWidth: constraints.maxWidth,
+            maxHeight: constraints.maxHeight,
+            plutoTheme: plutoTheme,
+          );
+
+          return _buildGridViewport(
+            width: displaySize.width,
+            height: displaySize.height,
+            plutoTheme: plutoTheme,
+            showScrollbars: displaySize.showScrollbars,
+            scheme: scheme,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MatrixActions extends StatelessWidget {
+  const _MatrixActions({
+    required this.layout,
+    required this.canShowResults,
+    required this.onShowResults,
+    required this.onClearRanges,
+  });
+
+  final AppLayoutMetrics layout;
+  final bool canShowResults;
+  final VoidCallback onShowResults;
+  final VoidCallback onClearRanges;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: EdgeInsets.only(
+        top: layout.isMobile ? AppSpacing.md : AppSpacing.lg,
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: AppResponsiveActions(
+          layout: layout,
+          desktopAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            ElevatedButton.icon(
+              onPressed: canShowResults ? onShowResults : null,
+              icon: const Icon(Icons.analytics),
+              label: const Text('Show Results'),
             ),
-            Padding(
-              padding: EdgeInsets.only(
-                top: layout.isMobile ? AppSpacing.md : AppSpacing.lg,
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: AppResponsiveActions(
-                  layout: layout,
-                  desktopAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _stateManager == null
-                          ? null
-                          : () => _showResults(context),
-                      icon: const Icon(Icons.analytics),
-                      label: const Text('Show Results'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _clearRanges,
-                      icon: const Icon(Icons.clear_all),
-                      label: const Text('Clear All Ranges'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: scheme.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            OutlinedButton.icon(
+              onPressed: onClearRanges,
+              icon: const Icon(Icons.clear_all),
+              label: const Text('Clear All Ranges'),
+              style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -1066,135 +974,4 @@ class _ScrollCueState {
 
   @override
   int get hashCode => Object.hash(showLeft, showRight, showTop, showBottom);
-}
-
-enum _ScrollCueEdge { left, right, top, bottom }
-
-class _GridScrollCue extends StatelessWidget {
-  const _GridScrollCue({required this.edge, required this.scheme});
-
-  final _ScrollCueEdge edge;
-  final ColorScheme scheme;
-
-  static const double _extent = 52;
-
-  @override
-  Widget build(BuildContext context) {
-    final isHorizontal =
-        edge == _ScrollCueEdge.left || edge == _ScrollCueEdge.right;
-
-    return IgnorePointer(
-      child: SizedBox(
-        width: isHorizontal ? _extent : double.infinity,
-        height: isHorizontal ? double.infinity : _extent,
-        child: DecoratedBox(
-          decoration: BoxDecoration(gradient: _gradient()),
-          child: Align(
-            alignment: _iconAlignment(),
-            child: Padding(
-              padding: _iconPadding(),
-              child: Icon(
-                _icon(),
-                size: 22,
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.85),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  LinearGradient _gradient() {
-    const fade = 0.96;
-    const mid = 0.72;
-    final surface = scheme.surface;
-    final transparent = surface.withValues(alpha: 0);
-
-    switch (edge) {
-      case _ScrollCueEdge.left:
-        return LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            surface.withValues(alpha: fade),
-            surface.withValues(alpha: mid),
-            transparent,
-          ],
-          stops: const [0, 0.45, 1],
-        );
-      case _ScrollCueEdge.right:
-        return LinearGradient(
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-          colors: [
-            surface.withValues(alpha: fade),
-            surface.withValues(alpha: mid),
-            transparent,
-          ],
-          stops: const [0, 0.45, 1],
-        );
-      case _ScrollCueEdge.top:
-        return LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            surface.withValues(alpha: fade),
-            surface.withValues(alpha: mid),
-            transparent,
-          ],
-          stops: const [0, 0.45, 1],
-        );
-      case _ScrollCueEdge.bottom:
-        return LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [
-            surface.withValues(alpha: fade),
-            surface.withValues(alpha: mid),
-            transparent,
-          ],
-          stops: const [0, 0.45, 1],
-        );
-    }
-  }
-
-  IconData _icon() {
-    switch (edge) {
-      case _ScrollCueEdge.left:
-        return Icons.keyboard_double_arrow_left_rounded;
-      case _ScrollCueEdge.right:
-        return Icons.keyboard_double_arrow_right_rounded;
-      case _ScrollCueEdge.top:
-        return Icons.keyboard_double_arrow_up_rounded;
-      case _ScrollCueEdge.bottom:
-        return Icons.keyboard_double_arrow_down_rounded;
-    }
-  }
-
-  Alignment _iconAlignment() {
-    switch (edge) {
-      case _ScrollCueEdge.left:
-        return Alignment.centerLeft;
-      case _ScrollCueEdge.right:
-        return Alignment.centerRight;
-      case _ScrollCueEdge.top:
-        return Alignment.topCenter;
-      case _ScrollCueEdge.bottom:
-        return Alignment.bottomCenter;
-    }
-  }
-
-  EdgeInsets _iconPadding() {
-    switch (edge) {
-      case _ScrollCueEdge.left:
-        return const EdgeInsets.only(left: AppSpacing.sm);
-      case _ScrollCueEdge.right:
-        return const EdgeInsets.only(right: AppSpacing.sm);
-      case _ScrollCueEdge.top:
-        return const EdgeInsets.only(top: AppSpacing.sm);
-      case _ScrollCueEdge.bottom:
-        return const EdgeInsets.only(bottom: AppSpacing.sm);
-    }
-  }
 }

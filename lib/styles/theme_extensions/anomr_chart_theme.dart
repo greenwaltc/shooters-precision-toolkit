@@ -26,11 +26,11 @@ class AnomrChartTheme extends ThemeExtension<AnomrChartTheme> {
 
   /// Sensible defaults for the standard light theme.
   const AnomrChartTheme.standard()
-      : dotOutlineColor = AppColors.chartDotOutline,
-        gridLineOpacity = AppOpacity.chartGridLine,
-        referenceLineOpacity = AppOpacity.neutralReference,
-        gridLineDashArray = const <int>[2, 4],
-        boundLineDashArray = const <int>[6, 4];
+    : dotOutlineColor = AppColors.chartDotOutline,
+      gridLineOpacity = AppOpacity.chartGridLine,
+      referenceLineOpacity = AppOpacity.neutralReference,
+      gridLineDashArray = const <int>[2, 4],
+      boundLineDashArray = const <int>[6, 4];
 
   /// Stroke color painted around chart marker dots.
   final Color dotOutlineColor;
@@ -71,14 +71,17 @@ class AnomrChartTheme extends ThemeExtension<AnomrChartTheme> {
     return AnomrChartTheme(
       dotOutlineColor:
           Color.lerp(dotOutlineColor, other.dotOutlineColor, t) ??
-              dotOutlineColor,
-      gridLineOpacity:
-          _lerpDouble(gridLineOpacity, other.gridLineOpacity, t),
-      referenceLineOpacity:
-          _lerpDouble(referenceLineOpacity, other.referenceLineOpacity, t),
+          dotOutlineColor,
+      gridLineOpacity: _lerpDouble(gridLineOpacity, other.gridLineOpacity, t),
+      referenceLineOpacity: _lerpDouble(
+        referenceLineOpacity,
+        other.referenceLineOpacity,
+        t,
+      ),
       gridLineDashArray: t < 0.5 ? gridLineDashArray : other.gridLineDashArray,
-      boundLineDashArray:
-          t < 0.5 ? boundLineDashArray : other.boundLineDashArray,
+      boundLineDashArray: t < 0.5
+          ? boundLineDashArray
+          : other.boundLineDashArray,
     );
   }
 

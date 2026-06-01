@@ -59,10 +59,7 @@ class AnomrCalculator {
     );
   }
 
-  static double? _rangeValueForRow(
-    PlutoRow row, {
-    double? imputeWith,
-  }) {
+  static double? _rangeValueForRow(PlutoRow row, {double? imputeWith}) {
     return _parseRangeValue(row.cells['range']?.value) ?? imputeWith;
   }
 

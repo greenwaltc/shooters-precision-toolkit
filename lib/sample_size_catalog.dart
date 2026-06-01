@@ -9,19 +9,19 @@ import 'model/project_form_model.dart';
 //                          SAMPLE-SIZE OPTION CATALOG
 // =============================================================================
 
-const _16sample_riskLevels = {
+const _sixteenSampleRiskLevels = {
   RiskLevel.tenPercent: 0.314,
   RiskLevel.fivePercent: 0.371,
   RiskLevel.onePercent: 0.481,
 };
 
-const _32sample_riskLevels = {
+const _thirtyTwoSampleRiskLevels = {
   RiskLevel.tenPercent: 0.22,
   RiskLevel.fivePercent: 0.261,
   RiskLevel.onePercent: 0.341,
 };
 
-const _48sample_riskLevels = {
+const _fortyEightSampleRiskLevels = {
   RiskLevel.tenPercent: 0.179,
   RiskLevel.fivePercent: 0.213,
   RiskLevel.onePercent: 0.281,
@@ -74,21 +74,21 @@ const SampleSizeOption _twoFactor_16 = SampleSizeOption(
   numFactors: 2,
   numSets: 4,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _16sample_riskLevels,
+  detectableDifferences: _sixteenSampleRiskLevels,
 );
 
 const SampleSizeOption _twoFactor_32 = SampleSizeOption(
   numFactors: 2,
   numSets: 8,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _32sample_riskLevels,
+  detectableDifferences: _thirtyTwoSampleRiskLevels,
 );
 
 const SampleSizeOption _twoFactor_48 = SampleSizeOption(
   numFactors: 2,
   numSets: 12,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _48sample_riskLevels,
+  detectableDifferences: _fortyEightSampleRiskLevels,
 );
 
 // ---------------------------------------------------------------------------
@@ -100,21 +100,21 @@ const SampleSizeOption _threeFactor_16 = SampleSizeOption(
   numFactors: 3,
   numSets: 2,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _16sample_riskLevels,
+  detectableDifferences: _sixteenSampleRiskLevels,
 );
 
 const SampleSizeOption _threeFactor_32 = SampleSizeOption(
   numFactors: 3,
   numSets: 4,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _32sample_riskLevels,
+  detectableDifferences: _thirtyTwoSampleRiskLevels,
 );
 
 const SampleSizeOption _threeFactor_48 = SampleSizeOption(
   numFactors: 3,
   numSets: 6,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _48sample_riskLevels,
+  detectableDifferences: _fortyEightSampleRiskLevels,
 );
 
 // ---------------------------------------------------------------------------
@@ -126,21 +126,21 @@ const SampleSizeOption _fourFactor_16 = SampleSizeOption(
   numFactors: 4,
   numSets: 1,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _16sample_riskLevels,
+  detectableDifferences: _sixteenSampleRiskLevels,
 );
 
 const SampleSizeOption _fourFactor_32 = SampleSizeOption(
   numFactors: 4,
   numSets: 2,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _32sample_riskLevels,
+  detectableDifferences: _thirtyTwoSampleRiskLevels,
 );
 
 const SampleSizeOption _fourFactor_48 = SampleSizeOption(
   numFactors: 4,
   numSets: 3,
   family: SampleSizeFamily.factorial,
-  detectableDifferences: _48sample_riskLevels,
+  detectableDifferences: _fortyEightSampleRiskLevels,
 );
 
 // ---------------------------------------------------------------------------
@@ -163,7 +163,11 @@ class SampleSizeCatalog {
     },
     3: {
       RiskLevel.tenPercent: [_threeFactor_16, _threeFactor_32, _threeFactor_48],
-      RiskLevel.fivePercent: [_threeFactor_16, _threeFactor_32, _threeFactor_48],
+      RiskLevel.fivePercent: [
+        _threeFactor_16,
+        _threeFactor_32,
+        _threeFactor_48,
+      ],
       RiskLevel.onePercent: [_threeFactor_16, _threeFactor_32, _threeFactor_48],
     },
     4: {

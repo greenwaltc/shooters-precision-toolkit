@@ -52,10 +52,7 @@ List<Widget> helpAppBarActionsFor(
 
 /// Returns a help FAB when the current layout is not mobile-sized and a FAB
 /// will not crowd existing bottom actions.
-Widget? helpFabFor(
-  AppLayoutMetrics layout, {
-  bool preferAppBar = false,
-}) {
+Widget? helpFabFor(AppLayoutMetrics layout, {bool preferAppBar = false}) {
   if (layout.isMobile || preferAppBar) return null;
   return const HelpInstructionsFab();
 }

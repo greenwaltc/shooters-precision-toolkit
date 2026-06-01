@@ -55,7 +55,9 @@ class StatusPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: AppOpacity.pillFill),
         borderRadius: AppRadius.pillRadius,
-        border: Border.all(color: color.withValues(alpha: AppOpacity.pillBorder)),
+        border: Border.all(
+          color: color.withValues(alpha: AppOpacity.pillBorder),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

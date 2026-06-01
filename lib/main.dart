@@ -18,11 +18,13 @@ import 'widgets/anomr_results_page.dart';
 import 'widgets/project_form_page.dart';
 import 'widgets/project_home_page.dart';
 
+/// Boots Flutter and mounts the application.
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
+/// Root widget that owns the project store unless one is injected for tests.
 class MyApp extends StatefulWidget {
   const MyApp({super.key, this.projectStore});
 

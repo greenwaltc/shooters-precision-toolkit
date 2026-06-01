@@ -15,56 +15,28 @@ import '../styles/layout/app_layout.dart';
 import '../styles/layout/app_viewport.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
+import 'project_form/controllers/factor_input_controllers.dart';
+import 'project_form/models/factor_field_hints.dart';
+import 'project_form/services/project_form_validator.dart';
 
+/// Project setup form for experiment design, risk, and sample-size choices.
 class ProjectForm extends StatefulWidget {
-  final ProjectFormModel formModel;
-  final Future<void> Function()? onSubmit;
-
   const ProjectForm({super.key, required this.formModel, this.onSubmit});
+
+  /// Mutable setup state shared with the selected project.
+  final ProjectFormModel formModel;
+
+  /// Called after validation succeeds.
+  final Future<void> Function()? onSubmit;
 
   @override
   State<ProjectForm> createState() => _ProjectFormState();
 }
 
-class _FactorFieldHints {
-  const _FactorFieldHints({
-    required this.factorName,
-    required this.firstState,
-    required this.secondState,
-  });
-
-  final String factorName;
-  final String firstState;
-  final String secondState;
-}
-
-const _factorFieldHintsByIndex = <_FactorFieldHints>[
-  _FactorFieldHints(
-    factorName: 'Bullet Point Type',
-    firstState: 'Rounded',
-    secondState: 'Pointy',
-  ),
-  _FactorFieldHints(
-    factorName: 'Primer',
-    firstState: 'Magnum',
-    secondState: 'Regular',
-  ),
-  _FactorFieldHints(
-    factorName: 'Powder Charge',
-    firstState: 'Full',
-    secondState: '75%',
-  ),
-  _FactorFieldHints(
-    factorName: 'Shooting Position',
-    firstState: 'Kneeling',
-    secondState: 'Prone',
-  ),
-];
-
 class _ProjectFormState extends State<ProjectForm> {
   final _formKey = GlobalKey<FormState>();
   final projectTitleController = TextEditingController();
-  late final List<_FactorInputControllers> _factorControllers;
+  late final List<FactorInputControllers> _factorControllers;
   bool _isHydratingControllers = false;
 
   @override
@@ -76,7 +48,7 @@ class _ProjectFormState extends State<ProjectForm> {
 
     _factorControllers = List.generate(
       ExperimentStructure.fourFactors.factorCount,
-      (index) => _FactorInputControllers(),
+      (index) => FactorInputControllers(),
     );
     _hydrateFactorControllers();
 
@@ -204,77 +176,90 @@ class _ProjectFormState extends State<ProjectForm> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Form(
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       child: AppLayoutBuilder(
-        builder: (context, layout) {
-          final setupFields = <Widget>[
-            _buildProjectNameInput(),
-            const SectionTitle('Choose the Structure of Your Experiment'),
-            _buildExperimentStructureOptions(),
-            _buildFactorDefinitionContainer(),
-          ];
-          final sampleFields = <Widget>[
-            const SectionTitle(
-              'Choose Your Risk Level (chance of being wrong if test indicates '
-              'a real difference in factor states)',
-            ),
-            _buildRiskLevelOptions(),
-            const SectionTitle('Choose your sample size'),
-            _buildSampleSizeOptions(),
-            if (ProjectConfiguration.current.featureFlags.isEnabled(
-              FeatureFlag.imputeMissingData,
-            ))
-              _buildImputeMissingDataCheckbox(),
-            _buildSubmitButton(layout),
-          ];
-
-          return SingleChildScrollView(
-            padding: AppViewport.scrollBottomPadding(context),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Center(
-                  child: Text(
-                    'Project Setup',
-                    style: theme.textTheme.titleLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                if (layout.useTwoColumnForms)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: setupFields,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.xxxxl),
-                      Expanded(
-                        flex: 4,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: sampleFields,
-                        ),
-                      ),
-                    ],
-                  )
-                else ...[
-                  ...setupFields,
-                  ...sampleFields,
-                ],
-              ],
-            ),
-          );
-        },
+        builder: (context, layout) => _buildScrollBody(context, layout),
       ),
+    );
+  }
+
+  Widget _buildScrollBody(BuildContext context, AppLayoutMetrics layout) {
+    return SingleChildScrollView(
+      padding: AppViewport.scrollBottomPadding(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _buildFormTitle(context),
+          const SizedBox(height: AppSpacing.md),
+          _buildResponsiveFieldGroups(layout),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormTitle(BuildContext context) {
+    return Center(
+      child: Text(
+        'Project Setup',
+        style: Theme.of(context).textTheme.titleLarge,
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  Widget _buildResponsiveFieldGroups(AppLayoutMetrics layout) {
+    final setupFields = _buildSetupFields();
+    final sampleFields = _buildSampleFields(layout);
+
+    if (!layout.useTwoColumnForms) {
+      return _fieldColumn([...setupFields, ...sampleFields]);
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(flex: 5, child: _fieldColumn(setupFields)),
+        const SizedBox(width: AppSpacing.xxxxl),
+        Expanded(flex: 4, child: _fieldColumn(sampleFields)),
+      ],
+    );
+  }
+
+  List<Widget> _buildSetupFields() {
+    return [
+      _buildProjectNameInput(),
+      const SectionTitle('Choose the Structure of Your Experiment'),
+      _buildExperimentStructureOptions(),
+      _buildFactorDefinitionContainer(),
+    ];
+  }
+
+  List<Widget> _buildSampleFields(AppLayoutMetrics layout) {
+    return [
+      const SectionTitle(
+        'Choose Your Risk Level (chance of being wrong if test indicates '
+        'a real difference in factor states)',
+      ),
+      _buildRiskLevelOptions(),
+      const SectionTitle('Choose your sample size'),
+      _buildSampleSizeOptions(),
+      if (_canShowImputationOption()) _buildImputeMissingDataCheckbox(),
+      _buildSubmitButton(layout),
+    ];
+  }
+
+  Widget _fieldColumn(List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+  }
+
+  bool _canShowImputationOption() {
+    return ProjectConfiguration.current.featureFlags.isEnabled(
+      FeatureFlag.imputeMissingData,
     );
   }
 
@@ -283,7 +268,10 @@ class _ProjectFormState extends State<ProjectForm> {
       controller: projectTitleController,
       labelText: 'Project Name',
       prefixIcon: Icons.title,
-      validator: (value) => _requiredField(value, 'Project name is required.'),
+      validator: (value) => ProjectFormValidator.requiredField(
+        value,
+        'Project name is required.',
+      ),
     );
   }
 
@@ -338,7 +326,7 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildFactorFields(int index) {
     final controllers = _factorControllers[index];
-    final hints = _factorFieldHintsByIndex[index];
+    final hints = factorFieldHintsByIndex[index];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -524,71 +512,22 @@ class _ProjectFormState extends State<ProjectForm> {
     );
   }
 
-  String? _requiredField(String? value, String message) {
-    return value == null || value.trim().isEmpty ? message : null;
-  }
-
   String? _validateFactorName(int index, String? value) {
-    final requiredError = _requiredField(value, 'Factor name is required.');
-    if (requiredError != null) return requiredError;
-
-    final normalizedValue = value!.trim().toLowerCase();
-    final hasDuplicate = _factorControllers
-        .take(widget.formModel.experimentStructure.factorCount)
-        .indexed
-        .any((entry) {
-          final otherIndex = entry.$1;
-          final otherValue = entry.$2.factorName.text.trim().toLowerCase();
-          return otherIndex != index && otherValue == normalizedValue;
-        });
-
-    return hasDuplicate ? 'Each factor name must be unique.' : null;
+    return ProjectFormValidator.factorName(
+      index: index,
+      value: value,
+      controllers: _factorControllers,
+      factorCount: widget.formModel.experimentStructure.factorCount,
+    );
   }
 
   String? _validateFactorState({
     required String? value,
     required TextEditingController comparedController,
   }) {
-    final requiredError = _requiredField(value, 'Factor state is required.');
-    if (requiredError != null) return requiredError;
-
-    final normalizedValue = value!.trim().toLowerCase();
-    final comparedValue = comparedController.text.trim().toLowerCase();
-
-    if (normalizedValue == comparedValue) {
-      return 'Factor states must be different.';
-    }
-
-    return null;
-  }
-}
-
-class _FactorInputControllers {
-  final factorName = TextEditingController();
-  final firstStateName = TextEditingController();
-  final secondStateName = TextEditingController();
-
-  void addListener(VoidCallback listener) {
-    factorName.addListener(listener);
-    firstStateName.addListener(listener);
-    secondStateName.addListener(listener);
-  }
-
-  void setValues(FactorDefinition definition) {
-    factorName.text = definition.name;
-    firstStateName.text = definition.firstState;
-    secondStateName.text = definition.secondState;
-  }
-
-  void clear() {
-    factorName.clear();
-    firstStateName.clear();
-    secondStateName.clear();
-  }
-
-  void dispose() {
-    factorName.dispose();
-    firstStateName.dispose();
-    secondStateName.dispose();
+    return ProjectFormValidator.factorState(
+      value: value,
+      comparedController: comparedController,
+    );
   }
 }

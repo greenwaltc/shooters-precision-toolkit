@@ -15,10 +15,14 @@ class PdfStyles {
 
   // Page geometry
   static const pw.EdgeInsets pageMargin = pw.EdgeInsets.all(36);
-  static const pw.EdgeInsets tableHeaderCell =
-      pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6);
-  static const pw.EdgeInsets tableBodyCell =
-      pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+  static const pw.EdgeInsets tableHeaderCell = pw.EdgeInsets.symmetric(
+    horizontal: 8,
+    vertical: 6,
+  );
+  static const pw.EdgeInsets tableBodyCell = pw.EdgeInsets.symmetric(
+    horizontal: 8,
+    vertical: 4,
+  );
 
   // Spacing
   static const double gapXs = 2;
@@ -41,36 +45,25 @@ class PdfStyles {
 
   // Typography
   static pw.TextStyle title() => pw.TextStyle(
-        fontSize: 22,
-        fontWeight: pw.FontWeight.bold,
-        color: titleColor,
-      );
+    fontSize: 22,
+    fontWeight: pw.FontWeight.bold,
+    color: titleColor,
+  );
 
-  static pw.TextStyle subtitle() => const pw.TextStyle(
-        fontSize: 14,
-        color: subtitleColor,
-      );
+  static pw.TextStyle subtitle() =>
+      const pw.TextStyle(fontSize: 14, color: subtitleColor);
 
-  static pw.TextStyle sectionHeader() => pw.TextStyle(
-        fontSize: 16,
-        fontWeight: pw.FontWeight.bold,
-      );
+  static pw.TextStyle sectionHeader() =>
+      pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold);
 
-  static pw.TextStyle statLabel() => pw.TextStyle(
-        fontSize: 9,
-        color: statLabelColor,
-        letterSpacing: 0.8,
-      );
+  static pw.TextStyle statLabel() =>
+      pw.TextStyle(fontSize: 9, color: statLabelColor, letterSpacing: 0.8);
 
-  static pw.TextStyle statValue() => pw.TextStyle(
-        fontSize: 14,
-        fontWeight: pw.FontWeight.bold,
-      );
+  static pw.TextStyle statValue() =>
+      pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold);
 
-  static pw.TextStyle tableHeaderCellText() => pw.TextStyle(
-        fontWeight: pw.FontWeight.bold,
-        fontSize: 10,
-      );
+  static pw.TextStyle tableHeaderCellText() =>
+      pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10);
 
   static pw.TextStyle tableBodyCellText() => const pw.TextStyle(fontSize: 10);
 }

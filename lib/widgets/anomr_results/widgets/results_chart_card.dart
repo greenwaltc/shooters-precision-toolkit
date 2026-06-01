@@ -41,7 +41,8 @@ class ResultsChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+    final chartTheme =
+        Theme.of(context).extension<AnomrChartTheme>() ??
         const AnomrChartTheme.standard();
 
     return OutlinedSurfaceCard(
@@ -67,8 +68,9 @@ class ResultsChartCard extends StatelessWidget {
           ChartLegend(
             factorRows: factorRows,
             scale: scale,
-            grandMeanColor: scheme.onSurface
-                .withValues(alpha: chartTheme.referenceLineOpacity),
+            grandMeanColor: scheme.onSurface.withValues(
+              alpha: chartTheme.referenceLineOpacity,
+            ),
             boundColor: scheme.error,
           ),
           SizedBox(height: scale.chartOuterPadding),
@@ -99,7 +101,8 @@ class _Title extends StatelessWidget {
           'Results',
           style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            fontSize: (textTheme.titleLarge?.fontSize ?? 22) *
+            fontSize:
+                (textTheme.titleLarge?.fontSize ?? 22) *
                 scale.scale.clamp(0.9, 1.2),
           ),
         ),

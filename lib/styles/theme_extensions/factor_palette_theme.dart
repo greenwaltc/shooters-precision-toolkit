@@ -19,8 +19,7 @@ class FactorPaletteTheme extends ThemeExtension<FactorPaletteTheme> {
   const FactorPaletteTheme({required this.colors});
 
   /// Default palette wired up in the standard light theme.
-  const FactorPaletteTheme.standard()
-      : colors = AppColors.factorPalette;
+  const FactorPaletteTheme.standard() : colors = AppColors.factorPalette;
 
   /// Ordered list of factor colors. Indexing wraps via [colorFor].
   final List<Color> colors;

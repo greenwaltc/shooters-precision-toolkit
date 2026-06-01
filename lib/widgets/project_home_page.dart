@@ -16,6 +16,7 @@ import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
 import 'confirm_delete_project_dialog.dart';
 
+/// Home route listing saved projects and the create-project action.
 class ProjectHomePage extends StatelessWidget {
   const ProjectHomePage({super.key});
 
@@ -54,7 +55,9 @@ class ProjectHomePage extends StatelessWidget {
     ProjectStore store,
     AppLayoutMetrics _,
   ) {
-    if (store.projects.isEmpty) {
+    final projects = store.projects;
+
+    if (projects.isEmpty) {
       return Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _emptyStateMaxWidth),
@@ -96,10 +99,10 @@ class ProjectHomePage extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Expanded(
           child: ListView.separated(
-            itemCount: store.projects.length,
+            itemCount: projects.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, index) {
-              return _ProjectListTile(project: store.projects[index]);
+              return _ProjectListTile(project: projects[index]);
             },
           ),
         ),

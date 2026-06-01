@@ -33,10 +33,7 @@ class GroupedFieldPanel extends StatelessWidget {
         padding: innerPadding,
         decoration: BoxDecoration(
           color: scheme.surfaceContainerLow,
-          border: Border.all(
-            color: scheme.outline,
-            width: AppBorders.regular,
-          ),
+          border: Border.all(color: scheme.outline, width: AppBorders.regular),
           borderRadius: AppRadius.mdRadius,
         ),
         child: child,

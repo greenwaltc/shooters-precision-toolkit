@@ -26,10 +26,9 @@ class NoSelectedProjectPage extends StatelessWidget {
           body: Center(
             child: FilledButton.icon(
               onPressed: () {
-                Navigator.of(context).pushNamedAndRemoveUntil(
-                  AppRoutes.projects,
-                  (_) => false,
-                );
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
               },
               icon: const Icon(Icons.home_outlined),
               label: const Text('Projects'),

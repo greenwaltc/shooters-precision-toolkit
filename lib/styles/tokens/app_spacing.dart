@@ -60,18 +60,25 @@ class AppSpacing {
   static const EdgeInsets factorTitle = EdgeInsets.fromLTRB(md, 0, md, sm);
 
   /// Title above a form section.
-  static const EdgeInsets formSectionTitle =
-      EdgeInsets.fromLTRB(md, xxl, md, md);
+  static const EdgeInsets formSectionTitle = EdgeInsets.fromLTRB(
+    md,
+    xxl,
+    md,
+    md,
+  );
 
   /// Vertical padding for items inside a radio list group.
-  static const EdgeInsets radioItemVertical =
-      EdgeInsets.symmetric(vertical: sm);
+  static const EdgeInsets radioItemVertical = EdgeInsets.symmetric(
+    vertical: sm,
+  );
 
   /// Vertical padding for table cells in the form's detection table.
-  static const EdgeInsets tableCellVertical =
-      EdgeInsets.symmetric(vertical: xs);
+  static const EdgeInsets tableCellVertical = EdgeInsets.symmetric(
+    vertical: xs,
+  );
 
   /// Padding inside the cell renderer of the Pluto factor columns.
-  static const EdgeInsets plutoFactorCell =
-      EdgeInsets.symmetric(horizontal: lg);
+  static const EdgeInsets plutoFactorCell = EdgeInsets.symmetric(
+    horizontal: lg,
+  );
 }

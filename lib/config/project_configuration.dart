@@ -18,12 +18,11 @@ enum FeatureFlag {
 /// lookup API so overrides (environment, remote config, etc.) can be added
 /// later without changing call sites.
 class FeatureFlags {
-  const FeatureFlags({required Map<FeatureFlag, bool> values}) : _values = values;
+  const FeatureFlags({required Map<FeatureFlag, bool> values})
+    : _values = values;
 
   static const FeatureFlags defaults = FeatureFlags(
-    values: {
-      FeatureFlag.imputeMissingData: false,
-    },
+    values: {FeatureFlag.imputeMissingData: false},
   );
 
   final Map<FeatureFlag, bool> _values;

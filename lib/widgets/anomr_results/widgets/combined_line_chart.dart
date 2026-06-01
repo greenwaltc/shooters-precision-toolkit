@@ -38,15 +38,47 @@ class CombinedLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return LineChart(_chartData(context));
+  }
+
+  LineChartData _chartData(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final locator = FactorRowLocator(factorRows);
+
+    final xBounds = _xBounds();
+    final yRange = _yRange();
+
+    return LineChartData(
+      minX: xBounds.$1,
+      maxX: xBounds.$2,
+      minY: yRange.min,
+      maxY: yRange.max,
+      clipData: const FlClipData.all(),
+      lineTouchData: _tooltip(context, locator),
+      gridData: _grid(context, yRange),
+      borderData: _border(scheme),
+      titlesData: _titles(context, locator),
+      extraLinesData: ChartReferenceLines.build(
+        context: context,
+        scale: scale,
+        grandMean: grandMean,
+        lowerBound: lowerBound,
+        upperBound: upperBound,
+        detectableDiffPercent: detectableDiffPercent,
+      ),
+      lineBarsData: _lineBars(context),
+    );
+  }
+
+  (double, double) _xBounds() {
     final lastSecondX = factorRows.isEmpty
         ? ChartLayout.segmentSpan
         : factorRows.last.secondX;
-    final minX = -ChartLayout.edgePad;
-    final maxX = lastSecondX + ChartLayout.edgePad;
+    return (-ChartLayout.edgePad, lastSecondX + ChartLayout.edgePad);
+  }
 
-    final yRange = ChartYRange.compute([
+  ChartYRangeValues _yRange() {
+    return ChartYRange.compute([
       grandMean,
       upperBound,
       lowerBound,
@@ -55,47 +87,28 @@ class CombinedLineChart extends StatelessWidget {
         if (row.stats.hasSecond) row.stats.secondMean,
       ],
     ]);
+  }
 
-    return LineChart(
-      LineChartData(
-        minX: minX,
-        maxX: maxX,
-        minY: yRange.min,
-        maxY: yRange.max,
-        clipData: const FlClipData.all(),
-        lineTouchData: _tooltip(context, locator),
-        gridData: _grid(context, yRange),
-        borderData: FlBorderData(
-          show: true,
-          border: Border(
-            bottom: BorderSide(color: scheme.outline),
-            left: BorderSide(color: scheme.outline),
-          ),
-        ),
-        titlesData: FlTitlesData(
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: ChartXAxis.build(
-            context: context,
-            locator: locator,
-            scale: scale,
-          ),
-          leftTitles: ChartYAxis.build(context: context, scale: scale),
-        ),
-        extraLinesData: ChartReferenceLines.build(
-          context: context,
-          scale: scale,
-          grandMean: grandMean,
-          lowerBound: lowerBound,
-          upperBound: upperBound,
-          detectableDiffPercent: detectableDiffPercent,
-        ),
-        lineBarsData: _lineBars(context),
+  FlBorderData _border(ColorScheme scheme) {
+    return FlBorderData(
+      show: true,
+      border: Border(
+        bottom: BorderSide(color: scheme.outline),
+        left: BorderSide(color: scheme.outline),
       ),
+    );
+  }
+
+  FlTitlesData _titles(BuildContext context, FactorRowLocator locator) {
+    return FlTitlesData(
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      bottomTitles: ChartXAxis.build(
+        context: context,
+        locator: locator,
+        scale: scale,
+      ),
+      leftTitles: ChartYAxis.build(context: context, scale: scale),
     );
   }
 
@@ -126,15 +139,17 @@ class CombinedLineChart extends StatelessWidget {
 
   FlGridData _grid(BuildContext context, ChartYRangeValues yRange) {
     final scheme = Theme.of(context).colorScheme;
-    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+    final chartTheme =
+        Theme.of(context).extension<AnomrChartTheme>() ??
         const AnomrChartTheme.standard();
     return FlGridData(
       show: true,
       drawVerticalLine: false,
       horizontalInterval: ((yRange.max - yRange.min) / 4).abs(),
       getDrawingHorizontalLine: (_) => FlLine(
-        color: scheme.outlineVariant
-            .withValues(alpha: chartTheme.gridLineOpacity),
+        color: scheme.outlineVariant.withValues(
+          alpha: chartTheme.gridLineOpacity,
+        ),
         strokeWidth: 1,
         dashArray: chartTheme.gridLineDashArray,
       ),
@@ -142,7 +157,8 @@ class CombinedLineChart extends StatelessWidget {
   }
 
   List<LineChartBarData> _lineBars(BuildContext context) {
-    final chartTheme = Theme.of(context).extension<AnomrChartTheme>() ??
+    final chartTheme =
+        Theme.of(context).extension<AnomrChartTheme>() ??
         const AnomrChartTheme.standard();
     return [
       for (final row in factorRows)

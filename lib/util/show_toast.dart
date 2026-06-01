@@ -32,5 +32,7 @@ void showToast(BuildContext context, String message) {
   );
 
   overlay.insert(overlayEntry);
-  Future.delayed(const Duration(seconds: 2)).then((value) => overlayEntry.remove());
+  Future.delayed(
+    const Duration(seconds: 2),
+  ).then((value) => overlayEntry.remove());
 }

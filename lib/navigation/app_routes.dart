@@ -5,6 +5,7 @@
 
 import '../model/saved_project.dart';
 
+/// Named routes and route-selection helpers used by `MaterialApp`.
 class AppRoutes {
   static const projects = '/';
   static const projectForm = '/project-form';

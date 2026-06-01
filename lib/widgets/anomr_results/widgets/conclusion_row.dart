@@ -25,80 +25,114 @@ class ConclusionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final (statusColor, statusIcon) = _statusVisuals(scheme, row.status);
-    final marker = SizedBox(
+
+    return Container(
+      padding: _padding(),
+      decoration: _decoration(),
+      child: scale.isCompact
+          ? _compactLayout(context, statusColor, statusIcon)
+          : _regularLayout(context, statusColor, statusIcon),
+    );
+  }
+
+  EdgeInsets _padding() {
+    return EdgeInsets.symmetric(
+      horizontal: (12 * scale.scale).clamp(10.0, 18.0),
+      vertical: (10 * scale.scale).clamp(8.0, 14.0),
+    );
+  }
+
+  BoxDecoration _decoration() {
+    return BoxDecoration(
+      color: row.color.withValues(alpha: AppOpacity.rowFill),
+      borderRadius: AppRadius.mdRadius,
+      border: Border.all(
+        color: row.color.withValues(alpha: AppOpacity.rowBorder),
+      ),
+    );
+  }
+
+  Widget _compactLayout(BuildContext context, Color color, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _markerLabelRow(context),
+        const SizedBox(height: AppSpacing.md),
+        _pill(color, icon),
+      ],
+    );
+  }
+
+  Widget _regularLayout(BuildContext context, Color color, IconData icon) {
+    return Row(
+      children: [
+        _marker(),
+        SizedBox(width: scale.conclusionRowFactorGap),
+        Expanded(child: _label(context)),
+        SizedBox(width: scale.conclusionRowPillGap),
+        _pill(color, icon),
+      ],
+    );
+  }
+
+  Widget _markerLabelRow(BuildContext context) {
+    return Row(
+      children: [
+        _marker(),
+        SizedBox(width: scale.conclusionRowFactorGap),
+        Expanded(child: _label(context)),
+      ],
+    );
+  }
+
+  Widget _marker() {
+    return SizedBox(
       width: scale.legendIconWidth,
       height: scale.legendIconHeight,
       child: CustomPaint(
         painter: LegendPainter(color: row.color, style: LegendStyle.solidDots),
       ),
     );
-    final label = Column(
+  }
+
+  Widget _label(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          row.displayName,
-          style: textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            fontSize: scale.stateLabelFontSize + 1,
-          ),
-        ),
+        Text(row.displayName, style: _titleStyle(textTheme)),
         SizedBox(height: scale.conclusionRowLabelGap),
-        Text(
-          '${row.firstLabel} → ${row.secondLabel}',
-          style: textTheme.bodySmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-            fontSize: scale.axisLabelFontSize,
-          ),
-        ),
+        Text(_stateTransition, style: _stateStyle(textTheme, scheme)),
       ],
     );
-    final pill = StatusPill(
+  }
+
+  Widget _pill(Color color, IconData icon) {
+    return StatusPill(
       label: row.status.label,
-      color: statusColor,
-      icon: statusIcon,
+      color: color,
+      icon: icon,
       scale: scale.scale,
       iconSize: scale.stateLabelFontSize + 4,
       fontSize: scale.axisLabelFontSize + 1,
     );
+  }
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: (12 * scale.scale).clamp(10.0, 18.0),
-        vertical: (10 * scale.scale).clamp(8.0, 14.0),
-      ),
-      decoration: BoxDecoration(
-        color: row.color.withValues(alpha: AppOpacity.rowFill),
-        borderRadius: AppRadius.mdRadius,
-        border: Border.all(
-          color: row.color.withValues(alpha: AppOpacity.rowBorder),
-        ),
-      ),
-      child: scale.isCompact
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    marker,
-                    SizedBox(width: scale.conclusionRowFactorGap),
-                    Expanded(child: label),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                pill,
-              ],
-            )
-          : Row(
-              children: [
-                marker,
-                SizedBox(width: scale.conclusionRowFactorGap),
-                Expanded(child: label),
-                SizedBox(width: scale.conclusionRowPillGap),
-                pill,
-              ],
-            ),
+  String get _stateTransition => '${row.firstLabel} → ${row.secondLabel}';
+
+  TextStyle? _titleStyle(TextTheme textTheme) {
+    return textTheme.titleSmall?.copyWith(
+      fontWeight: FontWeight.w700,
+      fontSize: scale.stateLabelFontSize + 1,
+    );
+  }
+
+  TextStyle? _stateStyle(TextTheme textTheme, ColorScheme scheme) {
+    return textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+      fontSize: scale.axisLabelFontSize,
     );
   }
 

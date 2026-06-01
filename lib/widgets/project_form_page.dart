@@ -15,6 +15,7 @@ import 'project_drawer.dart';
 import 'project_form.dart';
 import 'no_selected_project_page.dart';
 
+/// Route that hosts setup editing for the selected project.
 class ProjectFormPage extends StatelessWidget {
   const ProjectFormPage({super.key});
 

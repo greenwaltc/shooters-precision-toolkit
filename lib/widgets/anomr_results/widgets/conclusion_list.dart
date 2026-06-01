@@ -42,8 +42,7 @@ class ConclusionList extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         for (var i = 0; i < factorRows.length; i++) ...[
           ConclusionRow(row: factorRows[i], scale: scale),
-          if (i != factorRows.length - 1)
-            const SizedBox(height: AppSpacing.md),
+          if (i != factorRows.length - 1) const SizedBox(height: AppSpacing.md),
         ],
       ],
     );

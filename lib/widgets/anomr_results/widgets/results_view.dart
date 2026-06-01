@@ -54,7 +54,10 @@ class _ResultsViewState extends State<ResultsView> {
       builder: (context, layout) {
         return Scaffold(
           drawer: const ProjectDrawer(),
-          appBar: _ResultsAppBar(displayName: project.displayName, layout: layout),
+          appBar: _ResultsAppBar(
+            displayName: project.displayName,
+            layout: layout,
+          ),
           body: previewSummary.hasEnoughData
               ? _ResultsBody(
                   formModel: formModel,
@@ -179,70 +182,78 @@ class _ResultsBody extends StatelessWidget {
     return SafeArea(
       minimum: AppViewport.safeAreaMinimum,
       child: AppLayoutBuilder(
-        builder: (context, layout) {
-          return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              layout.pageGutter,
-              layout.pageGutter,
-              layout.pageGutter,
-              layout.pageGutter + AppSpacing.xl,
-            ),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: layout.resultsMaxWidth),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final scale = ChartScale.of(context, constraints);
-                    final chartLayout = scale.isCompact
-                        ? ChartLayout.compact
-                        : ChartLayout.standard;
-                    final summary = AnomrCalculator.summarize(
-                      formModel: formModel,
-                      stateManager: stateManager,
-                      layout: chartLayout,
-                    );
+        builder: (context, layout) => _buildScrollView(layout),
+      ),
+    );
+  }
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        HeaderSummary(
-                          grandMean: summary.grandMean,
-                          riskLevel: formModel.riskLevel,
-                          detectableDiffPercent: summary.detectableDiffPercent,
-                          sampleSizeLabel: formModel.sampleSizeOption.labelFor(
-                            formModel.experimentStructure,
-                          ),
-                        ),
-                        SizedBox(height: scale.chartOuterPadding),
-                        ExportActionButton(
-                          onPressed: () => onExportPressed(summary),
-                          isExporting: isExporting,
-                        ),
-                        SizedBox(
-                          height: scale.chartOuterPadding + AppSpacing.sm,
-                        ),
-                        RepaintBoundary(
-                          key: chartKey,
-                          child: ResultsChartCard(
-                            factorRows: summary.factorRows,
-                            grandMean: summary.grandMean,
-                            lowerBound: summary.lowerBound,
-                            upperBound: summary.upperBound,
-                            detectableDiffPercent:
-                                summary.detectableDiffPercent,
-                            riskLevel: formModel.riskLevel,
-                            scale: scale,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          );
-        },
+  Widget _buildScrollView(AppLayoutMetrics layout) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        layout.pageGutter,
+        layout.pageGutter,
+        layout.pageGutter,
+        layout.pageGutter + AppSpacing.xl,
+      ),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: layout.resultsMaxWidth),
+          child: LayoutBuilder(builder: _buildResultsColumn),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResultsColumn(BuildContext context, BoxConstraints constraints) {
+    final scale = ChartScale.of(context, constraints);
+    final summary = _summaryFor(scale);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeader(summary),
+        SizedBox(height: scale.chartOuterPadding),
+        ExportActionButton(
+          onPressed: () => onExportPressed(summary),
+          isExporting: isExporting,
+        ),
+        SizedBox(height: scale.chartOuterPadding + AppSpacing.sm),
+        _buildChart(summary, scale),
+      ],
+    );
+  }
+
+  AnomrSummary _summaryFor(ChartScale scale) {
+    return AnomrCalculator.summarize(
+      formModel: formModel,
+      stateManager: stateManager,
+      layout: scale.isCompact ? ChartLayout.compact : ChartLayout.standard,
+    );
+  }
+
+  Widget _buildHeader(AnomrSummary summary) {
+    return HeaderSummary(
+      grandMean: summary.grandMean,
+      riskLevel: formModel.riskLevel,
+      detectableDiffPercent: summary.detectableDiffPercent,
+      sampleSizeLabel: formModel.sampleSizeOption.labelFor(
+        formModel.experimentStructure,
+      ),
+    );
+  }
+
+  Widget _buildChart(AnomrSummary summary, ChartScale scale) {
+    return RepaintBoundary(
+      key: chartKey,
+      child: ResultsChartCard(
+        factorRows: summary.factorRows,
+        grandMean: summary.grandMean,
+        lowerBound: summary.lowerBound,
+        upperBound: summary.upperBound,
+        detectableDiffPercent: summary.detectableDiffPercent,
+        riskLevel: formModel.riskLevel,
+        scale: scale,
       ),
     );
   }

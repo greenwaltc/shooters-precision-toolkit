@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../config/project_configuration.dart';
 import '../model/project_form_model.dart';
 import '../sample_size_catalog.dart';
 import '../styles/components/app_text_field_decoration.dart';
@@ -147,7 +148,10 @@ class _ProjectFormState extends State<ProjectForm> {
             _buildRiskLevelOptions(),
             const SectionTitle('Choose your sample size'),
             _buildSampleSizeOptions(),
-            _buildImputeMissingDataCheckbox(),
+            if (ProjectConfiguration.current.featureFlags.isEnabled(
+              FeatureFlag.imputeMissingData,
+            ))
+              _buildImputeMissingDataCheckbox(),
             _buildSubmitButton(layout),
           ];
 

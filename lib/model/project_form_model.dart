@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../config/project_configuration.dart';
 import '../sample_size_catalog.dart';
 
 enum ExperimentStructure {
@@ -295,6 +296,13 @@ class ProjectFormModel extends ChangeNotifier {
     return List.unmodifiable(_factorDefinitions);
   }
 
+  /// Whether the impute-missing-data capability is enabled for this app build.
+  bool get canImputeMissingData => ProjectConfiguration.current.featureFlags
+      .isEnabled(FeatureFlag.imputeMissingData);
+
+  /// Whether missing range cells should be filled with the grand mean.
+  bool get shouldImputeMissingData => canImputeMissingData && imputeMissingData;
+
   /// Whether the form satisfies the same requirements enforced by submit
   /// validation on [ProjectForm].
   bool get isSetupValid {
@@ -393,6 +401,9 @@ class ProjectFormModel extends ChangeNotifier {
   }
 
   void setImputeMissingData(bool shouldImpute) {
+    if (!canImputeMissingData) {
+      shouldImpute = false;
+    }
     if (imputeMissingData == shouldImpute) return;
 
     imputeMissingData = shouldImpute;

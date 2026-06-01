@@ -32,7 +32,6 @@ void main() {
       find.text('Test How One Factor (two states) Influences A'),
       findsOneWidget,
     );
-    expect(find.text('Impute missing data with the grand mean'), findsOneWidget);
     expect(
       find.text('8 total ranges in 4 replicates of 2 ranges each'),
       findsOneWidget,

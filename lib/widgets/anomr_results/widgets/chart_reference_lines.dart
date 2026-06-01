@@ -34,6 +34,7 @@ class ChartReferenceLines {
 
     final percentLabel = (detectableDiffPercent * 100).toStringAsFixed(0);
     final boundsCollapsed = (upperBound - lowerBound).abs() < 0.0000001;
+    String formatYValue(double value) => value.toStringAsFixed(4);
 
     return ExtraLinesData(
       horizontalLines: [
@@ -68,7 +69,7 @@ class ChartReferenceLines {
               fontWeight: FontWeight.w600,
               fontSize: scale.axisLabelFontSize,
             ),
-            labelResolver: (_) => '+$percentLabel%',
+            labelResolver: (_) => formatYValue(upperBound),
           ),
         ),
         HorizontalLine(
@@ -85,7 +86,7 @@ class ChartReferenceLines {
               fontWeight: FontWeight.w600,
               fontSize: scale.axisLabelFontSize,
             ),
-            labelResolver: (_) => '-$percentLabel%',
+            labelResolver: (_) => formatYValue(lowerBound),
           ),
         ),
       ],

@@ -50,6 +50,15 @@ class AnomrCalculator {
         .toList(growable: false);
   }
 
+  /// Returns true when any matrix row lacks a parseable range value.
+  static bool hasMissingRangeData(PlutoGridStateManager manager) {
+    if (manager.rows.isEmpty) return true;
+
+    return manager.rows.any(
+      (row) => _parseRangeValue(row.cells['range']?.value) == null,
+    );
+  }
+
   static double? _rangeValueForRow(
     PlutoRow row, {
     double? imputeWith,
@@ -160,7 +169,7 @@ class AnomrCalculator {
     final observedRanges = collectRanges(stateManager);
     final grandMean = mean(observedRanges);
     final imputeWith =
-        formModel.imputeMissingData && observedRanges.isNotEmpty
+        formModel.shouldImputeMissingData && observedRanges.isNotEmpty
         ? grandMean
         : null;
     final ranges = collectRanges(

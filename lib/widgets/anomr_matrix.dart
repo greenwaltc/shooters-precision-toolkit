@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import 'package:provider/provider.dart';
 
+import '../config/project_configuration.dart';
 import '../help/help_access.dart';
 import '../model/project_form_model.dart';
 import '../model/project_store.dart';
@@ -17,6 +18,7 @@ import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
 import '../styles/layout/app_viewport.dart';
+import 'anomr_results/services/anomr_calculator.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
@@ -797,6 +799,31 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     }
   }
 
+  void _showResults(BuildContext context) {
+    final manager = _stateManager;
+    if (manager == null) return;
+
+    if (!ProjectConfiguration.current.featureFlags.isEnabled(
+          FeatureFlag.imputeMissingData,
+        ) &&
+        AnomrCalculator.hasMissingRangeData(manager)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Ranges column data is incomplete. Please fill out all cells to continue.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      AppRoutes.anomrResults,
+      arguments: manager,
+    );
+  }
+
   void _clearRanges() {
     if (_stateManager == null) return;
 
@@ -883,11 +910,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                     ElevatedButton.icon(
                       onPressed: _stateManager == null
                           ? null
-                          : () => Navigator.pushNamed(
-                              context,
-                              AppRoutes.anomrResults,
-                              arguments: _stateManager,
-                            ),
+                          : () => _showResults(context),
                       icon: const Icon(Icons.analytics),
                       label: const Text('Show Results'),
                     ),

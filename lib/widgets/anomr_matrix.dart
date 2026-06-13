@@ -23,6 +23,7 @@ import '../styles/layout/app_viewport.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
+import 'anomr_matrix/services/matrix_grid_clipboard.dart';
 import 'anomr_matrix/services/matrix_grid_data_builder.dart';
 import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'anomr_results/services/anomr_calculator.dart';
@@ -433,9 +434,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         LogicalKeyboardKey.control,
       ]) ...{
         LogicalKeySet(modifier, LogicalKeyboardKey.keyC):
-            const PlutoGridActionCopyValues(),
+            const MatrixGridCopyValuesAction(),
         LogicalKeySet(modifier, LogicalKeyboardKey.keyV):
-            const PlutoGridActionPasteValues(),
+            const MatrixGridPasteValuesAction(),
       },
       if (!widget.isMobile) ...{
         LogicalKeySet(LogicalKeyboardKey.enter):

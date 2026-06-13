@@ -38,7 +38,6 @@ class ResultsView extends StatefulWidget {
 }
 
 class _ResultsViewState extends State<ResultsView> {
-  final GlobalKey _chartKey = GlobalKey();
   bool _isExporting = false;
 
   @override
@@ -64,10 +63,8 @@ class _ResultsViewState extends State<ResultsView> {
               ? _ResultsBody(
                   formModel: formModel,
                   stateManager: stateManager,
-                  chartKey: _chartKey,
                   isExporting: _isExporting,
-                  onExportPressed: (summary) => _onExportPressed(
-                    summary: summary,
+                  onExportPressed: () => _onExportPressed(
                     formModel: formModel,
                     stateManager: stateManager,
                   ),
@@ -85,7 +82,6 @@ class _ResultsViewState extends State<ResultsView> {
   }
 
   Future<void> _onExportPressed({
-    required AnomrSummary summary,
     required ProjectFormModel formModel,
     required PlutoGridStateManager stateManager,
   }) async {
@@ -99,14 +95,17 @@ class _ResultsViewState extends State<ResultsView> {
     );
     if (options == null || !mounted) return;
 
+    final overlay = Overlay.of(context, rootOverlay: true);
+
     setState(() => _isExporting = true);
     try {
-      // Wait for any setState-triggered repaints to flush before capturing.
+      // Wait for any setState-triggered repaints to flush before exporting.
       await WidgetsBinding.instance.endOfFrame;
 
+      if (!mounted) return;
+
       final controller = ExportController(
-        chartKey: _chartKey,
-        summary: summary,
+        overlay: overlay,
         formModel: formModel,
         stateManager: stateManager,
         project: project,
@@ -166,16 +165,14 @@ class _ResultsBody extends StatelessWidget {
   const _ResultsBody({
     required this.formModel,
     required this.stateManager,
-    required this.chartKey,
     required this.isExporting,
     required this.onExportPressed,
   });
 
   final ProjectFormModel formModel;
   final PlutoGridStateManager stateManager;
-  final GlobalKey chartKey;
   final bool isExporting;
-  final ValueChanged<AnomrSummary> onExportPressed;
+  final VoidCallback onExportPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -215,7 +212,7 @@ class _ResultsBody extends StatelessWidget {
         _buildHeader(summary),
         SizedBox(height: scale.chartOuterPadding),
         ExportActionButton(
-          onPressed: () => onExportPressed(summary),
+          onPressed: onExportPressed,
           isExporting: isExporting,
         ),
         SizedBox(height: scale.chartOuterPadding + AppSpacing.sm),
@@ -244,17 +241,14 @@ class _ResultsBody extends StatelessWidget {
   }
 
   Widget _buildChart(AnomrSummary summary, ChartScale scale) {
-    return RepaintBoundary(
-      key: chartKey,
-      child: ResultsChartCard(
-        factorRows: summary.factorRows,
-        grandMean: summary.grandMean,
-        lowerBound: summary.lowerBound,
-        upperBound: summary.upperBound,
-        detectableDiffPercent: summary.detectableDiffPercent,
-        riskLevel: formModel.riskLevel,
-        scale: scale,
-      ),
+    return ResultsChartCard(
+      factorRows: summary.factorRows,
+      grandMean: summary.grandMean,
+      lowerBound: summary.lowerBound,
+      upperBound: summary.upperBound,
+      detectableDiffPercent: summary.detectableDiffPercent,
+      riskLevel: formModel.riskLevel,
+      scale: scale,
     );
   }
 }

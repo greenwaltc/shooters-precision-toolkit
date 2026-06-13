@@ -26,6 +26,9 @@ class ChartLayout {
     edgePad: edgePad,
   );
 
+  /// Fixed layout used for all file exports regardless of screen size.
+  static const ChartLayoutGeometry export = standard;
+
   /// Compact layout pulls factor groups closer together so mobile screens
   /// spend more pixels on the data and fewer pixels on empty inter-group gaps.
   static const ChartLayoutGeometry compact = ChartLayoutGeometry(

@@ -9,14 +9,16 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pluto_grid/pluto_grid.dart';
 
+import '../../anomr_matrix/services/matrix_grid_data_builder.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/pdf/pdf_styles.dart';
 
-/// Builds a PDF document containing the captured chart image and an optional
-/// ANOMR data table.
+/// Builds a PDF document containing the export-rendered chart image and an
+/// optional ANOMR data table.
 ///
 /// All visual decisions (margins, typography, table borders) come from
-/// [PdfStyles] so the export reads as a sibling of the in-app card.
+/// [PdfStyles]. Chart and table content use fixed export layout rules that do
+/// not depend on the current screen size or platform.
 class AnomrPdfBuilder {
   const AnomrPdfBuilder._();
 
@@ -136,7 +138,7 @@ class AnomrPdfBuilder {
               )
               .toList(),
         ),
-        ...manager.rows.map(
+        ..._exportRows(manager).map(
           (row) => pw.TableRow(
             children: columns.map((column) {
               final value = row.cells[column.field]?.value;
@@ -157,5 +159,20 @@ class AnomrPdfBuilder {
   static String _formatNumber(double value) {
     if (value.isNaN || !value.isFinite) return '—';
     return value.toStringAsFixed(4);
+  }
+
+  /// Rows in stable storage-index order so PDF matrix tables are identical
+  /// regardless of on-screen randomization or viewport.
+  static List<PlutoRow> _exportRows(PlutoGridStateManager manager) {
+    final rows = List<PlutoRow>.from(manager.refRows);
+    rows.sort(
+      (a, b) => _storageIndexFor(a).compareTo(_storageIndexFor(b)),
+    );
+    return rows;
+  }
+
+  static int _storageIndexFor(PlutoRow row) {
+    return MatrixGridDataBuilder.cellIntValue(row.cells['storage']) ??
+        ((MatrixGridDataBuilder.cellIntValue(row.cells['row']) ?? 1) - 1);
   }
 }

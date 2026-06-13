@@ -16,8 +16,7 @@ import 'chart_legend.dart';
 import 'combined_line_chart.dart';
 import 'conclusion_list.dart';
 
-/// Card surface that wraps the chart, legend, and per-factor conclusion
-/// list. Designed to be captured as a single image during export.
+/// Card surface that wraps the chart, legend, and per-factor conclusion list.
 class ResultsChartCard extends StatelessWidget {
   const ResultsChartCard({
     super.key,

@@ -38,6 +38,19 @@ class ChartScale {
   static const double _minScale = 0.78;
   static const double _maxScale = 1.45;
 
+  /// Logical width used when rendering results for file export.
+  static const double exportWidth = _baseWidth;
+
+  /// Pixel ratio used when rasterizing the export chart image.
+  static const double exportPixelRatio = 3.0;
+
+  /// Fixed sizing for exported chart images (PNG, JPEG, and PDF chart section).
+  ///
+  /// Matches the standard desktop chart at [exportWidth] with scale 1.0 so
+  /// exports look identical on every platform and viewport size.
+  static ChartScale get export =>
+      const ChartScale._(scale: 1.0, isCompact: false);
+
   final double scale;
   final bool isCompact;
 

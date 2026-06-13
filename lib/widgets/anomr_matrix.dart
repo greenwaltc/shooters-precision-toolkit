@@ -238,6 +238,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   PlutoGridStateManager? _stateManager;
   _ScrollCueState _scrollCues = const _ScrollCueState();
 
+  bool _randomizeOrder = false;
+  final math.Random _random = math.Random();
+
   static const double _scrollEpsilon = 1;
 
   PlutoGridStyleTheme _plutoTheme() {
@@ -652,22 +655,56 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       project: widget.project,
     );
 
-    _rows = gridData.rows;
+    _randomizeOrder = widget.project.randomizeOrder;
+    final ordered = _initialRowOrder(gridData.rows);
+    _renumberRunOrder(ordered);
+
+    _rows = ordered;
     _columns = _buildColumns(formModel, gridData.totalSamples);
     _columnGroups = _buildColumnGroups(formModel);
+  }
+
+  /// Resolves the row order for the first paint, honoring any persisted
+  /// randomized sequence so the layout survives navigation and app restarts.
+  List<PlutoRow> _initialRowOrder(List<PlutoRow> rows) {
+    if (!_randomizeOrder) return rows;
+
+    final sequence = widget.project.randomizeSequence;
+    if (sequence != null && _sequenceMatchesRows(sequence, rows)) {
+      return _applySequence(rows, sequence);
+    }
+
+    // Randomization is on but no usable sequence is stored (e.g. the sample
+    // size changed). Generate one now and persist it after the first frame.
+    final shuffled = [...rows]..shuffle(_random);
+    widget.project.randomizeSequence = shuffled.map(_storageIndexOf).toList();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<ProjectStore>().persistSelectedProject();
+    });
+    return shuffled;
   }
 
   List<PlutoColumn> _buildColumns(
     ProjectFormModel formModel,
     int totalSamples,
   ) {
+    final isOneFactor =
+        formModel.experimentStructure == ExperimentStructure.simpleABComparison;
+
     return [
-      _readOnlyIndexColumn(title: 'Row', field: 'row', maxValue: totalSamples),
       _readOnlyIndexColumn(
-        title: 'Replicate',
-        field: 'group',
-        maxValue: formModel.sampleSizeOption.rangesPerGroup.toInt(),
+        title: 'Run Order',
+        field: 'row',
+        maxValue: totalSamples,
       ),
+      // One-factor designs collapse to a single state per row, so the
+      // replicate index is meaningless and the column is omitted.
+      if (!isOneFactor)
+        _readOnlyIndexColumn(
+          title: 'Replicate',
+          field: 'group',
+          maxValue: formModel.sampleSizeOption.rangesPerGroup.toInt(),
+        ),
       ..._buildFactorColumns(formModel),
       _buildRangeColumn(),
     ];
@@ -787,6 +824,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             rendererContext.rowIdx + 1,
         factorStates: factorStates,
         initialValue: rendererContext.cell.value?.toString(),
+        showReplicate:
+            formModel.experimentStructure !=
+            ExperimentStructure.simpleABComparison,
       ),
     );
 
@@ -888,8 +928,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     return AppLayoutBuilder(
       builder: (context, layout) => Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _RandomizeOrderToggle(
+            value: _randomizeOrder,
+            onChanged: _stateManager == null ? null : _onRandomizeToggled,
+          ),
           Expanded(child: _buildGridArea(plutoTheme, scheme)),
           _MatrixActions(
             layout: layout,
@@ -900,6 +944,72 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         ],
       ),
     );
+  }
+
+  /// Toggling on generates a fresh randomized order; toggling off restores the
+  /// canonical sequential order. Either way the new state is persisted so it
+  /// survives navigation, project switches, and app restarts. Rows are
+  /// reordered by instance, so range values stay bound to their rows.
+  void _onRandomizeToggled(bool value) {
+    final manager = _stateManager;
+    if (manager == null) return;
+
+    setState(() => _randomizeOrder = value);
+
+    final current = manager.refRows.toList();
+    final ordered = value
+        ? ([...current]..shuffle(_random))
+        : ([...current]
+            ..sort((a, b) => _storageIndexOf(a).compareTo(_storageIndexOf(b))));
+
+    _persistRandomizeState(value, ordered);
+    _applyOrderedRows(manager, ordered);
+  }
+
+  void _persistRandomizeState(bool value, List<PlutoRow> ordered) {
+    widget.project.randomizeOrder = value;
+    widget.project.randomizeSequence = value
+        ? ordered.map(_storageIndexOf).toList()
+        : null;
+    context.read<ProjectStore>().persistSelectedProject();
+  }
+
+  void _applyOrderedRows(PlutoGridStateManager manager, List<PlutoRow> ordered) {
+    _renumberRunOrder(ordered);
+
+    _rows = ordered;
+    manager.removeAllRows(notify: false);
+    manager.appendRows(ordered);
+    manager.notifyListeners();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateScrollCues();
+    });
+  }
+
+  void _renumberRunOrder(List<PlutoRow> rows) {
+    for (var index = 0; index < rows.length; index++) {
+      rows[index].cells['row']!.value = index + 1;
+    }
+  }
+
+  int _storageIndexOf(PlutoRow row) {
+    return MatrixGridDataBuilder.cellIntValue(row.cells['storage']) ?? 0;
+  }
+
+  bool _sequenceMatchesRows(List<int> sequence, List<PlutoRow> rows) {
+    if (sequence.length != rows.length) return false;
+    final rowIndices = rows.map(_storageIndexOf).toSet();
+    final sequenceIndices = sequence.toSet();
+    return sequenceIndices.length == rowIndices.length &&
+        sequenceIndices.containsAll(rowIndices);
+  }
+
+  List<PlutoRow> _applySequence(List<PlutoRow> rows, List<int> sequence) {
+    final rowsByStorage = {
+      for (final row in rows) _storageIndexOf(row): row,
+    };
+    return [for (final index in sequence) rowsByStorage[index]!];
   }
 
   Widget _buildGridArea(PlutoGridStyleTheme plutoTheme, ColorScheme scheme) {
@@ -921,6 +1031,30 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             scheme: scheme,
           );
         },
+      ),
+    );
+  }
+}
+
+class _RandomizeOrderToggle extends StatelessWidget {
+  const _RandomizeOrderToggle({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text('Randomize order?', style: textTheme.bodyMedium),
+          const SizedBox(width: AppSpacing.md),
+          Text(value ? 'Yes' : 'No', style: textTheme.labelLarge),
+          Switch(value: value, onChanged: onChanged),
+        ],
       ),
     );
   }

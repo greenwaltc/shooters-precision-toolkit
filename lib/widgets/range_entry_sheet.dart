@@ -17,12 +17,16 @@ class RangeEntryContext {
     required this.replicateIndex,
     required this.factorStates,
     required this.initialValue,
+    this.showReplicate = true,
   });
 
   final int rowIndex;
   final int replicateIndex;
   final List<FactorStateEntry> factorStates;
   final String? initialValue;
+
+  /// Whether to surface the replicate summary. Hidden for one-factor designs.
+  final bool showReplicate;
 }
 
 @immutable
@@ -166,18 +170,20 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
     return Row(
       children: [
         _CompactStat(
-          label: 'Row',
+          label: 'Run Order',
           value: widget.entry.rowIndex.toString(),
           labelStyle: labelStyle,
           valueStyle: textTheme.titleSmall,
         ),
-        const SizedBox(width: AppSpacing.lg),
-        _CompactStat(
-          label: 'Replicate',
-          value: widget.entry.replicateIndex.toString(),
-          labelStyle: labelStyle,
-          valueStyle: textTheme.titleSmall,
-        ),
+        if (widget.entry.showReplicate) ...[
+          const SizedBox(width: AppSpacing.lg),
+          _CompactStat(
+            label: 'Replicate',
+            value: widget.entry.replicateIndex.toString(),
+            labelStyle: labelStyle,
+            valueStyle: textTheme.titleSmall,
+          ),
+        ],
       ],
     );
   }

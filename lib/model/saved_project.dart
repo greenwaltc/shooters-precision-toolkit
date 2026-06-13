@@ -13,6 +13,8 @@ class SavedProject {
     required this.updatedAt,
     required this.formModel,
     this.setupComplete = false,
+    this.randomizeOrder = false,
+    this.randomizeSequence,
     Map<String, dynamic>? matrixState,
   }) : matrixState = matrixState ?? {};
 
@@ -24,6 +26,15 @@ class SavedProject {
   /// Whether the user has submitted the project setup form and may access
   /// the ANOMR matrix.
   bool setupComplete;
+
+  /// Whether the matrix rows are displayed in a randomized run order.
+  bool randomizeOrder;
+
+  /// Persisted randomized row order, expressed as the list of stable sample
+  /// (storage) indices in display order. `null` when [randomizeOrder] is off.
+  /// Re-generated only when the randomize toggle is switched off and back on.
+  List<int>? randomizeSequence;
+
   final Map<String, dynamic> matrixState;
 
   /// Display title with a stable fallback for incomplete projects.
@@ -50,6 +61,10 @@ class SavedProject {
       setupComplete:
           json['setupComplete'] as bool? ??
           (matrixState.isNotEmpty && formModel.isSetupValid),
+      randomizeOrder: json['randomizeOrder'] as bool? ?? false,
+      randomizeSequence: (json['randomizeSequence'] as List?)
+          ?.map((value) => (value as num).toInt())
+          .toList(),
       matrixState: matrixState,
     );
   }
@@ -61,6 +76,8 @@ class SavedProject {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'setupComplete': setupComplete,
+      'randomizeOrder': randomizeOrder,
+      'randomizeSequence': randomizeSequence,
       'formModel': formModel.toJson(),
       'matrixState': matrixState,
     };

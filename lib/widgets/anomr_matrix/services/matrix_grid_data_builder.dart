@@ -34,7 +34,14 @@ class MatrixGridDataBuilder {
   }
 
   /// Returns the persisted range key for a rendered row.
+  ///
+  /// The key is derived from the stable `storage` cell (the canonical sample
+  /// index) so it survives row reordering (e.g. randomization). The displayed
+  /// "Run Order" column is purely positional and must not drive persistence.
   static String storageKeyForRow(PlutoRow row) {
+    final storageIndex = cellIntValue(row.cells['storage']);
+    if (storageIndex != null) return 'range_$storageIndex';
+
     final rowNumber = cellIntValue(row.cells['row']) ?? 1;
     return 'range_${rowNumber - 1}';
   }
@@ -146,8 +153,12 @@ class MatrixGridDataBuilder {
 
     return PlutoRow(
       cells: {
+        // Display "Run Order"; built in canonical order so it starts sequential
+        // and is renumbered by position whenever rows are reordered.
         'row': PlutoCell(value: rangeIndex + 1),
         'group': PlutoCell(value: blockIdx + 1),
+        // Stable, hidden persistence index (no matching column).
+        'storage': PlutoCell(value: rangeIndex),
         for (var factorIdx = 0; factorIdx < combo.length; factorIdx++)
           'factor_$factorIdx': PlutoCell(value: combo[factorIdx]),
         'range': PlutoCell(

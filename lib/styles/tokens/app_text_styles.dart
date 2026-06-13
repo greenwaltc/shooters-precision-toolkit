@@ -42,12 +42,6 @@ class AppTextStyles {
     context,
   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600);
 
-  /// Subtitle paragraph beneath a chart / card title.
-  static TextStyle? cardSubtitle(BuildContext context) => Theme.of(context)
-      .textTheme
-      .bodySmall
-      ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
-
   /// Header style for the form's risk-level / detection table.
   static TextStyle? formTableHeader(BuildContext context) => Theme.of(
     context,

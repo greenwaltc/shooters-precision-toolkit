@@ -37,11 +37,6 @@ class AppLayoutMetrics {
 
   EdgeInsets get pagePadding => EdgeInsets.all(pageGutter);
 
-  EdgeInsets get toolPadding => EdgeInsets.symmetric(
-    horizontal: pageGutter,
-    vertical: isMobile ? AppSpacing.md : AppSpacing.xl,
-  );
-
   double get homeMaxWidth => isDesktop ? 980 : double.infinity;
   double get formMaxWidth => isDesktop ? 1080 : double.infinity;
   double get resultsMaxWidth => isDesktop ? 1180 : double.infinity;

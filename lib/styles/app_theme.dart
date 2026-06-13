@@ -32,16 +32,6 @@ class AppTheme {
     return _build(colorScheme);
   }
 
-  /// Optional dark theme. Currently unused by `MaterialApp` but provided so
-  /// switching is a single one-liner away.
-  static ThemeData dark() {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.seed,
-      brightness: Brightness.dark,
-    );
-    return _build(colorScheme);
-  }
-
   static ThemeData _build(ColorScheme colorScheme) {
     final base = ThemeData(colorScheme: colorScheme, useMaterial3: true);
 

@@ -28,21 +28,6 @@ class FeatureFlags {
   final Map<FeatureFlag, bool> _values;
 
   bool isEnabled(FeatureFlag flag) => _values[flag] ?? false;
-
-  factory FeatureFlags.fromJson(Map<String, dynamic>? json) {
-    if (json == null) return defaults;
-
-    return FeatureFlags(
-      values: {
-        for (final flag in FeatureFlag.values)
-          flag: json[flag.key] as bool? ?? defaults.isEnabled(flag),
-      },
-    );
-  }
-
-  Map<String, bool> toJson() {
-    return {for (final flag in FeatureFlag.values) flag.key: isEnabled(flag)};
-  }
 }
 
 /// Application-wide configuration for project behavior.

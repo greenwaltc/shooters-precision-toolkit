@@ -17,6 +17,7 @@ import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
 import '../styles/components/matrix_grid_style.dart';
+import '../styles/components/scroll_cue_style.dart';
 import '../styles/layout/app_layout.dart';
 import '../styles/layout/app_viewport.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
@@ -489,7 +490,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               top: 0,
               bottom: 0,
               child: GridScrollCue(
-                edge: MatrixScrollCueEdge.left,
+                edge: ScrollCueEdge.left,
                 scheme: scheme,
               ),
             ),
@@ -499,7 +500,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               top: 0,
               bottom: 0,
               child: GridScrollCue(
-                edge: MatrixScrollCueEdge.right,
+                edge: ScrollCueEdge.right,
                 scheme: scheme,
               ),
             ),
@@ -509,7 +510,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               right: 0,
               top: _bodyRowsTopInset(plutoTheme),
               child: GridScrollCue(
-                edge: MatrixScrollCueEdge.top,
+                edge: ScrollCueEdge.top,
                 scheme: scheme,
               ),
             ),
@@ -519,7 +520,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               right: 0,
               bottom: 0,
               child: GridScrollCue(
-                edge: MatrixScrollCueEdge.bottom,
+                edge: ScrollCueEdge.bottom,
                 scheme: scheme,
               ),
             ),
@@ -770,10 +771,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     ];
   }
 
-  String _rangeStorageKeyForRow(PlutoRow row) {
-    return MatrixGridDataBuilder.storageKeyForRow(row);
-  }
-
   Widget _mobileRangeCellRenderer(PlutoColumnRendererContext rendererContext) {
     final value = rendererContext.cell.value?.toString() ?? '';
     return Material(
@@ -843,8 +840,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     if (manager == null) return;
 
     manager.rows[rowIdx].cells['range']!.value = value;
-    widget.project.matrixState[_rangeStorageKeyForRow(manager.rows[rowIdx])] =
-        value;
+    widget.project.matrixState[MatrixGridDataBuilder.storageKeyForRow(
+      manager.rows[rowIdx],
+    )] = value;
     context.read<ProjectStore>().persistSelectedProject(markModified: true);
 
     manager.notifyListeners();
@@ -915,7 +913,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     for (final row in manager.rows) {
       row.cells['range']!.value = null;
-      widget.project.matrixState.remove(_rangeStorageKeyForRow(row));
+      widget.project.matrixState.remove(
+        MatrixGridDataBuilder.storageKeyForRow(row),
+      );
     }
     manager.notifyListeners();
     context.read<ProjectStore>().persistSelectedProject(markModified: true);

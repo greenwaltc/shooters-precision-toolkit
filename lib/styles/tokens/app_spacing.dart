@@ -37,9 +37,6 @@ class AppSpacing {
   /// Page-level padding around scaffold body content.
   static const EdgeInsets page = EdgeInsets.all(xl);
 
-  /// Slightly tighter screen inset, used by form pages.
-  static const EdgeInsets screenInsetMd = EdgeInsets.all(lg);
-
   /// Padding inside outlined surface cards (header summary etc.).
   static const EdgeInsets cardPadding = EdgeInsets.all(xxl);
 
@@ -51,10 +48,6 @@ class AppSpacing {
 
   /// Padding for the empty / placeholder result state.
   static const EdgeInsets emptyState = EdgeInsets.all(xxxxl);
-
-  /// Used for `SingleChildScrollView` so the last item never sits flush
-  /// against the bottom of the viewport.
-  static const EdgeInsets scrollBottom = EdgeInsets.only(bottom: xxxl);
 
   /// Title above a grouped factor block.
   static const EdgeInsets factorTitle = EdgeInsets.fromLTRB(md, 0, md, sm);

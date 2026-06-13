@@ -156,11 +156,6 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return true;
   }
 
-  /// Persists all projects immediately.
-  Future<void> persistAllProjects() async {
-    await _saveProjects();
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.inactive ||

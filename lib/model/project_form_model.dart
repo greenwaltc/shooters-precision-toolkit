@@ -13,7 +13,6 @@ enum ExperimentStructure {
   simpleABComparison(
     label: 'Test how one factor (two states) influences precision',
     factorCount: 1,
-    usesFactorialSamplePlan: false,
   ),
   twoFactors(label: 'Test how two factors influence precision', factorCount: 2),
   threeFactors(
@@ -28,12 +27,10 @@ enum ExperimentStructure {
   const ExperimentStructure({
     required this.label,
     required this.factorCount,
-    this.usesFactorialSamplePlan = true,
   });
 
   final String label;
   final int factorCount;
-  final bool usesFactorialSamplePlan;
 
   /// Resolves a persisted enum name to a valid experiment structure.
   static ExperimentStructure fromName(String? name) {
@@ -158,9 +155,6 @@ class SampleSizeOption {
   /// Total number of individual samples — `numSets * groupSize`, rounded to
   /// the nearest integer to absorb fractional-factorial replications.
   int get totalSamples => (numSets * groupSize).round();
-
-  /// Alias for [groupSize] — one group per Cartesian-product cell.
-  int get groupCount => groupSize;
 
   /// Number of replicate ranges per group.
   num get rangesPerGroup => numSets;

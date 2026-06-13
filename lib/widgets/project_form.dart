@@ -10,7 +10,7 @@ import '../model/project_form_model.dart';
 import '../sample_size_catalog.dart';
 import '../styles/components/app_text_field_decoration.dart';
 import '../styles/components/grouped_field_panel.dart';
-import '../styles/components/matrix_grid_style.dart';
+import '../styles/components/scroll_cue_style.dart';
 import '../styles/components/section_title.dart';
 import '../styles/layout/app_layout.dart';
 import '../styles/layout/app_viewport.dart';
@@ -244,7 +244,7 @@ class _ProjectFormState extends State<ProjectForm> {
             left: 0,
             right: 0,
             child: GridScrollCue(
-              edge: MatrixScrollCueEdge.top,
+              edge: ScrollCueEdge.top,
               scheme: scheme,
             ),
           ),
@@ -254,7 +254,7 @@ class _ProjectFormState extends State<ProjectForm> {
             left: 0,
             right: 0,
             child: GridScrollCue(
-              edge: MatrixScrollCueEdge.bottom,
+              edge: ScrollCueEdge.bottom,
               scheme: scheme,
             ),
           ),

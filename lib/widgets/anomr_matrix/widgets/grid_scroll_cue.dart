@@ -5,14 +5,14 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../styles/components/matrix_grid_style.dart';
+import '../../../styles/components/scroll_cue_style.dart';
 
-/// Non-interactive edge overlay that hints more matrix content is scrollable.
+/// Non-interactive edge overlay that hints more content is scrollable.
 class GridScrollCue extends StatelessWidget {
   const GridScrollCue({super.key, required this.edge, required this.scheme});
 
   /// Edge where the cue is painted.
-  final MatrixScrollCueEdge edge;
+  final ScrollCueEdge edge;
 
   /// Active color scheme used to harmonize the cue with the page surface.
   final ColorScheme scheme;
@@ -20,27 +20,25 @@ class GridScrollCue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isHorizontal =
-        edge == MatrixScrollCueEdge.left || edge == MatrixScrollCueEdge.right;
+        edge == ScrollCueEdge.left || edge == ScrollCueEdge.right;
 
     return IgnorePointer(
       child: SizedBox(
-        width: isHorizontal ? MatrixGridStyle.scrollCueExtent : double.infinity,
-        height: isHorizontal
-            ? double.infinity
-            : MatrixGridStyle.scrollCueExtent,
+        width: isHorizontal ? ScrollCueStyle.extent : double.infinity,
+        height: isHorizontal ? double.infinity : ScrollCueStyle.extent,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            gradient: MatrixGridStyle.scrollCueGradient(
+            gradient: ScrollCueStyle.gradient(
               edge: edge,
               surface: scheme.surface,
             ),
           ),
           child: Align(
-            alignment: MatrixGridStyle.scrollCueIconAlignment(edge),
+            alignment: ScrollCueStyle.iconAlignment(edge),
             child: Padding(
-              padding: MatrixGridStyle.scrollCueIconPadding(edge),
+              padding: ScrollCueStyle.iconPadding(edge),
               child: Icon(
-                MatrixGridStyle.scrollCueIcon(edge),
+                ScrollCueStyle.icon(edge),
                 size: 22,
                 color: scheme.onSurfaceVariant.withValues(alpha: 0.85),
               ),

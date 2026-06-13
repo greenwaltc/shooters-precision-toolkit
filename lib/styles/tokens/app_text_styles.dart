@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 class AppTextStyles {
   const AppTextStyles._();
 
-  /// Section title styling for forms ("Choose Your Risk Level", etc.).
+  /// Section title styling for forms ("Choose your risk level", etc.).
   static TextStyle? sectionTitle(BuildContext context) =>
       Theme.of(context).textTheme.titleMedium;
 

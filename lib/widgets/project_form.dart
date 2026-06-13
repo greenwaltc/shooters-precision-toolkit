@@ -239,7 +239,7 @@ class _ProjectFormState extends State<ProjectForm> {
   List<Widget> _buildSampleFields(AppLayoutMetrics layout) {
     return [
       const SectionTitle(
-        'Choose Your Risk Level (chance of being wrong if test indicates '
+        'Choose your risk level (chance of being wrong if test indicates '
         'a real difference in factor states)',
       ),
       _buildRiskLevelOptions(),

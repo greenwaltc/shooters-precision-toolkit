@@ -29,7 +29,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('Test How One Factor (two states) Influences Precision'),
+      find.text('Test how one factor (two states) influences precision'),
       findsOneWidget,
     );
     expect(
@@ -76,7 +76,7 @@ void main() {
     await _pumpApp(tester);
     await _createProject(tester);
 
-    await tester.tap(find.text('Test How Three Factors Influence Precision'));
+    await tester.tap(find.text('Test how three factors influence precision'));
     await tester.pumpAndSettle();
 
     expect(find.text('Factor 3'), findsOneWidget);

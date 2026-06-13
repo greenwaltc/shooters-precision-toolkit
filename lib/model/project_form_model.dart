@@ -11,17 +11,17 @@ import '../sample_size_catalog.dart';
 /// Supported experiment structures and their factor counts.
 enum ExperimentStructure {
   simpleABComparison(
-    label: 'Test How One Factor (two states) Influences Precision',
+    label: 'Test how one factor (two states) influences precision',
     factorCount: 1,
     usesFactorialSamplePlan: false,
   ),
-  twoFactors(label: 'Test How Two Factors Influence Precision', factorCount: 2),
+  twoFactors(label: 'Test how two factors influence precision', factorCount: 2),
   threeFactors(
-    label: 'Test How Three Factors Influence Precision',
+    label: 'Test how three factors influence precision',
     factorCount: 3,
   ),
   fourFactors(
-    label: 'Test How Four Factors Influence Precision',
+    label: 'Test how four factors influence precision',
     factorCount: 4,
   );
 

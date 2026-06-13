@@ -188,6 +188,24 @@ class SampleSizeOption {
         '$groupSize ranges each';
   }
 
+  /// Label used for the radio options in the project form's sample-size
+  /// section.
+  ///
+  /// * One-factor designs ([ExperimentStructure.simpleABComparison]) drop the
+  ///   trailing " ranges each" suffix from [labelFor].
+  /// * Multi-factor designs are truncated to just the total range count
+  ///   (e.g. `"16 total ranges"`).
+  String formOptionLabel(ExperimentStructure structure) {
+    if (structure == ExperimentStructure.simpleABComparison) {
+      final replicates = _formatSampleValue(groupSize);
+      final rangesEach = _formatSampleValue(numSets);
+      return '$totalSamples total ranges in $replicates replicates of '
+          '$rangesEach';
+    }
+
+    return '$totalSamples total ranges';
+  }
+
   /// Linear index used to persist a matrix range cell for [comboIdx] at
   /// replicate [blockIdx]. One-factor designs use state-major ordering; all
   /// other structures use replicate-major ordering.

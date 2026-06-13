@@ -33,7 +33,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('8 total ranges in 2 replicates of 4 ranges each'),
+      find.text('8 total ranges in 2 replicates of 4'),
       findsOneWidget,
     );
   });
@@ -80,10 +80,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Factor 3'), findsOneWidget);
-    expect(
-      find.text('16 total ranges in 2 replicates of 8 ranges each'),
-      findsOneWidget,
-    );
+    expect(find.text('16 total ranges'), findsOneWidget);
   });
 
   testWidgets('form submits to matrix and setup round trip preserves state', (
@@ -100,7 +97,7 @@ void main() {
 
     expect(find.text('Range Test'), findsWidgets);
 
-    await tester.tap(find.byIcon(Icons.tune));
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
     final titleField = tester.widget<TextFormField>(
@@ -112,7 +109,7 @@ void main() {
     await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.tune), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
   });
 
   testWidgets('project state persists to storage and reloads on home page', (

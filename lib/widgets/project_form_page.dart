@@ -11,6 +11,7 @@ import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
+import 'app_copyright_footer.dart';
 import 'project_drawer.dart';
 import 'project_form.dart';
 import 'no_selected_project_page.dart';
@@ -58,6 +59,7 @@ class ProjectFormPage extends StatelessWidget {
                 ),
                 floatingActionButton: helpFabFor(layout),
                 floatingActionButtonLocation: helpFabLocation,
+                bottomNavigationBar: const AppCopyrightFooter(),
               );
             },
           );

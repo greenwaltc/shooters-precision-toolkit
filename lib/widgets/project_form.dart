@@ -10,11 +10,13 @@ import '../model/project_form_model.dart';
 import '../sample_size_catalog.dart';
 import '../styles/components/app_text_field_decoration.dart';
 import '../styles/components/grouped_field_panel.dart';
+import '../styles/components/matrix_grid_style.dart';
 import '../styles/components/section_title.dart';
 import '../styles/layout/app_layout.dart';
 import '../styles/layout/app_viewport.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
+import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'project_form/controllers/factor_input_controllers.dart';
 import 'project_form/models/factor_field_hints.dart';
 import 'project_form/services/project_form_validator.dart';
@@ -35,9 +37,16 @@ class ProjectForm extends StatefulWidget {
 
 class _ProjectFormState extends State<ProjectForm> {
   final _formKey = GlobalKey<FormState>();
+  final _fieldsScrollController = ScrollController();
   final projectTitleController = TextEditingController();
   late final List<FactorInputControllers> _factorControllers;
   bool _isHydratingControllers = false;
+
+  /// Distance (in pixels) from an edge before a scroll cue is hidden.
+  static const double _scrollCueEpsilon = 1;
+
+  bool _showTopScrollCue = false;
+  bool _showBottomScrollCue = false;
 
   @override
   void initState() {
@@ -55,10 +64,13 @@ class _ProjectFormState extends State<ProjectForm> {
     for (var index = 0; index < _factorControllers.length; index++) {
       _factorControllers[index].addListener(() => _syncFactorDefinition(index));
     }
+
+    _scheduleScrollCueUpdate();
   }
 
   @override
   void dispose() {
+    _fieldsScrollController.dispose();
     projectTitleController.dispose();
     for (final controllers in _factorControllers) {
       controllers.dispose();
@@ -180,23 +192,95 @@ class _ProjectFormState extends State<ProjectForm> {
       key: _formKey,
       autovalidateMode: AutovalidateMode.onUserInteraction,
       child: AppLayoutBuilder(
-        builder: (context, layout) => _buildScrollBody(context, layout),
+        builder: (context, layout) => _buildFormLayout(context, layout),
       ),
     );
   }
 
-  Widget _buildScrollBody(BuildContext context, AppLayoutMetrics layout) {
-    return SingleChildScrollView(
-      padding: AppViewport.scrollBottomPadding(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _buildFormTitle(context),
-          const SizedBox(height: AppSpacing.md),
-          _buildResponsiveFieldGroups(layout),
-        ],
-      ),
+  /// Splits the form into a scrollable field region and a statically pinned
+  /// submit button so the submit action is always visible.
+  Widget _buildFormLayout(BuildContext context, AppLayoutMetrics layout) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: _buildScrollableFields(context, layout)),
+        _buildSubmitButton(layout),
+      ],
     );
+  }
+
+  Widget _buildScrollableFields(BuildContext context, AppLayoutMetrics layout) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Stack(
+      children: [
+        NotificationListener<ScrollMetricsNotification>(
+          onNotification: (_) {
+            _scheduleScrollCueUpdate();
+            return false;
+          },
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (_) {
+              _scheduleScrollCueUpdate();
+              return false;
+            },
+            child: SingleChildScrollView(
+              controller: _fieldsScrollController,
+              padding: AppViewport.scrollBottomPadding(context),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _buildFormTitle(context),
+                  const SizedBox(height: AppSpacing.md),
+                  _buildResponsiveFieldGroups(layout),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_showTopScrollCue)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GridScrollCue(
+              edge: MatrixScrollCueEdge.top,
+              scheme: scheme,
+            ),
+          ),
+        if (_showBottomScrollCue)
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: GridScrollCue(
+              edge: MatrixScrollCueEdge.bottom,
+              scheme: scheme,
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _scheduleScrollCueUpdate() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final controller = _fieldsScrollController;
+      if (!controller.hasClients) return;
+
+      final position = controller.position;
+      final showTop = position.pixels > _scrollCueEpsilon;
+      final showBottom =
+          position.pixels < position.maxScrollExtent - _scrollCueEpsilon;
+
+      if (showTop != _showTopScrollCue || showBottom != _showBottomScrollCue) {
+        setState(() {
+          _showTopScrollCue = showTop;
+          _showBottomScrollCue = showBottom;
+        });
+      }
+    });
   }
 
   Widget _buildFormTitle(BuildContext context) {
@@ -211,7 +295,7 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildResponsiveFieldGroups(AppLayoutMetrics layout) {
     final setupFields = _buildSetupFields();
-    final sampleFields = _buildSampleFields(layout);
+    final sampleFields = _buildSampleFields();
 
     if (!layout.useTwoColumnForms) {
       return _fieldColumn([...setupFields, ...sampleFields]);
@@ -236,7 +320,7 @@ class _ProjectFormState extends State<ProjectForm> {
     ];
   }
 
-  List<Widget> _buildSampleFields(AppLayoutMetrics layout) {
+  List<Widget> _buildSampleFields() {
     return [
       const SectionTitle(
         'Choose your risk level (chance of being wrong if test indicates '
@@ -246,7 +330,6 @@ class _ProjectFormState extends State<ProjectForm> {
       const SectionTitle('Choose your sample size'),
       _buildSampleSizeOptions(),
       if (_canShowImputationOption()) _buildImputeMissingDataCheckbox(),
-      _buildSubmitButton(layout),
     ];
   }
 
@@ -408,7 +491,9 @@ class _ProjectFormState extends State<ProjectForm> {
       padding: AppSpacing.radioItemVertical,
       child: RadioListTile<SampleSizeOption>(
         value: option,
-        title: Text(option.labelFor(widget.formModel.experimentStructure)),
+        title: Text(
+          option.formOptionLabel(widget.formModel.experimentStructure),
+        ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: AppSpacing.md),
           child: _buildDetectableDifferenceTable(option),

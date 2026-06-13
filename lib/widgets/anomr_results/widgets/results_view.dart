@@ -15,6 +15,8 @@ import '../../../styles/chart/chart_scale.dart';
 import '../../../styles/layout/app_layout.dart';
 import '../../../styles/layout/app_viewport.dart';
 import '../../../styles/tokens/app_spacing.dart';
+import '../../app_back_button.dart';
+import '../../app_copyright_footer.dart';
 import '../../project_drawer.dart';
 import '../models/anomr_summary.dart';
 import '../models/export_options.dart';
@@ -76,6 +78,7 @@ class _ResultsViewState extends State<ResultsView> {
                 ),
           floatingActionButton: helpFabFor(layout),
           floatingActionButtonLocation: helpFabLocation,
+          bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );
@@ -144,10 +147,7 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       title: Text('$displayName — Results'),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
+      leading: AppBackButton(onPressed: () => Navigator.of(context).pop()),
       actions: [
         ...helpAppBarActionsFor(layout),
         Builder(

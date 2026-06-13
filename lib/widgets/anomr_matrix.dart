@@ -25,6 +25,8 @@ import '../styles/tokens/app_text_styles.dart';
 import 'anomr_matrix/services/matrix_grid_data_builder.dart';
 import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'anomr_results/services/anomr_calculator.dart';
+import 'app_back_button.dart';
+import 'app_copyright_footer.dart';
 import 'no_selected_project_page.dart';
 import 'project_drawer.dart';
 import 'range_entry_sheet.dart';
@@ -93,6 +95,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
         drawer: const ProjectDrawer(),
         appBar: _buildAppBar(context, layout, store),
         body: _buildBody(context, layout, formModel),
+        bottomNavigationBar: const AppCopyrightFooter(),
       ),
     );
   }
@@ -103,18 +106,24 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     ProjectStore store,
   ) {
     return AppBar(
+      leading: AppBackButton(
+        tooltip: 'Project setup',
+        onPressed: () => _goToProjectSetup(context, store),
+      ),
       title: Text(project.displayName),
       actions: [
         ...helpAppBarActionsFor(layout, preferAppBar: true),
         IconButton(
-          tooltip: 'Projects',
-          onPressed: () => _goHome(context, store),
-          icon: const Icon(Icons.home_outlined),
-        ),
-        IconButton(
           tooltip: 'Project setup',
           onPressed: () => _goToProjectSetup(context, store),
           icon: const Icon(Icons.tune),
+        ),
+        Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
         ),
       ],
     );
@@ -155,12 +164,6 @@ class _AnomrMatrixScaffold extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _goHome(BuildContext context, ProjectStore store) async {
-    final navigator = Navigator.of(context);
-    await store.persistSelectedProject();
-    navigator.pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
   }
 
   Future<void> _goToProjectSetup(
@@ -407,24 +410,41 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         columnSize: const PlutoGridColumnSizeConfig(
           autoSizeMode: PlutoAutoSizeMode.none,
         ),
-        shortcut: PlutoGridShortcut(
-          actions: {
-            ...PlutoGridShortcut.defaultActions,
-            for (final modifier in [
-              LogicalKeyboardKey.meta,
-              LogicalKeyboardKey.control,
-            ]) ...{
-              LogicalKeySet(modifier, LogicalKeyboardKey.keyC):
-                  const PlutoGridActionCopyValues(),
-              LogicalKeySet(modifier, LogicalKeyboardKey.keyV):
-                  const PlutoGridActionPasteValues(),
-            },
-          },
-        ),
-        enterKeyAction: PlutoGridEnterKeyAction.editingAndMoveDown,
-        tabKeyAction: PlutoGridTabKeyAction.moveToNextOnEdge,
+        shortcut: PlutoGridShortcut(actions: _shortcutActions()),
       ),
     );
+  }
+
+  /// Builds the grid's keyboard shortcut map.
+  ///
+  /// On desktop/web, Enter and Tab advance the active cell to the next range
+  /// cell (Excel / Google Sheets convention). Because the range column is the
+  /// only editable column, "next appropriate cell" is the range cell directly
+  /// below (or above with Shift). Copy/paste use the platform modifier.
+  Map<ShortcutActivator, PlutoGridShortcutAction> _shortcutActions() {
+    return {
+      ...PlutoGridShortcut.defaultActions,
+      for (final modifier in [
+        LogicalKeyboardKey.meta,
+        LogicalKeyboardKey.control,
+      ]) ...{
+        LogicalKeySet(modifier, LogicalKeyboardKey.keyC):
+            const PlutoGridActionCopyValues(),
+        LogicalKeySet(modifier, LogicalKeyboardKey.keyV):
+            const PlutoGridActionPasteValues(),
+      },
+      if (!widget.isMobile) ...{
+        LogicalKeySet(LogicalKeyboardKey.enter):
+            const _AdvanceRangeCellAction(),
+        LogicalKeySet(LogicalKeyboardKey.numpadEnter):
+            const _AdvanceRangeCellAction(),
+        LogicalKeySet(LogicalKeyboardKey.shift, LogicalKeyboardKey.enter):
+            const _AdvanceRangeCellAction(),
+        LogicalKeySet(LogicalKeyboardKey.tab): const _AdvanceRangeCellAction(),
+        LogicalKeySet(LogicalKeyboardKey.shift, LogicalKeyboardKey.tab):
+            const _AdvanceRangeCellAction(),
+      },
+    };
   }
 
   double _bodyRowsTopInset(PlutoGridStyleTheme plutoTheme) {
@@ -925,6 +945,9 @@ class _MatrixActions extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(
         top: layout.isMobile ? AppSpacing.md : AppSpacing.lg,
+        // Desktop/web place the action row above the page bottom; add
+        // breathing room so the buttons aren't cramped against the edge.
+        bottom: layout.isMobile ? 0 : AppSpacing.xl,
       ),
       child: SizedBox(
         width: double.infinity,
@@ -947,6 +970,36 @@ class _MatrixActions extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Moves the active cell to the next range cell for spreadsheet-style data
+/// entry. Plain Enter/Tab move down; Shift+Enter/Shift+Tab move up. Committing
+/// any in-progress edit happens implicitly when the current cell changes.
+class _AdvanceRangeCellAction extends PlutoGridShortcutAction {
+  const _AdvanceRangeCellAction();
+
+  @override
+  void execute({
+    required PlutoKeyManagerEvent keyEvent,
+    required PlutoGridStateManager stateManager,
+  }) {
+    if (stateManager.currentCell == null) {
+      stateManager.setCurrentCell(stateManager.firstCell, 0);
+      return;
+    }
+
+    final moveUp = HardwareKeyboard.instance.isShiftPressed;
+    stateManager.moveCurrentCell(
+      moveUp ? PlutoMoveDirection.up : PlutoMoveDirection.down,
+      notify: false,
+    );
+
+    if (stateManager.currentColumn?.enableEditingMode == true) {
+      stateManager.setEditing(true, notify: false);
+    }
+
+    stateManager.notifyListeners();
   }
 }
 

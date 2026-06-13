@@ -14,6 +14,7 @@ import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
+import 'app_copyright_footer.dart';
 import 'confirm_delete_project_dialog.dart';
 
 /// Home route listing saved projects and the create-project action.
@@ -45,6 +46,7 @@ class ProjectHomePage extends StatelessWidget {
           ),
           floatingActionButton: helpFabFor(layout),
           floatingActionButtonLocation: helpFabLocation,
+          bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );

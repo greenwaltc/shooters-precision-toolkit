@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../help/help_access.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
+import 'app_copyright_footer.dart';
 
 class NoSelectedProjectPage extends StatelessWidget {
   const NoSelectedProjectPage({super.key, required this.title});
@@ -36,6 +37,7 @@ class NoSelectedProjectPage extends StatelessWidget {
           ),
           floatingActionButton: helpFabFor(layout),
           floatingActionButtonLocation: helpFabLocation,
+          bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );

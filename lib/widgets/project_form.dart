@@ -18,7 +18,6 @@ import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
 import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'project_form/controllers/factor_input_controllers.dart';
-import 'project_form/models/factor_field_hints.dart';
 import 'project_form/services/project_form_validator.dart';
 
 /// Project setup form for experiment design, risk, and sample-size choices.
@@ -90,13 +89,11 @@ class _ProjectFormState extends State<ProjectForm> {
 
   void _hydrateFactorControllers() {
     _isHydratingControllers = true;
-    final definitions = widget.formModel.factorDefinitions;
 
     for (var index = 0; index < _factorControllers.length; index++) {
-      final definition = index < definitions.length
-          ? definitions[index]
-          : const FactorDefinition();
-      _factorControllers[index].setValues(definition);
+      _factorControllers[index].setValues(
+        widget.formModel.storedFactorDefinitionAt(index),
+      );
     }
     _isHydratingControllers = false;
   }
@@ -366,7 +363,6 @@ class _ProjectFormState extends State<ProjectForm> {
 
         setState(() {
           widget.formModel.setExperimentStructure(structure);
-          _clearHiddenFactorControllers();
         });
       },
       child: Column(
@@ -379,16 +375,6 @@ class _ProjectFormState extends State<ProjectForm> {
         }).toList(),
       ),
     );
-  }
-
-  void _clearHiddenFactorControllers() {
-    for (
-      var index = widget.formModel.experimentStructure.factorCount;
-      index < _factorControllers.length;
-      index++
-    ) {
-      _factorControllers[index].clear();
-    }
   }
 
   Widget _buildFactorDefinitionContainer() {
@@ -409,7 +395,6 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildFactorFields(int index) {
     final controllers = _factorControllers[index];
-    final hints = factorFieldHintsByIndex[index];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -424,13 +409,11 @@ class _ProjectFormState extends State<ProjectForm> {
         _buildTextField(
           controller: controllers.factorName,
           labelText: 'Name Factor',
-          hintText: hints.factorName,
           validator: (value) => _validateFactorName(index, value),
         ),
         _buildTextField(
           controller: controllers.firstStateName,
           labelText: 'Name one state of that factor',
-          hintText: hints.firstState,
           validator: (value) => _validateFactorState(
             value: value,
             comparedController: controllers.secondStateName,
@@ -439,7 +422,6 @@ class _ProjectFormState extends State<ProjectForm> {
         _buildTextField(
           controller: controllers.secondStateName,
           labelText: 'Name the other state of that factor',
-          hintText: hints.secondState,
           validator: (value) => _validateFactorState(
             value: value,
             comparedController: controllers.firstStateName,

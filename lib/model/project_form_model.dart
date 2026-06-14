@@ -357,9 +357,23 @@ class ProjectFormModel extends ChangeNotifier {
     );
   }
 
-  /// Immutable view of the active factor definitions.
+  /// Maximum number of factor slots retained across structure changes.
+  static const int maxFactorCount = 4;
+
+  /// Immutable view of the active factor definitions for the current structure.
   List<FactorDefinition> get factorDefinitions {
-    return List.unmodifiable(_factorDefinitions);
+    return List.unmodifiable(
+      _factorDefinitions.take(experimentStructure.factorCount),
+    );
+  }
+
+  /// Returns a stored factor definition by index, including inactive slots.
+  FactorDefinition storedFactorDefinitionAt(int index) {
+    if (index < 0 || index >= _factorDefinitions.length) {
+      return const FactorDefinition();
+    }
+
+    return _factorDefinitions[index];
   }
 
   /// Whether the impute-missing-data capability is enabled for this app build.
@@ -375,7 +389,8 @@ class ProjectFormModel extends ChangeNotifier {
     if (projectTitle.trim().isEmpty) return false;
 
     final normalizedFactorNames = <String>{};
-    for (final factor in factorDefinitions) {
+    for (var index = 0; index < experimentStructure.factorCount; index++) {
+      final factor = _factorDefinitions[index];
       final name = factor.name.trim();
       final firstState = factor.firstState.trim();
       final secondState = factor.secondState.trim();
@@ -425,7 +440,7 @@ class ProjectFormModel extends ChangeNotifier {
     if (experimentStructure == structure) return;
 
     experimentStructure = structure;
-    _resizeFactorDefinitions(structure.factorCount);
+    _ensureFactorDefinitionsCapacity();
     _ensureSampleSizeOptionIsValid();
     notifyListeners();
   }
@@ -483,12 +498,8 @@ class ProjectFormModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _resizeFactorDefinitions(int factorCount) {
-    if (_factorDefinitions.length > factorCount) {
-      _factorDefinitions.removeRange(factorCount, _factorDefinitions.length);
-    }
-
-    while (_factorDefinitions.length < factorCount) {
+  void _ensureFactorDefinitionsCapacity() {
+    while (_factorDefinitions.length < maxFactorCount) {
       _factorDefinitions.add(const FactorDefinition());
     }
   }
@@ -530,7 +541,7 @@ class ProjectFormModel extends ChangeNotifier {
     List<FactorDefinition>? definitions,
   ) {
     return List.generate(
-      structure.factorCount,
+      maxFactorCount,
       (index) => index < (definitions?.length ?? 0)
           ? definitions![index]
           : const FactorDefinition(),

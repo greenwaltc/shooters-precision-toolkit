@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../tokens/app_opacity.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
 
@@ -50,8 +51,8 @@ class OutlinedSurfaceCard extends StatelessWidget {
       elevation: 0,
       color: switch (variant) {
         OutlinedSurfaceVariant.surface => scheme.surface,
-        OutlinedSurfaceVariant.tinted =>
-          scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        OutlinedSurfaceVariant.tinted => scheme.surfaceContainerHighest
+            .withValues(alpha: AppOpacity.cardTint),
       },
       shape: RoundedRectangleBorder(
         borderRadius: borderRadius,

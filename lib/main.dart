@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'model/project_store.dart';
+import 'model/theme_controller.dart';
 import 'navigation/app_routes.dart';
 import 'storage/project_storage.dart';
 import 'styles/app_theme.dart';
@@ -24,11 +25,13 @@ void main() {
   runApp(const MyApp());
 }
 
-/// Root widget that owns the project store unless one is injected for tests.
+/// Root widget that owns the project store and theme controller unless they
+/// are injected (e.g. for tests).
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, this.projectStore});
+  const MyApp({super.key, this.projectStore, this.themeController});
 
   final ProjectStore? projectStore;
+  final ThemeController? themeController;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -36,7 +39,9 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   late final ProjectStore _projectStore;
+  late final ThemeController _themeController;
   late final bool _ownsProjectStore;
+  late final bool _ownsThemeController;
 
   @override
   void initState() {
@@ -47,6 +52,10 @@ class _MyAppState extends State<MyApp> {
         widget.projectStore ??
         ProjectStore(storage: SharedPreferencesProjectStorage());
     unawaited(_projectStore.load());
+
+    _ownsThemeController = widget.themeController == null;
+    _themeController = widget.themeController ?? ThemeController();
+    unawaited(_themeController.load());
   }
 
   @override
@@ -54,28 +63,40 @@ class _MyAppState extends State<MyApp> {
     if (_ownsProjectStore) {
       _projectStore.dispose();
     }
+    if (_ownsThemeController) {
+      _themeController.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<ProjectStore>.value(
-      value: _projectStore,
-      child: MaterialApp(
-        title: 'Shooter\'s Precision Test Kit',
-        theme: AppTheme.light(),
-        initialRoute: AppRoutes.projects,
-        builder: (context, child) {
-          return MediaQuery(
-            data: AppViewport.applyWebSafeArea(MediaQuery.of(context)),
-            child: child ?? const SizedBox.shrink(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ProjectStore>.value(value: _projectStore),
+        ChangeNotifierProvider<ThemeController>.value(value: _themeController),
+      ],
+      child: Consumer<ThemeController>(
+        builder: (context, themeController, _) {
+          return MaterialApp(
+            title: 'Shooter\'s Precision Test Kit',
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: themeController.themeMode,
+            initialRoute: AppRoutes.projects,
+            builder: (context, child) {
+              return MediaQuery(
+                data: AppViewport.applyWebSafeArea(MediaQuery.of(context)),
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
+            routes: {
+              AppRoutes.projects: (_) => const ProjectHomePage(),
+              AppRoutes.projectForm: (_) => const ProjectFormPage(),
+              AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),
+              AppRoutes.anomrResults: (_) => const AnomrResultsPage(),
+            },
           );
-        },
-        routes: {
-          AppRoutes.projects: (_) => const ProjectHomePage(),
-          AppRoutes.projectForm: (_) => const ProjectFormPage(),
-          AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),
-          AppRoutes.anomrResults: (_) => const AnomrResultsPage(),
         },
       ),
     );

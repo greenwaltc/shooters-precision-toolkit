@@ -38,6 +38,27 @@ void main() {
     );
   });
 
+  testWidgets('home page dark-mode toggle switches the active theme', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(tester);
+
+    // Light is active by default, so the control offers a switch *to* dark.
+    expect(find.byIcon(Icons.dark_mode_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.light_mode_outlined), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.dark_mode_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.dark_mode_outlined), findsNothing);
+
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.themeMode, ThemeMode.dark);
+    expect(Theme.of(tester.element(find.byType(Scaffold))).brightness,
+        Brightness.dark);
+  });
+
   testWidgets('sample size section follows selected risk level', (
     WidgetTester tester,
   ) async {

@@ -5,10 +5,12 @@
 
 import 'package:flutter/widgets.dart';
 
-/// Spacing scale used throughout the app.
+import '../app_design.dart';
+
+/// Spacing scale used throughout the app — a typed facet over [AppDesign].
 ///
 /// All padding, gap, and margin values should reference one of these tokens
-/// instead of hardcoding numbers. The scale is intentionally small so that
+/// instead of hardcoding numbers. The raw ladder lives in [AppDesign] so
 /// touching one constant rebalances the entire UI.
 ///
 /// Scale (in logical pixels):
@@ -23,14 +25,14 @@ import 'package:flutter/widgets.dart';
 class AppSpacing {
   const AppSpacing._();
 
-  static const double xs = 2;
-  static const double sm = 4;
-  static const double md = 8;
-  static const double lg = 12;
-  static const double xl = 16;
-  static const double xxl = 20;
-  static const double xxxl = 24;
-  static const double xxxxl = 32;
+  static const double xs = AppDesign.space2;
+  static const double sm = AppDesign.space4;
+  static const double md = AppDesign.space8;
+  static const double lg = AppDesign.space12;
+  static const double xl = AppDesign.space16;
+  static const double xxl = AppDesign.space20;
+  static const double xxxl = AppDesign.space24;
+  static const double xxxxl = AppDesign.space32;
 
   // Common composed insets.
 

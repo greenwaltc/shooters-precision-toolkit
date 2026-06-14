@@ -356,23 +356,25 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildExperimentStructureOptions() {
-    return RadioGroup<ExperimentStructure>(
-      groupValue: widget.formModel.experimentStructure,
-      onChanged: (structure) {
-        if (structure == null) return;
+    return GroupedFieldPanel(
+      child: RadioGroup<ExperimentStructure>(
+        groupValue: widget.formModel.experimentStructure,
+        onChanged: (structure) {
+          if (structure == null) return;
 
-        setState(() {
-          widget.formModel.setExperimentStructure(structure);
-        });
-      },
-      child: Column(
-        children: ExperimentStructure.values.map((structure) {
-          return RadioListTile<ExperimentStructure>(
-            value: structure,
-            title: Text(structure.label),
-            selected: widget.formModel.experimentStructure == structure,
-          );
-        }).toList(),
+          setState(() {
+            widget.formModel.setExperimentStructure(structure);
+          });
+        },
+        child: Column(
+          children: ExperimentStructure.values.map((structure) {
+            return RadioListTile<ExperimentStructure>(
+              value: structure,
+              title: Text(structure.label),
+              selected: widget.formModel.experimentStructure == structure,
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -432,21 +434,23 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildRiskLevelOptions() {
-    return RadioGroup<RiskLevel>(
-      groupValue: widget.formModel.riskLevel,
-      onChanged: (level) {
-        if (level == null) return;
+    return GroupedFieldPanel(
+      child: RadioGroup<RiskLevel>(
+        groupValue: widget.formModel.riskLevel,
+        onChanged: (level) {
+          if (level == null) return;
 
-        setState(() => widget.formModel.setRiskLevel(level));
-      },
-      child: Column(
-        children: RiskLevel.values.map((level) {
-          return RadioListTile<RiskLevel>(
-            value: level,
-            title: Text(level.label),
-            selected: widget.formModel.riskLevel == level,
-          );
-        }).toList(),
+          setState(() => widget.formModel.setRiskLevel(level));
+        },
+        child: Column(
+          children: RiskLevel.values.map((level) {
+            return RadioListTile<RiskLevel>(
+              value: level,
+              title: Text(level.label),
+              selected: widget.formModel.riskLevel == level,
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -457,14 +461,16 @@ class _ProjectFormState extends State<ProjectForm> {
       riskLevel: widget.formModel.riskLevel,
     );
 
-    return RadioGroup<SampleSizeOption>(
-      groupValue: widget.formModel.sampleSizeOption,
-      onChanged: (option) {
-        if (option == null) return;
+    return GroupedFieldPanel(
+      child: RadioGroup<SampleSizeOption>(
+        groupValue: widget.formModel.sampleSizeOption,
+        onChanged: (option) {
+          if (option == null) return;
 
-        setState(() => widget.formModel.setSampleSizeOption(option));
-      },
-      child: Column(children: options.map(_buildSampleSizeOption).toList()),
+          setState(() => widget.formModel.setSampleSizeOption(option));
+        },
+        child: Column(children: options.map(_buildSampleSizeOption).toList()),
+      ),
     );
   }
 
@@ -537,9 +543,10 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildSubmitButton(AppLayoutMetrics layout) {
-    final button = ElevatedButton(
+    final button = FilledButton.icon(
       onPressed: _onSubmitClicked,
-      child: const Text('Submit'),
+      icon: const Icon(Icons.check_rounded),
+      label: const Text('Submit'),
     );
 
     return Padding(

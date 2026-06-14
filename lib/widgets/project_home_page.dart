@@ -9,7 +9,9 @@ import 'package:provider/provider.dart';
 import '../help/help_access.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
+import '../model/theme_controller.dart';
 import '../navigation/app_routes.dart';
+import '../styles/app_design.dart';
 import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
@@ -36,7 +38,10 @@ class ProjectHomePage extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: const Text("Shooter's Precision Test Kit"),
-            actions: helpAppBarActionsFor(layout),
+            actions: [
+              const _ThemeModeToggle(),
+              ...helpAppBarActionsFor(layout),
+            ],
           ),
           body: AppResponsiveBody(
             maxWidth: (layout) => layout.homeMaxWidth,
@@ -79,18 +84,38 @@ class ProjectHomePage extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.analytics_outlined,
-                        size: _emptyStateIconSize,
-                        color: Theme.of(context).colorScheme.primary,
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
+                          borderRadius: AppRadius.xlRadius,
+                        ),
+                        child: Icon(
+                          Icons.analytics_outlined,
+                          size: _emptyStateIconSize,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.xxl),
                       Text(
                         'No projects yet',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Create your first project to start measuring how '
+                        'your chosen factors influence precision.',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
                       FilledButton.icon(
                         onPressed: () => _createProject(context, store),
                         icon: const Icon(Icons.add),
@@ -144,16 +169,27 @@ class _ProjectListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Card(
-      // Compact radius variant for list cards (cards default to AppRadius.sm
-      // in AppTheme; setting it explicitly keeps the local style obvious).
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-        borderRadius: AppRadius.smRadius,
+        side: BorderSide(color: scheme.outlineVariant),
+        borderRadius: AppRadius.lgRadius,
       ),
       child: ListTile(
-        leading: const Icon(Icons.analytics_outlined),
-        title: Text(project.displayName),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        leading: _LeadingBadge(
+          icon: Icons.analytics_outlined,
+          background: scheme.secondaryContainer,
+          foreground: scheme.onSecondaryContainer,
+        ),
+        title: Text(
+          project.displayName,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         subtitle: Text(
           'Created ${formatProjectTimestamp(project.createdAt)}\n'
           'Modified ${formatProjectTimestamp(project.updatedAt)}',
@@ -167,7 +203,7 @@ class _ProjectListTile extends StatelessWidget {
               onPressed: () => _deleteProject(context),
               icon: const Icon(Icons.delete_outline),
             ),
-            const Icon(Icons.chevron_right),
+            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
           ],
         ),
         onTap: () => _openProject(context),
@@ -191,5 +227,51 @@ class _ProjectListTile extends StatelessWidget {
     if (!confirmed || !context.mounted) return;
 
     await store.deleteProject(project.id);
+  }
+}
+
+/// App-bar control that flips the app between light and dark themes and
+/// persists the choice via [ThemeController].
+class _ThemeModeToggle extends StatelessWidget {
+  const _ThemeModeToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<ThemeController>();
+    final isDark = controller.isDarkActive(context);
+
+    return IconButton(
+      tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+      icon: Icon(
+        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+      ),
+      onPressed: () => controller.setDarkMode(enabled: !isDark),
+    );
+  }
+}
+
+/// Tinted, rounded badge that frames a leading icon on list/hero surfaces.
+class _LeadingBadge extends StatelessWidget {
+  const _LeadingBadge({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: AppDesign.leadingIconBadgeSize,
+      height: AppDesign.leadingIconBadgeSize,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AppRadius.mdRadius,
+      ),
+      child: Icon(icon, color: foreground, size: 22),
+    );
   }
 }

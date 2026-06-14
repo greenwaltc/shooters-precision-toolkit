@@ -5,32 +5,34 @@
 
 import 'package:flutter/widgets.dart';
 
-/// Border-radius tokens for the app.
+import '../app_design.dart';
+
+/// Border-radius tokens for the app — a typed facet over [AppDesign].
 ///
 /// Each token is exposed both as a raw `double` (for use as a single
 /// [Radius] value) and as a pre-built [BorderRadius]. Use the
 /// [BorderRadius] form whenever possible — it keeps widget code free of
-/// `BorderRadius.circular(...)` literals.
+/// `BorderRadius.circular(...)` literals. The raw values live in [AppDesign].
 class AppRadius {
   const AppRadius._();
 
   /// Compact radius used for project list cards in the home page.
-  static const double sm = 8;
+  static const double sm = AppDesign.radiusSm;
 
-  /// Bottom-sheet radius (slightly tighter than [sm]).
-  static const double bottomSheet = 10;
+  /// Bottom-sheet radius.
+  static const double bottomSheet = AppDesign.radiusBottomSheet;
 
-  /// Default form-field / grouped-panel radius.
-  static const double md = 12;
+  /// Default form-field / grouped-panel / button radius.
+  static const double md = AppDesign.radiusMd;
 
   /// Outlined surface card radius.
-  static const double lg = 16;
+  static const double lg = AppDesign.radiusLg;
 
   /// Large dialog / hero card radius (results card, export dialog).
-  static const double xl = 18;
+  static const double xl = AppDesign.radiusXl;
 
   /// Full pill radius used by status pills.
-  static const double pill = 20;
+  static const double pill = AppDesign.radiusPill;
 
   static const BorderRadius smRadius = BorderRadius.all(Radius.circular(sm));
   static const BorderRadius bottomSheetRadius = BorderRadius.all(

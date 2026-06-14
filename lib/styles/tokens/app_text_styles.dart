@@ -5,6 +5,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../app_design.dart';
+
 /// Text-style tokens layered on top of the active [ThemeData.textTheme].
 ///
 /// These helpers exist so widgets can write
@@ -28,6 +30,7 @@ class AppTextStyles {
     final scheme = Theme.of(context).colorScheme;
     return Theme.of(context).textTheme.labelSmall?.copyWith(
       color: scheme.onSurfaceVariant,
+      fontWeight: AppDesign.weightSemiBold,
       letterSpacing: 0.8,
     );
   }
@@ -35,26 +38,28 @@ class AppTextStyles {
   /// Bold value styling used by stat tiles (paired with [statLabel]).
   static TextStyle? statValue(BuildContext context) => Theme.of(
     context,
-  ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700);
+  ).textTheme.titleMedium?.copyWith(fontWeight: AppDesign.weightBold);
 
   /// Heading inside the header summary card.
   static TextStyle? headerSummaryTitle(BuildContext context) => Theme.of(
     context,
-  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600);
+  ).textTheme.titleLarge?.copyWith(fontWeight: AppDesign.weightSemiBold);
 
   /// Header style for the form's risk-level / detection table.
   static TextStyle? formTableHeader(BuildContext context) => Theme.of(
     context,
-  ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold);
+  ).textTheme.labelMedium?.copyWith(fontWeight: AppDesign.weightBold);
 
   /// Renderer text style for non-editable factor cells in [PlutoGrid].
   static TextStyle plutoFactorCell(BuildContext context) {
     return TextStyle(
-      fontWeight: FontWeight.w500,
+      fontWeight: AppDesign.weightMedium,
       color: Theme.of(context).colorScheme.onSurface,
     );
   }
 
   /// Header text style for [PlutoGrid] columns.
-  static const TextStyle plutoColumn = TextStyle(fontWeight: FontWeight.bold);
+  static const TextStyle plutoColumn = TextStyle(
+    fontWeight: AppDesign.weightBold,
+  );
 }

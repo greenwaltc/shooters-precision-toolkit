@@ -3,6 +3,7 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -25,6 +26,8 @@ import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
 import 'anomr_matrix/services/matrix_grid_clipboard.dart';
 import 'anomr_matrix/services/matrix_grid_data_builder.dart';
+import 'anomr_matrix/services/matrix_grid_history.dart';
+import 'anomr_matrix/services/range_value_parser.dart';
 import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'anomr_results/services/anomr_calculator.dart';
 import 'app_back_button.dart';
@@ -242,8 +245,91 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   bool _randomizeOrder = false;
   final math.Random _random = math.Random();
+  bool _gridWasEditing = false;
+  Timer? _rangeEditSelectionGuardTimer;
+  VoidCallback? _rangeEditSelectionGuardListener;
+  final MatrixGridHistoryController _history = MatrixGridHistoryController();
+
+  static const Duration _rangeEditSelectionGuardDuration =
+      Duration(milliseconds: 150);
 
   static const double _scrollEpsilon = 1;
+
+  void _handleRangeCellEditFocus() {
+    final manager = _stateManager;
+    if (manager == null) {
+      return;
+    }
+
+    final isEditing = manager.isEditing == true;
+    if (isEditing &&
+        !_gridWasEditing &&
+        manager.currentColumn?.field == 'range') {
+      _beginRangeCellEditSelectionGuard();
+    } else if (!isEditing && _gridWasEditing) {
+      _endRangeCellEditSelectionGuard();
+    }
+
+    _gridWasEditing = isEditing;
+  }
+
+  void _beginRangeCellEditSelectionGuard() {
+    _endRangeCellEditSelectionGuard();
+
+    void enforceCaretAtEnd() {
+      final manager = _stateManager;
+      if (manager?.isEditing != true ||
+          manager!.currentColumn?.field != 'range') {
+        return;
+      }
+
+      final controller = manager.textEditingController;
+      if (controller == null) {
+        return;
+      }
+
+      final offset = controller.text.length;
+      final selection = controller.selection;
+      if (selection.baseOffset != offset || selection.extentOffset != offset) {
+        controller.selection = TextSelection.collapsed(offset: offset);
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+
+        enforceCaretAtEnd();
+
+        final controller = _stateManager?.textEditingController;
+        if (controller == null) {
+          return;
+        }
+
+        _rangeEditSelectionGuardListener = enforceCaretAtEnd;
+        controller.addListener(enforceCaretAtEnd);
+
+        _rangeEditSelectionGuardTimer = Timer(
+          _rangeEditSelectionGuardDuration,
+          _endRangeCellEditSelectionGuard,
+        );
+      });
+    });
+  }
+
+  void _endRangeCellEditSelectionGuard() {
+    _rangeEditSelectionGuardTimer?.cancel();
+    _rangeEditSelectionGuardTimer = null;
+
+    final controller = _stateManager?.textEditingController;
+    final listener = _rangeEditSelectionGuardListener;
+    if (controller != null && listener != null) {
+      controller.removeListener(listener);
+    }
+    _rangeEditSelectionGuardListener = null;
+  }
 
   PlutoGridStyleTheme _plutoTheme() {
     return Theme.of(context).extension<PlutoGridStyleTheme>() ??
@@ -375,9 +461,13 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   void _attachStateManager(PlutoGridStateManager manager) {
     _detachScrollListeners();
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
+    _stateManager?.removeListener(_handleRangeCellEditFocus);
+    _endRangeCellEditSelectionGuard();
     _stateManager = manager;
     _stateManager!.resizingChangeNotifier.addListener(_handleGridResize);
     _stateManager!.setSelectingMode(PlutoGridSelectingMode.cell);
+    _gridWasEditing = manager.isEditing == true;
+    _stateManager!.addListener(_handleRangeCellEditFocus);
     _attachScrollListeners();
   }
 
@@ -425,7 +515,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   /// On desktop/web, Enter and Tab advance the active cell to the next range
   /// cell (Excel / Google Sheets convention). Because the range column is the
   /// only editable column, "next appropriate cell" is the range cell directly
-  /// below (or above with Shift). Copy/paste use the platform modifier.
+  /// below (or above with Shift). Copy/paste and undo/redo use the platform
+  /// modifier.
   Map<ShortcutActivator, PlutoGridShortcutAction> _shortcutActions() {
     return {
       ...PlutoGridShortcut.defaultActions,
@@ -436,7 +527,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         LogicalKeySet(modifier, LogicalKeyboardKey.keyC):
             const MatrixGridCopyValuesAction(),
         LogicalKeySet(modifier, LogicalKeyboardKey.keyV):
-            const MatrixGridPasteValuesAction(),
+            MatrixGridPasteValuesAction(history: _history),
       },
       if (!widget.isMobile) ...{
         LogicalKeySet(LogicalKeyboardKey.enter):
@@ -641,16 +732,21 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   void initState() {
     super.initState();
     _initializeGridData();
+    HardwareKeyboard.instance.addHandler(_matrixKeyboardHandler);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_matrixKeyboardHandler);
     _detachScrollListeners();
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
+    _stateManager?.removeListener(_handleRangeCellEditFocus);
+    _endRangeCellEditSelectionGuard();
     super.dispose();
   }
 
   void _initializeGridData() {
+    _history.clear();
     final formModel = context.read<ProjectFormModel>();
     final gridData = MatrixGridDataBuilder.build(
       formModel: formModel,
@@ -830,24 +926,101 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     if (!mounted || result == null) return;
 
+    _applyRangeValue(rowIdx: rendererContext.rowIdx, value: result);
+  }
+
+  void _applyRangeValueForHistory(
+    int rowIdx,
+    Object? value, {
+    bool recordHistory = true,
+  }) {
     _applyRangeValue(
-      rowIdx: rendererContext.rowIdx,
-      value: result.isEmpty ? null : result,
+      rowIdx: rowIdx,
+      value: value,
+      recordHistory: recordHistory,
     );
   }
 
-  void _applyRangeValue({required int rowIdx, required Object? value}) {
+  // TODO: Undo/redo keybindings — see TODO in matrix_grid_history.dart.
+  bool _matrixKeyboardHandler(KeyEvent event) {
+    if (!mounted) {
+      return false;
+    }
+
+    final isUndo = isMatrixUndoShortcut(event);
+    final isRedo = isMatrixRedoShortcut(event);
+    if (!isUndo && !isRedo) {
+      return false;
+    }
+
+    // While the user is actively typing into a cell (uncommitted edits), let
+    // Flutter's built-in EditableText undo/redo handle the keystroke so the
+    // in-cell text history works. We must not consume the event in that case.
+    if (matrixUndoShouldDeferToTextField(_stateManager)) {
+      return false;
+    }
+
+    final handled = isUndo
+        ? performMatrixGridUndo(
+            history: _history,
+            stateManager: _stateManager,
+            applyRangeValue: _applyRangeValueForHistory,
+          )
+        : performMatrixGridRedo(
+            history: _history,
+            stateManager: _stateManager,
+            applyRangeValue: _applyRangeValueForHistory,
+          );
+
+    if (handled && mounted) {
+      setState(() {});
+    }
+
+    return handled;
+  }
+
+  void _applyRangeValue({
+    required int rowIdx,
+    required Object? value,
+    bool recordHistory = true,
+  }) {
     final manager = _stateManager;
     if (manager == null) return;
 
-    manager.rows[rowIdx].cells['range']!.value = value;
+    final previousValue = manager.rows[rowIdx].cells['range']!.value?.toString();
+
+    final parsed = RangeValueParser.parse(value);
+    if (parsed.invalid) {
+      _showInvalidRangeValueMessage();
+    }
+
+    final normalizedValue = parsed.displayValue;
+    if (recordHistory) {
+      _history.record(
+        MatrixRangeChange(
+          rowIdx: rowIdx,
+          previousValue: previousValue,
+          newValue: normalizedValue,
+        ),
+      );
+    }
+
+    manager.rows[rowIdx].cells['range']!.value = normalizedValue;
     widget.project.matrixState[MatrixGridDataBuilder.storageKeyForRow(
       manager.rows[rowIdx],
-    )] = value;
+    )] = normalizedValue;
     context.read<ProjectStore>().persistSelectedProject(markModified: true);
 
     manager.notifyListeners();
     setState(() {});
+  }
+
+  void _showInvalidRangeValueMessage() {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text(RangeValueParser.invalidInputMessage)),
+    );
   }
 
   void _handleOnChanged(PlutoGridOnChangedEvent event) {
@@ -912,14 +1085,19 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final manager = _stateManager;
     if (manager == null) return;
 
-    for (final row in manager.rows) {
-      row.cells['range']!.value = null;
-      widget.project.matrixState.remove(
-        MatrixGridDataBuilder.storageKeyForRow(row),
-      );
+    _history.beginBatch();
+    try {
+      for (var rowIdx = 0; rowIdx < manager.rows.length; rowIdx += 1) {
+        final row = manager.rows[rowIdx];
+        final previousValue = row.cells['range']!.value?.toString();
+        if (previousValue == null) {
+          continue;
+        }
+        _applyRangeValue(rowIdx: rowIdx, value: null);
+      }
+    } finally {
+      _history.endBatch();
     }
-    manager.notifyListeners();
-    context.read<ProjectStore>().persistSelectedProject(markModified: true);
   }
 
   @override
@@ -954,6 +1132,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   void _onRandomizeToggled(bool value) {
     final manager = _stateManager;
     if (manager == null) return;
+
+    _history.clear();
 
     setState(() => _randomizeOrder = value);
 

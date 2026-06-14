@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 
+import 'matrix_grid_history.dart';
+
 /// Target rows captured before edit mode is cleared for paste.
 class MatrixGridPasteTarget {
   const MatrixGridPasteTarget({
@@ -218,7 +220,9 @@ class MatrixGridCopyValuesAction extends PlutoGridShortcutAction {
 
 /// Pastes clipboard values into selected range cells.
 class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
-  const MatrixGridPasteValuesAction();
+  MatrixGridPasteValuesAction({this.history});
+
+  final MatrixGridHistoryController? history;
 
   @override
   void execute({
@@ -244,11 +248,16 @@ class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
         return;
       }
 
-      MatrixGridClipboard.pasteIntoRangeCells(
-        stateManager,
-        PlutoClipboardTransformation.stringToList(text),
-        target: target,
-      );
+      history?.beginBatch();
+      try {
+        MatrixGridClipboard.pasteIntoRangeCells(
+          stateManager,
+          PlutoClipboardTransformation.stringToList(text),
+          target: target,
+        );
+      } finally {
+        history?.endBatch();
+      }
     }
 
     if (kIsWeb) {

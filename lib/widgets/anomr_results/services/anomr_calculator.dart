@@ -12,6 +12,7 @@ import '../models/anomr_summary.dart';
 import '../models/effect_status.dart';
 import '../models/factor_row.dart';
 import '../models/factor_stats.dart';
+import '../../anomr_matrix/services/range_value_parser.dart';
 
 /// Pure (no `BuildContext`) computations used to derive the values the
 /// results view renders.
@@ -24,7 +25,7 @@ class AnomrCalculator {
   }
 
   static double? _parseRangeValue(Object? rawValue) {
-    return double.tryParse(rawValue?.toString() ?? '');
+    return RangeValueParser.toDouble(rawValue);
   }
 
   static List<double> collectRanges(

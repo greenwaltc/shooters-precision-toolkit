@@ -22,23 +22,57 @@ class AppViewport {
   /// Minimum bottom clearance applied on Windows web when the platform reports none.
   static const double webMinimumBottomInset = 48;
 
+  /// Lower bound applied to the user's text-scale preference.
+  ///
+  /// Allows users to shrink text slightly while preventing illegibly small
+  /// content that some browser/OS settings can request.
+  static const double minTextScaleFactor = 0.8;
+
+  /// Upper bound applied to the user's text-scale preference.
+  ///
+  /// Honors browser/OS magnification (accessibility "larger text" settings and
+  /// browser font-size zoom map to [MediaQueryData.textScaler]) while capping
+  /// the value so dense surfaces (forms, the data matrix, result cards) reflow
+  /// and scroll instead of clipping at extreme magnifications. Page-level
+  /// zoom (Ctrl/Cmd +/-) is unaffected by this cap because the browser
+  /// communicates it through the device pixel ratio, which the responsive
+  /// breakpoints already react to.
+  static const double maxTextScaleFactor = 1.6;
+
   /// Whether this build should add artificial bottom clearance in the browser.
   static bool get needsWebBottomClearance =>
       kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
-  /// Applies web-safe bottom insets to [mediaQuery].
+  /// Applies web-safe bottom insets and a clamped text scaler to [mediaQuery].
+  ///
+  /// The text-scale clamp keeps the app responsive to magnification while
+  /// guaranteeing layouts stay usable; see [clampTextScaler].
   static MediaQueryData applyWebSafeArea(MediaQueryData mediaQuery) {
-    if (!needsWebBottomClearance) return mediaQuery;
+    final scaled = mediaQuery.copyWith(
+      textScaler: clampTextScaler(mediaQuery.textScaler),
+    );
+
+    if (!needsWebBottomClearance) return scaled;
 
     final reportedBottom = math.max(
-      mediaQuery.padding.bottom,
-      mediaQuery.viewPadding.bottom,
+      scaled.padding.bottom,
+      scaled.viewPadding.bottom,
     );
     final bottom = math.max(reportedBottom, webMinimumBottomInset);
 
-    return mediaQuery.copyWith(
-      padding: mediaQuery.padding.copyWith(bottom: bottom),
-      viewPadding: mediaQuery.viewPadding.copyWith(bottom: bottom),
+    return scaled.copyWith(
+      padding: scaled.padding.copyWith(bottom: bottom),
+      viewPadding: scaled.viewPadding.copyWith(bottom: bottom),
+    );
+  }
+
+  /// Constrains [scaler] to the supported [minTextScaleFactor]..
+  /// [maxTextScaleFactor] range so magnified text remains legible without
+  /// breaking dense layouts.
+  static TextScaler clampTextScaler(TextScaler scaler) {
+    return scaler.clamp(
+      minScaleFactor: minTextScaleFactor,
+      maxScaleFactor: maxTextScaleFactor,
     );
   }
 

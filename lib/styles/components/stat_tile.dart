@@ -22,10 +22,15 @@ class StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label.toUpperCase(), style: AppTextStyles.statLabel(context)),
+        Text(
+          label.toUpperCase(),
+          style: AppTextStyles.statLabel(context),
+          softWrap: true,
+        ),
         const SizedBox(height: AppSpacing.xs),
-        Text(value, style: AppTextStyles.statValue(context)),
+        Text(value, style: AppTextStyles.statValue(context), softWrap: true),
       ],
     );
   }

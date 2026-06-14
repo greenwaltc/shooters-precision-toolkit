@@ -70,8 +70,14 @@ class HeaderSummary extends StatelessWidget {
                 );
               }
               return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: stats,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var index = 0; index < stats.length; index++) ...[
+                    Flexible(child: stats[index]),
+                    if (index != stats.length - 1)
+                      const SizedBox(width: AppSpacing.lg),
+                  ],
+                ],
               );
             },
           ),

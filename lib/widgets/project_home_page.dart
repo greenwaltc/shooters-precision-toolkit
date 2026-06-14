@@ -60,31 +60,49 @@ class ProjectHomePage extends StatelessWidget {
     final projects = store.projects;
 
     if (projects.isEmpty) {
-      return Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _emptyStateMaxWidth),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.analytics_outlined,
-                size: _emptyStateIconSize,
-                color: Theme.of(context).colorScheme.primary,
+      // Center the empty state when there is room, but allow it to scroll so
+      // it never clips under heavy browser zoom or large text-scale settings.
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.hasBoundedHeight
+                    ? constraints.maxHeight
+                    : 0,
               ),
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                'No projects yet',
-                style: Theme.of(context).textTheme.titleLarge,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: _emptyStateMaxWidth,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.analytics_outlined,
+                        size: _emptyStateIconSize,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        'No projects yet',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      FilledButton.icon(
+                        onPressed: () => _createProject(context, store),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create a New Project'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-              FilledButton.icon(
-                onPressed: () => _createProject(context, store),
-                icon: const Icon(Icons.add),
-                label: const Text('Create a New Project'),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     }
 
@@ -124,9 +142,6 @@ class _ProjectListTile extends StatelessWidget {
 
   final SavedProject project;
 
-  /// Width reserved for the trailing actions column.
-  static const double _trailingWidth = 96;
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -144,19 +159,16 @@ class _ProjectListTile extends StatelessWidget {
           'Modified ${formatProjectTimestamp(project.updatedAt)}',
         ),
         isThreeLine: true,
-        trailing: SizedBox(
-          width: _trailingWidth,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                tooltip: 'Delete project',
-                onPressed: () => _deleteProject(context),
-                icon: const Icon(Icons.delete_outline),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'Delete project',
+              onPressed: () => _deleteProject(context),
+              icon: const Icon(Icons.delete_outline),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
         ),
         onTap: () => _openProject(context),
       ),

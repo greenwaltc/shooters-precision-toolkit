@@ -1,6 +1,6 @@
-# shooters_precision_test_kit
+# Bramwell's Precision Test Kit
 
-Shooter's Precision Test Kit - A Statistical Analysis App by Denton Bramwell
+Bramwell's Precision Test Kit - A Statistical Analysis App by Denton Bramwell
 
 ## Getting Started
 

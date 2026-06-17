@@ -1,6 +1,6 @@
 # Software instructions
 
-The Shooter's Precision Test Kit is a simple way to test firearm shot consistency. You can test the variation of one cartridge design vs. another, or one shooting stance vs. another, or any other comparison of variation in shot placement that you want to make. For economy, you can test up to four different factors at once with no increase in required sample size.
+The Bramwell's Precision Test Kit is a simple way to test firearm shot consistency. You can test the variation of one cartridge design vs. another, or one shooting stance vs. another, or any other comparison of variation in shot placement that you want to make. For economy, you can test up to four different factors at once with no increase in required sample size.
 
 Any test that is based on a sample will have some risk associated with it. One of the main risks is that the test will say that a real difference exists, when actually none does. This is called 𝛂 (alpha) risk. For tests of magnitude, 5% is a common choice. However, tests of variation tend to require larger samples, so 10% 𝛂 risk is usually the more practical choice.
 

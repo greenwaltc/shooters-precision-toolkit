@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shooters_precision_test_kit/styles/layout/app_viewport.dart';
+import 'package:bramwells_precision_test_kit/styles/layout/app_viewport.dart';
 
 void main() {
   group('AppViewport.clampTextScaler', () {

@@ -1,4 +1,4 @@
-package com.bramwell.shooters_precision_test_kit
+package com.bramwell.bramwells_precision_test_kit
 
 import io.flutter.embedding.android.FlutterActivity
 

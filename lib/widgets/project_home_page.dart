@@ -37,7 +37,7 @@ class ProjectHomePage extends StatelessWidget {
       builder: (context, layout) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text("Shooter's Precision Test Kit"),
+            title: const Text("Bramwell's Precision Test Kit"),
             actions: [
               const _ThemeModeToggle(),
               ...helpAppBarActionsFor(layout),

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="shooters_precision_test_kit"
+        android:label="Bramwell's Precision Test Kit"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -31,7 +31,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <meta-data
-            android:name="com.bramwell.shootersPrecisionTestKit.COPYRIGHT"
+            android:name="com.bramwell.bramwellsPrecisionTestKit.COPYRIGHT"
             android:value="Copyright © 2026 Denton M. Bramwell. All rights reserved." />
     </application>
     <!-- Required to query activities that can process text, see:

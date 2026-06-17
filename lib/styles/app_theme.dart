@@ -11,7 +11,7 @@ import 'theme_extensions/factor_palette_theme.dart';
 import 'theme_extensions/pluto_grid_theme.dart';
 import 'tokens/app_colors.dart';
 
-/// Builds the [ThemeData] used by the Shooter's Precision Test Kit.
+/// Builds the [ThemeData] used by the Bramwell's Precision Test Kit.
 ///
 /// This file contains **no design constants of its own** — every color,
 /// radius, weight, size, and duration is read from [AppDesign], the single

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shooters_precision_test_kit/model/theme_controller.dart';
+import 'package:bramwells_precision_test_kit/model/theme_controller.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

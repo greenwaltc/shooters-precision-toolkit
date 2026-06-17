@@ -79,7 +79,7 @@ class _MyAppState extends State<MyApp> {
       child: Consumer<ThemeController>(
         builder: (context, themeController, _) {
           return MaterialApp(
-            title: 'Shooter\'s Precision Test Kit',
+            title: 'Bramwell\'s Precision Test Kit',
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: themeController.themeMode,

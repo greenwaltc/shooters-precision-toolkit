@@ -1,11 +1,11 @@
 {
-    "name": "shooters_precision_test_kit",
-    "short_name": "shooters_precision_test_kit",
+    "name": "Bramwell's Precision Test Kit",
+    "short_name": "Bramwell PT Kit",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Statistical analysis for precision testing.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

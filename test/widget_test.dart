@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:shooters_precision_test_kit/main.dart';
-import 'package:shooters_precision_test_kit/model/project_store.dart';
-import 'package:shooters_precision_test_kit/storage/project_storage.dart';
+import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/model/project_store.dart';
+import 'package:bramwells_precision_test_kit/storage/project_storage.dart';
 
 void main() {
   testWidgets('project home renders empty state and create action', (
@@ -11,7 +11,7 @@ void main() {
   ) async {
     await _pumpApp(tester);
 
-    expect(find.text("Shooter's Precision Test Kit"), findsOneWidget);
+    expect(find.text("Bramwell's Precision Test Kit"), findsOneWidget);
     expect(find.text('No projects yet'), findsOneWidget);
     expect(find.text('Create a New Project'), findsOneWidget);
   });

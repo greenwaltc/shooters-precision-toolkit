@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shooters_precision_test_kit/model/project_form_model.dart';
+import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
 
 void main() {
   group('ProjectFormModel factor persistence', () {

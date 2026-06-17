@@ -5,18 +5,30 @@
 
 import 'package:flutter/material.dart';
 
+import '../styles/app_design.dart';
 import '../styles/layout/app_layout.dart';
 import 'help_instructions.dart';
 
 /// App-bar help control shown on narrow viewports where a FAB would crowd
 /// the layout.
 class HelpInstructionsAppBarAction extends StatelessWidget {
-  const HelpInstructionsAppBarAction({super.key});
+  const HelpInstructionsAppBarAction({super.key, required this.layout});
+
+  final AppLayoutMetrics layout;
+
+  static const String _tooltip = 'Instructions';
 
   @override
   Widget build(BuildContext context) {
+    if (layout.showHelpInstructionsLabel) {
+      return TextButton(
+        onPressed: () => showHelpInstructionsSheet(context),
+        child: const Text('Instructions'),
+      );
+    }
+
     return IconButton(
-      tooltip: 'Help',
+      tooltip: _tooltip,
       onPressed: () => showHelpInstructionsSheet(context),
       icon: const Icon(Icons.question_mark_outlined),
     );
@@ -25,12 +37,29 @@ class HelpInstructionsAppBarAction extends StatelessWidget {
 
 /// Floating help control shown on wider viewports.
 class HelpInstructionsFab extends StatelessWidget {
-  const HelpInstructionsFab({super.key});
+  const HelpInstructionsFab({super.key, required this.layout});
+
+  final AppLayoutMetrics layout;
+
+  static const String _tooltip = 'Instructions';
 
   @override
   Widget build(BuildContext context) {
+    if (layout.showHelpInstructionsLabel) {
+      final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+        fontWeight: AppDesign.weightSemiBold,
+        letterSpacing: AppDesign.labelTracking,
+      );
+
+      return FloatingActionButton.extended(
+        tooltip: _tooltip,
+        onPressed: () => showHelpInstructionsSheet(context),
+        label: Text('INSTRUCTIONS', style: labelStyle),
+      );
+    }
+
     return FloatingActionButton.small(
-      tooltip: 'Help',
+      tooltip: _tooltip,
       onPressed: () => showHelpInstructionsSheet(context),
       child: const Icon(Icons.question_mark_outlined),
     );
@@ -45,7 +74,7 @@ List<Widget> helpAppBarActionsFor(
   bool preferAppBar = false,
 }) {
   if (layout.isMobile || preferAppBar) {
-    return const [HelpInstructionsAppBarAction()];
+    return [HelpInstructionsAppBarAction(layout: layout)];
   }
   return const [];
 }
@@ -54,7 +83,7 @@ List<Widget> helpAppBarActionsFor(
 /// will not crowd existing bottom actions.
 Widget? helpFabFor(AppLayoutMetrics layout, {bool preferAppBar = false}) {
   if (layout.isMobile || preferAppBar) return null;
-  return const HelpInstructionsFab();
+  return HelpInstructionsFab(layout: layout);
 }
 
 /// Default FAB placement used wherever the help FAB appears.

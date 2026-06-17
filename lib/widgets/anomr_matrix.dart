@@ -248,6 +248,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   bool _gridWasEditing = false;
   Timer? _rangeEditSelectionGuardTimer;
   VoidCallback? _rangeEditSelectionGuardListener;
+  VoidCallback? _rangeEditSyncListener;
   final MatrixGridHistoryController _history = MatrixGridHistoryController();
 
   static const Duration _rangeEditSelectionGuardDuration =
@@ -266,8 +267,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         !_gridWasEditing &&
         manager.currentColumn?.field == 'range') {
       _beginRangeCellEditSelectionGuard();
+      _attachRangeEditSyncListener();
     } else if (!isEditing && _gridWasEditing) {
       _endRangeCellEditSelectionGuard();
+      _detachRangeEditSyncListener();
     }
 
     _gridWasEditing = isEditing;
@@ -329,6 +332,96 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       controller.removeListener(listener);
     }
     _rangeEditSelectionGuardListener = null;
+  }
+
+  /// Keeps the in-progress range edit synced to row/project state on every
+  /// keystroke so validation and "Show Results" see the latest value without
+  /// requiring Enter or an explicit blur.
+  void _attachRangeEditSyncListener() {
+    _detachRangeEditSyncListener();
+
+    final controller = _stateManager?.textEditingController;
+    if (controller == null) {
+      return;
+    }
+
+    void syncOnKeystroke() {
+      _syncActiveRangeEdit(
+        recordHistory: false,
+        showInvalidMessage: false,
+        persist: false,
+      );
+    }
+
+    _rangeEditSyncListener = syncOnKeystroke;
+    controller.addListener(syncOnKeystroke);
+    syncOnKeystroke();
+  }
+
+  void _detachRangeEditSyncListener() {
+    final controller = _stateManager?.textEditingController;
+    final listener = _rangeEditSyncListener;
+    if (controller != null && listener != null) {
+      controller.removeListener(listener);
+    }
+    _rangeEditSyncListener = null;
+  }
+
+  /// Commits the active range cell editor (if any) before navigation or
+  /// validation.
+  void _commitActiveRangeEdit() {
+    final manager = _stateManager;
+    if (manager == null ||
+        manager.isEditing != true ||
+        manager.currentColumn?.field != 'range') {
+      return;
+    }
+
+    _syncActiveRangeEdit(
+      recordHistory: true,
+      showInvalidMessage: true,
+      persist: true,
+    );
+    manager.setEditing(false);
+  }
+
+  /// Reads the active range editor and applies it to the grid model.
+  void _syncActiveRangeEdit({
+    required bool recordHistory,
+    required bool showInvalidMessage,
+    required bool persist,
+  }) {
+    final manager = _stateManager;
+    if (manager == null ||
+        manager.isEditing != true ||
+        manager.currentColumn?.field != 'range') {
+      return;
+    }
+
+    final rowIdx = manager.currentRowIdx;
+    if (rowIdx == null) {
+      return;
+    }
+
+    final controller = manager.textEditingController;
+    if (controller == null) {
+      return;
+    }
+
+    final parsed = RangeValueParser.parse(controller.text);
+    if (parsed.invalid) {
+      if (showInvalidMessage) {
+        _showInvalidRangeValueMessage();
+      }
+      return;
+    }
+
+    _applyRangeValue(
+      rowIdx: rowIdx,
+      value: controller.text,
+      recordHistory: recordHistory,
+      persist: persist,
+    );
   }
 
   PlutoGridStyleTheme _plutoTheme() {
@@ -463,6 +556,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
     _stateManager?.removeListener(_handleRangeCellEditFocus);
     _endRangeCellEditSelectionGuard();
+    _detachRangeEditSyncListener();
     _stateManager = manager;
     _stateManager!.resizingChangeNotifier.addListener(_handleGridResize);
     _stateManager!.setSelectingMode(PlutoGridSelectingMode.cell);
@@ -742,6 +836,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
     _stateManager?.removeListener(_handleRangeCellEditFocus);
     _endRangeCellEditSelectionGuard();
+    _detachRangeEditSyncListener();
     super.dispose();
   }
 
@@ -983,6 +1078,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     required int rowIdx,
     required Object? value,
     bool recordHistory = true,
+    bool persist = true,
   }) {
     final manager = _stateManager;
     if (manager == null) return;
@@ -991,10 +1087,16 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     final parsed = RangeValueParser.parse(value);
     if (parsed.invalid) {
-      _showInvalidRangeValueMessage();
+      if (persist || recordHistory) {
+        _showInvalidRangeValueMessage();
+      }
     }
 
     final normalizedValue = parsed.displayValue;
+    if (normalizedValue == previousValue) {
+      return;
+    }
+
     if (recordHistory) {
       _history.record(
         MatrixRangeChange(
@@ -1009,7 +1111,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     widget.project.matrixState[MatrixGridDataBuilder.storageKeyForRow(
       manager.rows[rowIdx],
     )] = normalizedValue;
-    context.read<ProjectStore>().persistSelectedProject(markModified: true);
+    if (persist) {
+      context.read<ProjectStore>().persistSelectedProject(markModified: true);
+    }
 
     manager.notifyListeners();
     setState(() {});
@@ -1030,6 +1134,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   void _showResults(BuildContext context) {
+    _commitActiveRangeEdit();
+
     final manager = _stateManager;
     if (manager == null) return;
 

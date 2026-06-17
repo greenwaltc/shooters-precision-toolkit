@@ -33,7 +33,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('8 total ranges in 2 replicates of 4'),
+      find.text('8 total ranges in 2 groups of 4'),
       findsOneWidget,
     );
   });

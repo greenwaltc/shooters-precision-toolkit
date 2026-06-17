@@ -168,7 +168,7 @@ class SampleSizeOption {
     if (structure == ExperimentStructure.simpleABComparison) {
       final replicates = _formatSampleValue(groupSize);
       final rangesEach = _formatSampleValue(numSets);
-      return '$totalSamples total ranges in $replicates replicates of '
+      return '$totalSamples total ranges in $replicates groups of '
           '$rangesEach ranges each';
     }
 
@@ -193,7 +193,7 @@ class SampleSizeOption {
     if (structure == ExperimentStructure.simpleABComparison) {
       final replicates = _formatSampleValue(groupSize);
       final rangesEach = _formatSampleValue(numSets);
-      return '$totalSamples total ranges in $replicates replicates of '
+      return '$totalSamples total ranges in $replicates groups of '
           '$rangesEach';
     }
 

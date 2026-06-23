@@ -54,6 +54,11 @@ class AppSpacing {
   /// Title above a grouped factor block.
   static const EdgeInsets factorTitle = EdgeInsets.fromLTRB(md, 0, md, sm);
 
+  /// Left inset for factor state fields nested under "Name Factor".
+  static const EdgeInsets factorStateFieldIndent = EdgeInsets.only(
+    left: AppDesign.factorStateFieldIndent,
+  );
+
   /// Title above a form section.
   static const EdgeInsets formSectionTitle = EdgeInsets.fromLTRB(
     md,

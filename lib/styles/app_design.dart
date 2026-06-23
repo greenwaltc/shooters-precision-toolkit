@@ -102,6 +102,10 @@ class AppDesign {
   static const double space24 = 24;
   static const double space32 = 32;
 
+  /// Left inset for factor state fields nested under "Name Factor" on the
+  /// project setup form.
+  static const double factorStateFieldIndent = space16;
+
   // ───────────────────────────── 3. Corner radii ──────────────────────────
   //
   // Larger, more consistent radii read as more modern. Buttons, inputs, and

@@ -413,20 +413,28 @@ class _ProjectFormState extends State<ProjectForm> {
           labelText: 'Name Factor',
           validator: (value) => _validateFactorName(index, value),
         ),
-        _buildTextField(
-          controller: controllers.firstStateName,
-          labelText: 'Name one state of that factor',
-          validator: (value) => _validateFactorState(
-            value: value,
-            comparedController: controllers.secondStateName,
-          ),
-        ),
-        _buildTextField(
-          controller: controllers.secondStateName,
-          labelText: 'Name the other state of that factor',
-          validator: (value) => _validateFactorState(
-            value: value,
-            comparedController: controllers.firstStateName,
+        Padding(
+          padding: AppSpacing.factorStateFieldIndent,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildTextField(
+                controller: controllers.firstStateName,
+                labelText: 'Name one state of that factor',
+                validator: (value) => _validateFactorState(
+                  value: value,
+                  comparedController: controllers.secondStateName,
+                ),
+              ),
+              _buildTextField(
+                controller: controllers.secondStateName,
+                labelText: 'Name the other state of that factor',
+                validator: (value) => _validateFactorState(
+                  value: value,
+                  comparedController: controllers.firstStateName,
+                ),
+              ),
+            ],
           ),
         ),
       ],

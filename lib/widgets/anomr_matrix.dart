@@ -211,7 +211,7 @@ class _MatrixHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Factors and Ranges',
+          'Factors and Group Size',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -933,7 +933,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   PlutoColumn _buildRangeColumn() {
     return PlutoColumn(
-      title: 'Ranges',
+      title: 'Group Size',
       field: 'range',
       // Text avoids precision loss during paste; results parse back to double.
       type: PlutoColumnType.text(),
@@ -1146,7 +1146,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Ranges column data is incomplete. Please fill out all cells to continue.',
+            'Group Size column data is incomplete. Please fill out all cells to continue.',
           ),
         ),
       );
@@ -1165,9 +1165,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   AlertDialog _buildClearRangesDialog(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: const Text('Clear All Ranges?'),
+      title: const Text('Clear All Group Sizes?'),
       content: const Text(
-        'Are you sure you want to clear all entered range values? This action cannot be undone.',
+        'Are you sure you want to clear all entered group size values? This action cannot be undone.',
       ),
       actions: [
         TextButton(
@@ -1384,7 +1384,7 @@ class _MatrixActions extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onClearRanges,
               icon: const Icon(Icons.clear_all),
-              label: const Text('Clear All Ranges'),
+              label: const Text('Clear All Group Sizes'),
               style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
             ),
           ],

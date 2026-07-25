@@ -33,7 +33,7 @@ void main() {
       findsOneWidget,
     );
     expect(
-      find.text('8 total ranges in 2 groups of 4'),
+      find.text('8 total group sizes in 2 groups of 4'),
       findsOneWidget,
     );
   });
@@ -101,7 +101,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Factor 3'), findsOneWidget);
-    expect(find.text('16 total ranges'), findsOneWidget);
+    expect(find.text('16 total group sizes'), findsOneWidget);
   });
 
   testWidgets('form submits to matrix and setup round trip preserves state', (

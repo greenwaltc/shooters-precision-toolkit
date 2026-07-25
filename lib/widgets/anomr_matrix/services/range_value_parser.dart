@@ -35,7 +35,7 @@ class RangeValueParser {
   const RangeValueParser._();
 
   static const invalidInputMessage =
-      'Range values must be numbers. Please correct any invalid cells.';
+      'Group size values must be numbers. Please correct any invalid cells.';
 
   static final RegExp _fractionPattern = RegExp(
     r'^(-?\d+)\s*/\s*(\d+)$',

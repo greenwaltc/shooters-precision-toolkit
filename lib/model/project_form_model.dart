@@ -159,7 +159,7 @@ class SampleSizeOption {
   /// Number of replicate ranges per group.
   num get rangesPerGroup => numSets;
 
-  /// Display label, e.g. `"16 total ranges in 4 replicates of 4 ranges each"`.
+  /// Display label, e.g. `"16 total group sizes in 4 replicates of 4 group sizes each"`.
   ///
   /// For [ExperimentStructure.simpleABComparison], replicates and ranges-per-
   /// replicate are swapped in the label so the two factor states read as
@@ -168,8 +168,8 @@ class SampleSizeOption {
     if (structure == ExperimentStructure.simpleABComparison) {
       final replicates = _formatSampleValue(groupSize);
       final rangesEach = _formatSampleValue(numSets);
-      return '$totalSamples total ranges in $replicates groups of '
-          '$rangesEach ranges each';
+      return '$totalSamples total group sizes in $replicates groups of '
+          '$rangesEach group sizes each';
     }
 
     return label;
@@ -178,26 +178,26 @@ class SampleSizeOption {
   /// Default factorial-style label shared by multi-factor experiment structures.
   String get label {
     final replicates = _formatSampleValue(rangesPerGroup);
-    return '$totalSamples total ranges in $replicates replicates of '
-        '$groupSize ranges each';
+    return '$totalSamples total group sizes in $replicates replicates of '
+        '$groupSize group sizes each';
   }
 
   /// Label used for the radio options in the project form's sample-size
   /// section.
   ///
   /// * One-factor designs ([ExperimentStructure.simpleABComparison]) drop the
-  ///   trailing " ranges each" suffix from [labelFor].
-  /// * Multi-factor designs are truncated to just the total range count
-  ///   (e.g. `"16 total ranges"`).
+  ///   trailing " group sizes each" suffix from [labelFor].
+  /// * Multi-factor designs are truncated to just the total group-size count
+  ///   (e.g. `"16 total group sizes"`).
   String formOptionLabel(ExperimentStructure structure) {
     if (structure == ExperimentStructure.simpleABComparison) {
       final replicates = _formatSampleValue(groupSize);
       final rangesEach = _formatSampleValue(numSets);
-      return '$totalSamples total ranges in $replicates groups of '
+      return '$totalSamples total group sizes in $replicates groups of '
           '$rangesEach';
     }
 
-    return '$totalSamples total ranges';
+    return '$totalSamples total group sizes';
   }
 
   /// Linear index used to persist a matrix range cell for [comboIdx] at

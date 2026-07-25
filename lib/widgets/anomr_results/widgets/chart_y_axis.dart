@@ -10,7 +10,7 @@ import '../../../styles/chart/chart_scale.dart';
 
 /// Builds the left axis [AxisTitles] for the combined results chart.
 ///
-/// Includes a rotated "Range" axis name and numeric tick labels on the inner
+/// Includes a rotated "Group Size" axis name and numeric tick labels on the inner
 /// side; min/max ticks are suppressed so they don't visually collide with
 /// the chart border.
 class ChartYAxis {
@@ -30,7 +30,7 @@ class ChartYAxis {
           : Padding(
               padding: scale.axisNamePadding,
               child: Text(
-                'Range',
+                'Group Size',
                 style: textTheme.labelLarge?.copyWith(
                   color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,

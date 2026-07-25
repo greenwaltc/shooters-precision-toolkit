@@ -107,7 +107,7 @@ class _Title extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
-          'Mean ranges per factor state vs. grand mean',
+          'Mean group sizes per factor state vs. grand mean',
           style: textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
         ),
       ],

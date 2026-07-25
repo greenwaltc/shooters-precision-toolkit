@@ -133,7 +133,7 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
       children: [
         Expanded(
           child: Text(
-            'Enter Range',
+            'Enter Group Size',
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
@@ -228,9 +228,9 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
       textInputAction: TextInputAction.done,
       onSubmitted: (_) => _submit(),
       decoration: const InputDecoration(
-        labelText: 'Range',
+        labelText: 'Group Size',
         isDense: true,
-        hintText: 'Enter range value',
+        hintText: 'Enter group size',
       ),
     );
   }

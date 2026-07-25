@@ -31,13 +31,13 @@ class EmptyResultsState extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              'No range data available',
+              'No group size data available',
               style: textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Enter at least one range value in the data matrix to see results.',
+              'Enter at least one group size in the data matrix to see results.',
               style: textTheme.bodyMedium?.copyWith(
                 color: scheme.onSurfaceVariant,
               ),

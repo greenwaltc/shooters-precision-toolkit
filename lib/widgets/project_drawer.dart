@@ -6,9 +6,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/project_configuration.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/tokens/app_borders.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
 import 'confirm_delete_project_dialog.dart';
@@ -31,7 +33,7 @@ class ProjectDrawer extends StatelessWidget {
               leading: Icon(Icons.folder_open_outlined),
               title: Text('Projects'),
             ),
-            const Divider(height: 1.0),
+            const Divider(height: AppBorders.thin),
             Expanded(
               child: projects.isEmpty
                   ? const Center(child: Text('No projects yet'))
@@ -48,7 +50,9 @@ class ProjectDrawer extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: () => _createProject(context, store),
                 icon: const Icon(Icons.add),
-                label: const Text('Create New Project'),
+                label: Text(
+                  ProjectConfiguration.current.uiCopy.createProjectLabel,
+                ),
               ),
             ),
           ],
@@ -62,7 +66,8 @@ class ProjectDrawer extends StatelessWidget {
     navigator.pop();
     await store.persistSelectedProject();
     await store.createProject();
-    navigator.pushNamedAndRemoveUntil(AppRoutes.projectForm, (_) => false);
+    if (!context.mounted) return;
+    await AppRoutes.openFromProjects(navigator, AppRoutes.projectForm);
   }
 }
 
@@ -92,12 +97,19 @@ class _ProjectDrawerTile extends StatelessWidget {
 
   Future<void> _openProject(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
+    // Tapping the project that is already open should just dismiss the drawer
+    // and leave the user on whichever of its pages they were working in.
+    final isAlreadyOpen = store.selectedProject?.id == project.id;
+
     navigator.pop();
     await store.persistSelectedProject();
+    if (isAlreadyOpen) return;
+
     await store.selectProject(project.id);
-    navigator.pushNamedAndRemoveUntil(
+    if (!context.mounted) return;
+    await AppRoutes.openFromProjects(
+      navigator,
       AppRoutes.destinationForProject(project),
-      (_) => false,
     );
   }
 
@@ -111,7 +123,7 @@ class _ProjectDrawerTile extends StatelessWidget {
     await store.deleteProject(project.id);
 
     if (wasSelected && context.mounted) {
-      navigator.pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
+      await AppRoutes.goToProjects(navigator);
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bramwells_precision_test_kit/config/project_configuration.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
 import 'package:bramwells_precision_test_kit/storage/project_storage.dart';
@@ -11,9 +12,12 @@ void main() {
   ) async {
     await _pumpApp(tester);
 
-    expect(find.text("Bramwell's Precision Test Kit"), findsOneWidget);
+    final brand = ProjectConfiguration.current.brand;
+    final uiCopy = ProjectConfiguration.current.uiCopy;
+
+    expect(find.text(brand.tagline), findsOneWidget);
     expect(find.text('No projects yet'), findsOneWidget);
-    expect(find.text('Create a New Project'), findsOneWidget);
+    expect(find.text(uiCopy.createProjectLabel), findsOneWidget);
   });
 
   testWidgets('creating a project opens ANOMR form defaults', (
@@ -38,25 +42,16 @@ void main() {
     );
   });
 
-  testWidgets('home page dark-mode toggle switches the active theme', (
+  testWidgets('home page hides theme toggle when feature flag is off', (
     WidgetTester tester,
   ) async {
     await _pumpApp(tester);
 
-    // Light is active by default, so the control offers a switch *to* dark.
-    expect(find.byIcon(Icons.dark_mode_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.dark_mode_outlined), findsNothing);
     expect(find.byIcon(Icons.light_mode_outlined), findsNothing);
 
-    await tester.tap(find.byIcon(Icons.dark_mode_outlined));
-    await tester.pumpAndSettle();
-
-    expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
-    expect(find.byIcon(Icons.dark_mode_outlined), findsNothing);
-
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(materialApp.themeMode, ThemeMode.dark);
-    expect(Theme.of(tester.element(find.byType(Scaffold))).brightness,
-        Brightness.dark);
+    expect(materialApp.themeMode, ThemeMode.light);
   });
 
   testWidgets('sample size section follows selected risk level', (
@@ -97,7 +92,11 @@ void main() {
     await _pumpApp(tester);
     await _createProject(tester);
 
-    await tester.tap(find.text('Test how three factors influence precision'));
+    final threeFactorOption =
+        find.text('Test how three factors influence precision');
+    await tester.ensureVisible(threeFactorOption);
+    await tester.pumpAndSettle();
+    await tester.tap(threeFactorOption);
     await tester.pumpAndSettle();
 
     expect(find.text('Factor 3'), findsOneWidget);
@@ -202,7 +201,9 @@ Future<ProjectStore> _pumpApp(WidgetTester tester) async {
 }
 
 Future<void> _createProject(WidgetTester tester) async {
-  await tester.tap(find.text('Create a New Project'));
+  await tester.tap(
+    find.text(ProjectConfiguration.current.uiCopy.createProjectLabel),
+  );
   await tester.pumpAndSettle();
 }
 

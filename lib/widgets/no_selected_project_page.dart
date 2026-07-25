@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../help/help_access.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
+import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
 
 class NoSelectedProjectPage extends StatelessWidget {
@@ -21,16 +22,14 @@ class NoSelectedProjectPage extends StatelessWidget {
       builder: (context, layout) {
         return Scaffold(
           appBar: AppBar(
-            title: Text(title),
+            toolbarHeight: AppBrandTitle.toolbarHeight,
+            title: AppBrandTitle(label: title),
             actions: helpAppBarActionsFor(layout),
           ),
           body: Center(
             child: FilledButton.icon(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
-              },
+              onPressed: () =>
+                  AppRoutes.goToProjects(Navigator.of(context)),
               icon: const Icon(Icons.home_outlined),
               label: const Text('Projects'),
             ),

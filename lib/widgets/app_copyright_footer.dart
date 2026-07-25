@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../config/project_configuration.dart';
 import '../styles/tokens/app_spacing.dart';
 
 /// Slim copyright notice pinned to the bottom of every page.
@@ -15,8 +16,8 @@ class AppCopyrightFooter extends StatelessWidget {
   const AppCopyrightFooter({super.key});
 
   /// Single source of truth for the user-facing copyright line.
-  static const String noticeText =
-      '\u00A9 2026 Denton M. Bramwell. All rights reserved.';
+  static String get noticeText =>
+      ProjectConfiguration.current.brand.copyrightNotice;
 
   @override
   Widget build(BuildContext context) {

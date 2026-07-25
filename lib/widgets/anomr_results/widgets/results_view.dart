@@ -15,8 +15,11 @@ import '../../../styles/chart/chart_scale.dart';
 import '../../../styles/layout/app_layout.dart';
 import '../../../styles/layout/app_viewport.dart';
 import '../../../styles/tokens/app_spacing.dart';
-import '../../app_back_button.dart';
+import '../../../navigation/app_routes.dart';
+import '../../anomr_matrix/services/matrix_grid_data_builder.dart';
+import '../../app_brand_bar.dart';
 import '../../app_copyright_footer.dart';
+import '../../app_nav_chrome.dart';
 import '../../project_drawer.dart';
 import '../models/anomr_summary.dart';
 import '../models/export_options.dart';
@@ -140,24 +143,49 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
   final AppLayoutMetrics layout;
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(AppBrandTitle.toolbarHeight);
 
   @override
   Widget build(BuildContext context) {
+    final store = context.read<ProjectStore>();
+    final stateManager = context.read<PlutoGridStateManager>();
+
     return AppBar(
-      title: Text('$displayName — Results'),
-      leading: AppBackButton(onPressed: () => Navigator.of(context).pop()),
+      toolbarHeight: AppBrandTitle.toolbarHeight,
+      automaticallyImplyLeading: false,
+      leading: AppNavChrome.backLeading(context),
+      title: AppBrandTitle(label: '$displayName — Results'),
       actions: [
         ...helpAppBarActionsFor(layout),
-        Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-          ),
+        IconButton(
+          tooltip: 'Projects',
+          icon: const Icon(Icons.home_outlined),
+          onPressed: () => _goHome(context, store, stateManager),
         ),
+        AppNavChrome.drawerAction(),
       ],
     );
+  }
+
+  Future<void> _goHome(
+    BuildContext context,
+    ProjectStore store,
+    PlutoGridStateManager stateManager,
+  ) async {
+    final project = store.selectedProject;
+    if (project != null) {
+      // Results holds the live matrix manager; sync it before clearing the
+      // stack so Group Size values cannot be lost when the matrix is disposed.
+      MatrixGridDataBuilder.syncMatrixStateFromGrid(
+        project: project,
+        manager: stateManager,
+      );
+    }
+
+    final navigator = Navigator.of(context);
+    await store.persistSelectedProject();
+    if (!context.mounted) return;
+    await AppRoutes.goToProjects(navigator);
   }
 }
 

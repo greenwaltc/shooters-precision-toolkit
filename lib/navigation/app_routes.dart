@@ -3,6 +3,8 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+import 'package:flutter/widgets.dart';
+
 import '../model/saved_project.dart';
 
 /// Named routes and route-selection helpers used by `MaterialApp`.
@@ -12,8 +14,49 @@ class AppRoutes {
   static const anomrMatrix = '/anomr-matrix';
   static const anomrResults = '/anomr-results';
 
+  /// [RouteSettings.arguments] value used when Project Setup is opened from
+  /// the Data Matrix "tune" control. Submit then pops back to the matrix
+  /// instead of pushing a second matrix route onto the stack.
+  static const String projectFormOpenedFromMatrix = 'projectFormOpenedFromMatrix';
+
   /// Returns the route the user should land on for [project].
   static String destinationForProject(SavedProject project) {
     return project.setupComplete ? anomrMatrix : projectForm;
+  }
+
+  /// Whether the current route is Project Setup opened from the Data Matrix.
+  static bool isProjectFormOpenedFromMatrix(BuildContext context) {
+    return ModalRoute.of(context)?.settings.arguments ==
+        projectFormOpenedFromMatrix;
+  }
+
+  /// Clears the navigation stack down to the Projects page.
+  static Future<void> goToProjects(NavigatorState navigator) {
+    return navigator.pushNamedAndRemoveUntil(projects, (_) => false);
+  }
+
+  /// Opens Project Setup on top of the Data Matrix so Back returns to it.
+  static Future<Object?> openProjectFormFromMatrix(NavigatorState navigator) {
+    return navigator.pushNamed(
+      projectForm,
+      arguments: projectFormOpenedFromMatrix,
+    );
+  }
+
+  /// Opens [routeName] with [projects] as the only page beneath it.
+  ///
+  /// Used when the selected project changes out from under the stack (drawer
+  /// switches and drawer-created projects). Every page renders whichever
+  /// project is currently selected, so leaving the old project's pages in
+  /// place would make "back" replay the same screen instead of returning
+  /// somewhere meaningful.
+  static Future<void> openFromProjects(
+    NavigatorState navigator,
+    String routeName,
+  ) {
+    return navigator.pushNamedAndRemoveUntil(
+      routeName,
+      ModalRoute.withName(projects),
+    );
   }
 }

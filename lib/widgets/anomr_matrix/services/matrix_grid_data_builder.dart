@@ -8,6 +8,7 @@ import 'package:pluto_grid/pluto_grid.dart';
 import '../../../model/project_form_model.dart';
 import '../../../model/saved_project.dart';
 import '../models/matrix_grid_data.dart';
+import 'range_value_parser.dart';
 
 /// Builds and addresses the non-visual data used by the ANOMR matrix grid.
 class MatrixGridDataBuilder {
@@ -44,6 +45,40 @@ class MatrixGridDataBuilder {
 
     final rowNumber = cellIntValue(row.cells['row']) ?? 1;
     return 'range_${rowNumber - 1}';
+  }
+
+  /// Writes every Group Size cell from [rows] into [project.matrixState].
+  ///
+  /// Returns `true` when at least one stored value changed. Callers should
+  /// persist afterwards when they need the update durable.
+  static bool syncMatrixStateFromRows({
+    required SavedProject project,
+    required Iterable<PlutoRow> rows,
+  }) {
+    var changed = false;
+    for (final row in rows) {
+      final storageKey = storageKeyForRow(row);
+      final normalized = RangeValueParser.parse(
+        row.cells['range']?.value,
+      ).displayValue;
+      final stored = project.matrixState[storageKey]?.toString();
+      final left = (stored == null || stored.isEmpty) ? null : stored;
+      final right =
+          (normalized == null || normalized.isEmpty) ? null : normalized;
+      if (left == right) continue;
+
+      project.matrixState[storageKey] = normalized;
+      changed = true;
+    }
+    return changed;
+  }
+
+  /// Convenience wrapper around [syncMatrixStateFromRows] for a live grid.
+  static bool syncMatrixStateFromGrid({
+    required SavedProject project,
+    required PlutoGridStateManager manager,
+  }) {
+    return syncMatrixStateFromRows(project: project, rows: manager.rows);
   }
 
   /// Returns the integer value stored in [cell], if it can be parsed.

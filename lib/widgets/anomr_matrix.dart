@@ -17,6 +17,7 @@ import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../navigation/app_routes.dart';
+import '../styles/app_design.dart';
 import '../styles/components/matrix_grid_style.dart';
 import '../styles/components/scroll_cue_style.dart';
 import '../styles/layout/app_layout.dart';
@@ -30,8 +31,9 @@ import 'anomr_matrix/services/matrix_grid_history.dart';
 import 'anomr_matrix/services/range_value_parser.dart';
 import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'anomr_results/services/anomr_calculator.dart';
-import 'app_back_button.dart';
+import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
+import 'app_nav_chrome.dart';
 import 'no_selected_project_page.dart';
 import 'project_drawer.dart';
 import 'range_entry_sheet.dart';
@@ -111,33 +113,22 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     ProjectStore store,
   ) {
     return AppBar(
-      leading: AppBackButton(
-        tooltip: 'Project setup',
-        onPressed: () => _goToProjectSetup(context, store),
-      ),
-      title: Text(project.displayName),
+      toolbarHeight: AppBrandTitle.toolbarHeight,
+      automaticallyImplyLeading: false,
+      leading: AppNavChrome.backLeading(context),
+      title: AppBrandTitle(label: project.displayName),
       actions: [
         ...helpAppBarActionsFor(layout, preferAppBar: true),
+        AppNavChrome.homeAction(context: context, store: store),
         IconButton(
           tooltip: 'Project setup',
           onPressed: () => _goToProjectSetup(context, store),
           icon: const Icon(Icons.tune),
         ),
-        Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
+        AppNavChrome.drawerAction(),
       ],
     );
   }
-
-  /// Height the header, grid, and action row need before the page starts to
-  /// feel cramped. Scales with the text-size preference because every band
-  /// grows with it.
-  static const double _minBodyHeight = 460;
 
   Widget _buildBody(
     BuildContext context,
@@ -156,8 +147,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             ],
           );
 
-          final minHeight =
-              _minBodyHeight * MediaQuery.textScalerOf(context).scale(1);
+          final minHeight = AppDesign.matrixMinBodyHeight *
+              MediaQuery.textScalerOf(context).scale(1);
           if (!constraints.hasBoundedHeight ||
               constraints.maxHeight >= minHeight) {
             return content;
@@ -205,7 +196,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
   ) async {
     final navigator = Navigator.of(context);
     await store.persistSelectedProject();
-    navigator.pushReplacementNamed(AppRoutes.projectForm);
+    if (!context.mounted) return;
+    await AppRoutes.openProjectFormFromMatrix(navigator);
   }
 }
 
@@ -1125,13 +1117,18 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   void _applyRangeValue({
     required int rowIdx,
     required Object? value,
+    Object? previousValueOverride,
     bool recordHistory = true,
     bool persist = true,
   }) {
     final manager = _stateManager;
     if (manager == null) return;
 
-    final previousValue = manager.rows[rowIdx].cells['range']!.value?.toString();
+    final row = manager.rows[rowIdx];
+    final cell = row.cells['range']!;
+    final storageKey = MatrixGridDataBuilder.storageKeyForRow(row);
+    final cellValue = cell.value?.toString();
+    final storedValue = widget.project.matrixState[storageKey];
 
     final parsed = RangeValueParser.parse(value);
     if (parsed.invalid) {
@@ -1141,30 +1138,71 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     }
 
     final normalizedValue = parsed.displayValue;
-    if (normalizedValue == previousValue) {
+    final cellMatches = _rangeValuesEqual(cellValue, normalizedValue);
+    final storeMatches = _rangeValuesEqual(
+      storedValue?.toString(),
+      normalizedValue,
+    );
+
+    // PlutoGrid writes the cell *before* invoking onChanged. Skipping when the
+    // cell already matches would leave matrixState stale even though the grid
+    // looks correct — so always sync storage when it differs.
+    if (cellMatches && storeMatches) {
       return;
     }
 
     if (recordHistory) {
-      _history.record(
-        MatrixRangeChange(
-          rowIdx: rowIdx,
-          previousValue: previousValue,
-          newValue: normalizedValue,
-        ),
-      );
+      final historyPrevious = RangeValueParser.parse(
+        previousValueOverride ?? storedValue ?? cellValue,
+      ).displayValue;
+      if (!_rangeValuesEqual(historyPrevious, normalizedValue)) {
+        _history.record(
+          MatrixRangeChange(
+            rowIdx: rowIdx,
+            previousValue: historyPrevious,
+            newValue: normalizedValue,
+          ),
+        );
+      }
     }
 
-    manager.rows[rowIdx].cells['range']!.value = normalizedValue;
-    widget.project.matrixState[MatrixGridDataBuilder.storageKeyForRow(
-      manager.rows[rowIdx],
-    )] = normalizedValue;
+    if (!cellMatches) {
+      cell.value = normalizedValue;
+    }
+    widget.project.matrixState[storageKey] = normalizedValue;
+
     if (persist) {
       context.read<ProjectStore>().persistSelectedProject(markModified: true);
     }
 
-    manager.notifyListeners();
-    setState(() {});
+    if (!cellMatches) {
+      manager.notifyListeners();
+      setState(() {});
+    }
+  }
+
+  /// Copies every visible Group Size cell into [SavedProject.matrixState].
+  ///
+  /// Used before leaving the matrix so persistence cannot miss cells that only
+  /// lived in the PlutoGrid model.
+  void _flushAllRangeValuesToProject({bool persist = true}) {
+    final manager = _stateManager;
+    if (manager == null) return;
+
+    final changed = MatrixGridDataBuilder.syncMatrixStateFromGrid(
+      project: widget.project,
+      manager: manager,
+    );
+
+    if (changed && persist && mounted) {
+      context.read<ProjectStore>().persistSelectedProject(markModified: true);
+    }
+  }
+
+  static bool _rangeValuesEqual(String? a, String? b) {
+    final left = (a == null || a.isEmpty) ? null : a;
+    final right = (b == null || b.isEmpty) ? null : b;
+    return left == right;
   }
 
   void _showInvalidRangeValueMessage() {
@@ -1177,12 +1215,17 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   void _handleOnChanged(PlutoGridOnChangedEvent event) {
     if (event.column.field == 'range') {
-      _applyRangeValue(rowIdx: event.rowIdx, value: event.value);
+      _applyRangeValue(
+        rowIdx: event.rowIdx,
+        value: event.value,
+        previousValueOverride: event.oldValue,
+      );
     }
   }
 
   void _showResults(BuildContext context) {
     _commitActiveRangeEdit();
+    _flushAllRangeValuesToProject();
 
     final manager = _stateManager;
     if (manager == null) return;

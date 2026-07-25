@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'config/project_configuration.dart';
 import 'model/project_store.dart';
 import 'model/theme_controller.dart';
 import 'navigation/app_routes.dart';
@@ -69,6 +70,15 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
+  /// Honors the user's saved preference only while the theme toggle is
+  /// enabled; the app is otherwise pinned to its light theme.
+  ThemeMode _resolveThemeMode(ThemeController controller) {
+    final canToggle = ProjectConfiguration.current.featureFlags.isEnabled(
+      FeatureFlag.themeModeToggle,
+    );
+    return canToggle ? controller.themeMode : ThemeMode.light;
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -79,10 +89,10 @@ class _MyAppState extends State<MyApp> {
       child: Consumer<ThemeController>(
         builder: (context, themeController, _) {
           return MaterialApp(
-            title: 'Bramwell\'s Precision Test Kit',
+            title: ProjectConfiguration.current.brand.appTitle,
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
-            themeMode: themeController.themeMode,
+            themeMode: _resolveThemeMode(themeController),
             initialRoute: AppRoutes.projects,
             builder: (context, child) {
               return MediaQuery(

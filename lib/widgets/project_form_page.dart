@@ -11,7 +11,9 @@ import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
+import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
+import 'app_nav_chrome.dart';
 import 'project_drawer.dart';
 import 'project_form.dart';
 import 'no_selected_project_page.dart';
@@ -40,14 +42,14 @@ class ProjectFormPage extends StatelessWidget {
               return Scaffold(
                 drawer: const ProjectDrawer(),
                 appBar: AppBar(
-                  title: Text(project.displayName),
+                  toolbarHeight: AppBrandTitle.toolbarHeight,
+                  automaticallyImplyLeading: false,
+                  leading: AppNavChrome.backLeading(context),
+                  title: AppBrandTitle(label: project.displayName),
                   actions: [
                     ...helpAppBarActionsFor(layout),
-                    IconButton(
-                      tooltip: 'Projects',
-                      onPressed: () => _goHome(context, store),
-                      icon: const Icon(Icons.home_outlined),
-                    ),
+                    AppNavChrome.homeAction(context: context, store: store),
+                    AppNavChrome.drawerAction(),
                   ],
                 ),
                 body: AppResponsiveBody(
@@ -68,16 +70,21 @@ class ProjectFormPage extends StatelessWidget {
     );
   }
 
-  Future<void> _goHome(BuildContext context, ProjectStore store) async {
-    final navigator = Navigator.of(context);
-    await store.persistSelectedProject();
-    navigator.pushNamedAndRemoveUntil(AppRoutes.projects, (_) => false);
-  }
-
   Future<void> _goToMatrix(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
+    final openedFromMatrix = AppRoutes.isProjectFormOpenedFromMatrix(context);
+
     if (!await store.completeProjectSetup()) return;
     await store.persistSelectedProject();
-    navigator.pushReplacementNamed(AppRoutes.anomrMatrix);
+    if (!context.mounted) return;
+
+    // Returning from the matrix "tune" path should pop back onto the existing
+    // matrix page so the stack does not grow [matrix, form, matrix, ...].
+    if (openedFromMatrix && navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    await navigator.pushNamed(AppRoutes.anomrMatrix);
   }
 }

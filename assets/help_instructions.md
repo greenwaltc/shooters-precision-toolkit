@@ -12,7 +12,7 @@ Bramwell’s Precision Test Kit is designed to compare firearm (or other project
 
 **Alpha (𝛂) Risk:** This represents the risk that the test indicates a difference when none exists. While 5% is standard for magnitude tests, 10% is generally more practical for variation tests, which require larger samples.
 
-**Minimum Detectable Difference:** Detecting small differences in variation requires large samples. As a general rule, it is necessary to quadruple the sample size to cut the minimum detectable difference in half, so tests of variation often target a detection threshold of approximately ±25%. Each sample-size option on the setup form shows the difference it can detect at your chosen risk level.
+**Minimum Detectable Difference:** Detecting small differences in variation requires large samples. As a general rule, it is necessary to quadruple the sample size to cut the minimum detectable difference in half, so tests of variation often target a detection threshold of approximately ±25% to ±30%. Each sample-size option on the setup form shows the difference it can detect at your chosen risk level.
 
 **Sample Size:** The requirement for large sample sizes is not a failure of the analytical technique. Rather, it reflects the nature of all tests of variation. You are not likely to get a better result with fewer data by any other method.
 

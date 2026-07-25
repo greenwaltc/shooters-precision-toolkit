@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/project_configuration.dart';
 import '../help/help_access.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
@@ -16,18 +17,13 @@ import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
+import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
 import 'confirm_delete_project_dialog.dart';
 
 /// Home route listing saved projects and the create-project action.
 class ProjectHomePage extends StatelessWidget {
   const ProjectHomePage({super.key});
-
-  /// Maximum width of the empty-state column on wide viewports.
-  static const double _emptyStateMaxWidth = 420;
-
-  /// Size of the leading hero icon on the empty state.
-  static const double _emptyStateIconSize = 56;
 
   @override
   Widget build(BuildContext context) {
@@ -36,10 +32,13 @@ class ProjectHomePage extends StatelessWidget {
     return AppLayoutBuilder(
       builder: (context, layout) {
         return Scaffold(
-          appBar: AppBar(
-            title: const Text("Bramwell's Precision Test Kit"),
+          appBar: ProjectsBannerAppBar(
+            metrics: ProjectsBannerMetrics.of(context),
             actions: [
-              const _ThemeModeToggle(),
+              if (ProjectConfiguration.current.featureFlags.isEnabled(
+                FeatureFlag.themeModeToggle,
+              ))
+                const _ThemeModeToggle(),
               ...helpAppBarActionsFor(layout),
             ],
           ),
@@ -69,38 +68,45 @@ class ProjectHomePage extends StatelessWidget {
       // it never clips under heavy browser zoom or large text-scale settings.
       return LayoutBuilder(
         builder: (context, constraints) {
+          final compact =
+              constraints.maxHeight < AppDesign.emptyStateCompactHeight;
+          final blockGap = compact ? AppSpacing.lg : AppSpacing.xxl;
+          final scheme = Theme.of(context).colorScheme;
+
           return SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xl),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: constraints.hasBoundedHeight
                     ? constraints.maxHeight
                     : 0,
               ),
-              child: Center(
+              child: Align(
+                alignment: compact ? Alignment.topCenter : Alignment.center,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(
-                    maxWidth: _emptyStateMaxWidth,
+                    maxWidth: AppDesign.emptyStateMaxWidth,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        padding: EdgeInsets.all(
+                          compact ? AppSpacing.lg : AppSpacing.xl,
+                        ),
                         decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer,
+                          color: scheme.primaryContainer,
                           borderRadius: AppRadius.xlRadius,
                         ),
                         child: Icon(
                           Icons.analytics_outlined,
-                          size: _emptyStateIconSize,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onPrimaryContainer,
+                          size: compact
+                              ? AppDesign.emptyStateCompactIconSize
+                              : AppDesign.emptyStateIconSize,
+                          color: scheme.onPrimaryContainer,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xxl),
+                      SizedBox(height: blockGap),
                       Text(
                         'No projects yet',
                         textAlign: TextAlign.center,
@@ -112,14 +118,16 @@ class ProjectHomePage extends StatelessWidget {
                         'your chosen factors influence precision.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xxl),
+                      SizedBox(height: blockGap),
                       FilledButton.icon(
                         onPressed: () => _createProject(context, store),
                         icon: const Icon(Icons.add),
-                        label: const Text('Create a New Project'),
+                        label: Text(
+                          ProjectConfiguration.current.uiCopy.createProjectLabel,
+                        ),
                       ),
                     ],
                   ),
@@ -131,34 +139,52 @@ class ProjectHomePage extends StatelessWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        FilledButton.icon(
-          onPressed: () => _createProject(context, store),
-          icon: const Icon(Icons.add),
-          label: const Text('Create a New Project'),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        Text('Projects', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppSpacing.md),
-        Expanded(
-          child: ListView.separated(
-            itemCount: projects.length,
-            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-            itemBuilder: (context, index) {
-              return _ProjectListTile(project: projects[index]);
-            },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.hasBoundedHeight
+                  ? constraints.maxHeight
+                  : 0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton.icon(
+                  onPressed: () => _createProject(context, store),
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    ProjectConfiguration.current.uiCopy.createProjectLabel,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text('Projects', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: AppSpacing.md),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: projects.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.md),
+                  itemBuilder: (context, index) {
+                    return _ProjectListTile(project: projects[index]);
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
   Future<void> _createProject(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
     await store.createProject();
-    navigator.pushNamed(AppRoutes.projectForm);
+    if (!context.mounted) return;
+    await navigator.pushNamed(AppRoutes.projectForm);
   }
 }
 
@@ -217,7 +243,8 @@ class _ProjectListTile extends StatelessWidget {
 
     await store.persistSelectedProject();
     await store.selectProject(project.id);
-    navigator.pushNamed(AppRoutes.destinationForProject(project));
+    if (!context.mounted) return;
+    await navigator.pushNamed(AppRoutes.destinationForProject(project));
   }
 
   Future<void> _deleteProject(BuildContext context) async {
@@ -242,9 +269,7 @@ class _ThemeModeToggle extends StatelessWidget {
 
     return IconButton(
       tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
-      icon: Icon(
-        isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-      ),
+      icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
       onPressed: () => controller.setDarkMode(enabled: !isDark),
     );
   }
@@ -271,7 +296,11 @@ class _LeadingBadge extends StatelessWidget {
         color: background,
         borderRadius: AppRadius.mdRadius,
       ),
-      child: Icon(icon, color: foreground, size: 22),
+      child: Icon(
+        icon,
+        color: foreground,
+        size: AppDesign.leadingIconGlyphSize,
+      ),
     );
   }
 }

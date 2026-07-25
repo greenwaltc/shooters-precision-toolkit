@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:bramwells_precision_test_kit/config/project_configuration.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
@@ -57,7 +58,10 @@ void main() {
           await _pumpApp(tester);
           _expectNoLayoutErrors(tester, '$label — home empty state');
 
-          await _tapText(tester, 'Create a New Project');
+          await _tapText(
+            tester,
+            ProjectConfiguration.current.uiCopy.createProjectLabel,
+          );
           _expectNoLayoutErrors(tester, '$label — empty setup form');
 
           await _tapText(
@@ -104,7 +108,10 @@ void main() {
         _configureViewport(tester, size: entry.value, textScale: 1.6);
 
         await _pumpApp(tester);
-        await _tapText(tester, 'Create a New Project');
+        await _tapText(
+          tester,
+          ProjectConfiguration.current.uiCopy.createProjectLabel,
+        );
         await _openHelpSheet(tester);
 
         expect(find.text('Help'), findsOneWidget);
@@ -193,7 +200,10 @@ void main() {
       _configureViewport(tester, size: const Size(320, 568), textScale: 1.6);
 
       await _pumpCompletedProject(tester);
-      await tester.tap(find.byIcon(Icons.delete_outline));
+      final deleteIcon = find.byIcon(Icons.delete_outline);
+      await tester.ensureVisible(deleteIcon);
+      await tester.pumpAndSettle();
+      await tester.tap(deleteIcon);
       await tester.pumpAndSettle();
 
       expect(find.text('Delete project?'), findsOneWidget);
@@ -351,7 +361,21 @@ Future<void> _pumpCompletedProject(
 }
 
 Future<void> _tapText(WidgetTester tester, String label) async {
-  final finder = find.text(label).first;
+  final textFinder = find.text(label);
+  expect(textFinder, findsWidgets, reason: 'expected text "$label" on screen');
+
+  final buttonFinder = find.ancestor(
+    of: textFinder.first,
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is FilledButton ||
+          widget is TextButton ||
+          widget is OutlinedButton,
+    ),
+  );
+  final finder =
+      buttonFinder.evaluate().isNotEmpty ? buttonFinder.first : textFinder.first;
+
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
   await tester.tap(finder);

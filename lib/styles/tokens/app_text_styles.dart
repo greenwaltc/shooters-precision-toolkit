@@ -58,6 +58,15 @@ class AppTextStyles {
     );
   }
 
+  /// Product tagline rendered beneath the logo on the projects banner.
+  static TextStyle? bannerTagline(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: scheme.onSurfaceVariant,
+      height: AppDesign.lineHeightBody,
+    );
+  }
+
   /// Header text style for [PlutoGrid] columns.
   static const TextStyle plutoColumn = TextStyle(
     fontWeight: AppDesign.weightBold,

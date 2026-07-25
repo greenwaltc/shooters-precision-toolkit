@@ -34,8 +34,9 @@ import 'package:flutter/material.dart';
 ///   9. Inputs
 ///  10. Cards & surfaces
 ///  11. List tiles
-///  12. App bar
-///  13. Motion
+///  12. App bar & branding
+///  13. Empty states
+///  14. Motion
 ///
 /// ## Rules of the road
 ///   * Never hardcode a raw color/number in a widget — add or reuse a knob here.
@@ -263,13 +264,76 @@ class AppDesign {
   /// Size of the tinted leading icon container on list/hero surfaces.
   static const double leadingIconBadgeSize = 40;
 
-  // ──────────────────────────── 12. App bar ───────────────────────────────
+  /// Glyph size drawn inside [leadingIconBadgeSize].
+  static const double leadingIconGlyphSize = 22;
+
+  // ──────────────────────── 12. App bar & branding ────────────────────────
 
   /// Whether app-bar titles are centered. Left-aligned reads more like a
   /// modern productivity app.
   static const bool appBarCenterTitle = false;
 
-  // ──────────────────────────── 13. Motion ────────────────────────────────
+  /// Logo height in the standard (non-home) app bars.
+  static const double appBarLogoHeight = 72;
+
+  /// Breathing room above and below app-bar branding.
+  static const double appBarBrandingPadding = space8;
+
+  /// App-bar height that fits [appBarLogoHeight] plus its padding.
+  static const double appBarBrandedHeight =
+      appBarLogoHeight + appBarBrandingPadding * 2;
+
+  /// Logo height on the projects banner when the viewport has room for it.
+  static const double homeBannerLogoHeight = kToolbarHeight * 3;
+
+  /// Floor the projects banner logo shrinks to on short viewports.
+  static const double homeBannerMinLogoHeight = kToolbarHeight * 2;
+
+  /// Gap separating the projects banner logo from its tagline.
+  static const double homeBannerTaglineGap = space4;
+
+  /// Viewport height at or above which the projects banner always uses
+  /// [homeBannerLogoHeight]. Below it the logo shrinks so the page body keeps
+  /// at least [homeBannerMinBodyHeight].
+  static const double homeBannerFullSizeViewportHeight = 700;
+
+  /// Body height preserved beneath the projects banner on short viewports.
+  static const double homeBannerMinBodyHeight = 260;
+
+  /// Horizontal space reserved for the help control on the projects banner
+  /// when predicting how many lines the tagline will wrap to.
+  static const double homeBannerHelpActionsReserve = 64;
+
+  /// Extra horizontal reserve when the theme-mode toggle is shown beside help.
+  static const double homeBannerThemeToggleActionsReserve = 48;
+
+  /// Lower bound for the predicted tagline width so the estimate stays
+  /// meaningful on very narrow viewports.
+  static const double homeBannerMinTaglineWidth = 200;
+
+  /// Lines the projects banner tagline may wrap to before it is ellipsized.
+  static const int homeBannerTaglineMaxLines = 2;
+
+  /// Minimum height the Data Matrix body needs before the page scrolls as a
+  /// whole on short viewports (header + grid + action row).
+  static const double matrixMinBodyHeight = 460;
+
+  // ──────────────────────────── 13. Empty states ──────────────────────────
+
+  /// Width limit for the centered empty-state column on wide viewports.
+  static const double emptyStateMaxWidth = 420;
+
+  /// Hero icon size on the empty state.
+  static const double emptyStateIconSize = 56;
+
+  /// Hero icon size once the empty state switches to its compact layout.
+  static const double emptyStateCompactIconSize = 44;
+
+  /// Body height below which the empty state drops to its compact layout
+  /// (smaller hero, tighter spacing, top-aligned instead of centered).
+  static const double emptyStateCompactHeight = 360;
+
+  // ──────────────────────────── 14. Motion ────────────────────────────────
 
   static const Duration motionFast = Duration(milliseconds: 150);
   static const Duration motionMedium = Duration(milliseconds: 250);

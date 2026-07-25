@@ -77,6 +77,14 @@ class BrandConfiguration {
   /// Intrinsic width/height of [bannerLogoAsset]. Used to predict the width
   /// the banner needs at a given height before it is laid out.
   final double bannerLogoAspectRatio;
+
+  /// Canonical public origin for the Firebase Hosting web build (no trailing
+  /// slash). Used by `web/sitemap.xml` / `web/robots.txt` and any absolute
+  /// links that must match the live site.
+  ///
+  /// Keep the static files under `web/` in sync when this value changes.
+  static const String publicSiteUrl =
+      'https://bramwells-precision-test-kit.web.app';
 }
 
 /// User-facing chrome copy that is not part of the product brand itself.

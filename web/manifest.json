@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#000000",
     "theme_color": "#000000",
-    "description": "Statistical analysis for precision testing.",
+    "description": "Compare projectile and firearm shot consistency with analysis. Design experiments, collect two-shot group sizes, and see which factors improve precision.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,0 +1,5 @@
+# https://bramwells-precision-test-kit.web.app/
+User-agent: *
+Allow: /
+
+Sitemap: https://bramwells-precision-test-kit.web.app/sitemap.xml

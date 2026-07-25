@@ -39,6 +39,9 @@ class _ExportDialogState extends State<ExportDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      // Scrollable so the options stay reachable on short viewports and at
+      // large text-scale settings.
+      scrollable: true,
       title: const Text('Export Results'),
       content: SizedBox(width: _contentWidth, child: _buildContent(context)),
       actions: _buildActions(context),

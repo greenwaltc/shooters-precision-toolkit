@@ -134,6 +134,11 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     );
   }
 
+  /// Height the header, grid, and action row need before the page starts to
+  /// feel cramped. Scales with the text-size preference because every band
+  /// grows with it.
+  static const double _minBodyHeight = 460;
+
   Widget _buildBody(
     BuildContext context,
     AppLayoutMetrics layout,
@@ -141,12 +146,30 @@ class _AnomrMatrixScaffold extends StatelessWidget {
   ) {
     return SafeArea(
       minimum: AppViewport.safeAreaMinimum,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _MatrixHeader(layout: layout, formModel: formModel),
-          Expanded(child: _buildGrid(layout, formModel)),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MatrixHeader(layout: layout, formModel: formModel),
+              Expanded(child: _buildGrid(layout, formModel)),
+            ],
+          );
+
+          final minHeight =
+              _minBodyHeight * MediaQuery.textScalerOf(context).scale(1);
+          if (!constraints.hasBoundedHeight ||
+              constraints.maxHeight >= minHeight) {
+            return content;
+          }
+
+          // Short viewports (small phones, landscape, heavy magnification)
+          // cannot fit the grid plus its surrounding controls, so let the page
+          // scroll instead of squeezing the grid to nothing.
+          return SingleChildScrollView(
+            child: SizedBox(height: minHeight, child: content),
+          );
+        },
       ),
     );
   }
@@ -1337,7 +1360,13 @@ class _RandomizeOrderToggle extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Text('Randomize order?', style: textTheme.bodyMedium),
+          Flexible(
+            child: Text(
+              'Randomize order?',
+              style: textTheme.bodyMedium,
+              textAlign: TextAlign.end,
+            ),
+          ),
           const SizedBox(width: AppSpacing.md),
           Text(value ? 'Yes' : 'No', style: textTheme.labelLarge),
           Switch(value: value, onChanged: onChanged),
@@ -1374,7 +1403,7 @@ class _MatrixActions extends StatelessWidget {
         width: double.infinity,
         child: AppResponsiveActions(
           layout: layout,
-          desktopAlignment: MainAxisAlignment.spaceBetween,
+          desktopAlignment: WrapAlignment.spaceBetween,
           children: [
             ElevatedButton.icon(
               onPressed: canShowResults ? onShowResults : null,

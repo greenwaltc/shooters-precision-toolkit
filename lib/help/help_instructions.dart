@@ -13,10 +13,6 @@ import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 
-final Future<String> _helpInstructionsFuture = rootBundle.loadString(
-  'assets/help_instructions.md',
-);
-
 /// Presents the help markdown in a draggable, scrollable bottom sheet.
 Future<void> showHelpInstructionsSheet(BuildContext context) {
   return showModalBottomSheet<void>(
@@ -96,15 +92,29 @@ class HelpInstructionsSheet extends StatelessWidget {
 }
 
 /// Markdown renderer for bundled help instructions.
-class HelpInstructions extends StatelessWidget {
+class HelpInstructions extends StatefulWidget {
   const HelpInstructions({super.key, this.scrollController});
 
   final ScrollController? scrollController;
 
   @override
+  State<HelpInstructions> createState() => _HelpInstructionsState();
+}
+
+class _HelpInstructionsState extends State<HelpInstructions> {
+  /// Held in state rather than rebuilt in `build` so the [FutureBuilder] is
+  /// not restarted on every rebuild. `rootBundle` caches the decoded string,
+  /// so re-opening help does not re-read the asset.
+  late final Future<String> _instructions = rootBundle.loadString(
+    'assets/help_instructions.md',
+  );
+
+  ScrollController? get scrollController => widget.scrollController;
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<String>(
-      future: _helpInstructionsFuture,
+      future: _instructions,
       builder: _buildSnapshot,
     );
   }

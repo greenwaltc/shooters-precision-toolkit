@@ -124,12 +124,12 @@ class AppResponsiveActions extends StatelessWidget {
     super.key,
     required this.children,
     required this.layout,
-    this.desktopAlignment = MainAxisAlignment.end,
+    this.desktopAlignment = WrapAlignment.end,
   });
 
   final List<Widget> children;
   final AppLayoutMetrics layout;
-  final MainAxisAlignment desktopAlignment;
+  final WrapAlignment desktopAlignment;
 
   @override
   Widget build(BuildContext context) {
@@ -146,15 +146,15 @@ class AppResponsiveActions extends StatelessWidget {
       );
     }
 
-    return Row(
-      mainAxisAlignment: desktopAlignment,
-      children: [
-        for (var index = 0; index < children.length; index++) ...[
-          children[index],
-          if (index != children.length - 1)
-            const SizedBox(width: AppSpacing.md),
-        ],
-      ],
+    // Wrap rather than Row so wide button labels flow onto another line under
+    // heavy text magnification instead of overflowing the viewport.
+    return Wrap(
+      alignment: desktopAlignment,
+      runAlignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.md,
+      children: children,
     );
   }
 }

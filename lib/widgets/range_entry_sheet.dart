@@ -106,7 +106,9 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
       color: Theme.of(context).colorScheme.surface,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _contentWidth),
-        child: Padding(
+        // Scrollable because the auto-focused field raises the keyboard, which
+        // can leave less room than the sheet needs in landscape.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
             0,
@@ -169,19 +171,23 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
     final labelStyle = _labelStyle(context);
     return Row(
       children: [
-        _CompactStat(
-          label: 'Run Order',
-          value: widget.entry.rowIndex.toString(),
-          labelStyle: labelStyle,
-          valueStyle: textTheme.titleSmall,
+        Expanded(
+          child: _CompactStat(
+            label: 'Run Order',
+            value: widget.entry.rowIndex.toString(),
+            labelStyle: labelStyle,
+            valueStyle: textTheme.titleSmall,
+          ),
         ),
         if (widget.entry.showReplicate) ...[
           const SizedBox(width: AppSpacing.lg),
-          _CompactStat(
-            label: 'Replicate',
-            value: widget.entry.replicateIndex.toString(),
-            labelStyle: labelStyle,
-            valueStyle: textTheme.titleSmall,
+          Expanded(
+            child: _CompactStat(
+              label: 'Replicate',
+              value: widget.entry.replicateIndex.toString(),
+              labelStyle: labelStyle,
+              valueStyle: textTheme.titleSmall,
+            ),
           ),
         ],
       ],

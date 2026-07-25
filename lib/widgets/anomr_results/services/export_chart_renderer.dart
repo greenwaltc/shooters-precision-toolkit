@@ -40,21 +40,29 @@ class ExportChartRenderer {
     late OverlayEntry entry;
 
     entry = OverlayEntry(
-      builder: (_) => Positioned(
+      builder: (context) => Positioned(
         left: -30000,
         top: -30000,
         child: RepaintBoundary(
           key: chartKey,
-          child: SizedBox(
-            width: ChartScale.exportWidth,
-            child: ResultsChartCard(
-              factorRows: summary.factorRows,
-              grandMean: summary.grandMean,
-              lowerBound: summary.lowerBound,
-              upperBound: summary.upperBound,
-              detectableDiffPercent: summary.detectableDiffPercent,
-              riskLevel: formModel.riskLevel,
-              scale: ChartScale.export,
+          child: MediaQuery(
+            // [ChartScale.export] reserves label space at an unscaled size, so
+            // the reader's text-magnification preference must not leak into
+            // the capture or exports would differ from device to device.
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.noScaling),
+            child: SizedBox(
+              width: ChartScale.exportWidth,
+              child: ResultsChartCard(
+                factorRows: summary.factorRows,
+                grandMean: summary.grandMean,
+                lowerBound: summary.lowerBound,
+                upperBound: summary.upperBound,
+                detectableDiffPercent: summary.detectableDiffPercent,
+                riskLevel: formModel.riskLevel,
+                scale: ChartScale.export,
+              ),
             ),
           ),
         ),

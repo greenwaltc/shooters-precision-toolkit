@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bramwells_precision_test_kit/model/theme_controller.dart';
+import 'package:bramwells_precision_test_kit/styles/app_theme.dart';
+import 'package:bramwells_precision_test_kit/styles/theme_extensions/pluto_grid_theme.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -42,6 +44,17 @@ void main() {
       final restored = ThemeController();
       await restored.load();
       expect(restored.themeMode, ThemeMode.dark);
+    });
+  });
+
+  group('AppTheme', () {
+    test('PlutoGridStyleTheme follows light and dark color schemes', () {
+      final light = AppTheme.light().extension<PlutoGridStyleTheme>()!;
+      final dark = AppTheme.dark().extension<PlutoGridStyleTheme>()!;
+
+      expect(light.backgroundColor, isNot(dark.backgroundColor));
+      expect(light.factorCellBackground, isNot(dark.factorCellBackground));
+      expect(light.borderColor, isNot(dark.borderColor));
     });
   });
 }

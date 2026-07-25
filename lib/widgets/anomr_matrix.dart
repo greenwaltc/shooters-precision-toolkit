@@ -152,7 +152,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _MatrixHeader(layout: layout, formModel: formModel),
-              Expanded(child: _buildGrid(layout, formModel)),
+              Expanded(child: _buildGrid(context, layout, formModel)),
             ],
           );
 
@@ -174,7 +174,11 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     );
   }
 
-  Widget _buildGrid(AppLayoutMetrics layout, ProjectFormModel formModel) {
+  Widget _buildGrid(
+    BuildContext context,
+    AppLayoutMetrics layout,
+    ProjectFormModel formModel,
+  ) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: layout.pageGutter),
       child: Align(
@@ -184,7 +188,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
           child: AnomrMatrixGrid(
             key: ValueKey(
               '${project.id}_${formModel.experimentStructure}_'
-              '${formModel.sampleSizeOption.totalSamples}_${layout.isMobile}',
+              '${formModel.sampleSizeOption.totalSamples}_${layout.isMobile}_'
+              '${Theme.of(context).brightness.name}',
             ),
             project: project,
             isMobile: layout.isMobile,
@@ -588,6 +593,34 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     _attachScrollListeners();
   }
 
+  PlutoGridStyleConfig _plutoStyleConfig(PlutoGridStyleTheme plutoTheme) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final base = isDark
+        ? const PlutoGridStyleConfig.dark()
+        : const PlutoGridStyleConfig();
+
+    return base.copyWith(
+      gridBorderColor: plutoTheme.borderColor,
+      gridBorderRadius: plutoTheme.borderRadius,
+      borderColor: plutoTheme.borderColor,
+      columnTextStyle: AppTextStyles.plutoColumn.copyWith(
+        color: scheme.onSurface,
+      ),
+      cellTextStyle: TextStyle(
+        color: scheme.onSurface,
+        fontSize: 14,
+      ),
+      rowHeight: plutoTheme.rowHeight,
+      columnHeight: plutoTheme.columnHeight,
+      gridBackgroundColor: plutoTheme.backgroundColor,
+      rowColor: plutoTheme.backgroundColor,
+      cellColorInEditState: plutoTheme.backgroundColor,
+      cellColorInReadOnlyState: plutoTheme.factorCellBackground,
+    );
+  }
+
   Widget _buildPlutoGrid({
     required PlutoGridStyleTheme plutoTheme,
     required bool showScrollbars,
@@ -605,15 +638,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         });
       },
       configuration: PlutoGridConfiguration(
-        style: PlutoGridStyleConfig(
-          gridBorderColor: plutoTheme.borderColor,
-          gridBorderRadius: plutoTheme.borderRadius,
-          columnTextStyle: AppTextStyles.plutoColumn,
-          enableColumnBorderVertical: true,
-          rowHeight: plutoTheme.rowHeight,
-          columnHeight: plutoTheme.columnHeight,
-          gridBackgroundColor: plutoTheme.backgroundColor,
-        ),
+        style: _plutoStyleConfig(plutoTheme),
         scrollbar: PlutoGridScrollbarConfig(
           isAlwaysShown: showScrollbars,
           scrollbarThickness: plutoTheme.scrollbarThickness,

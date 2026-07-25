@@ -35,6 +35,21 @@ class PlutoGridStyleTheme extends ThemeExtension<PlutoGridStyleTheme> {
       scrollbarThickness = 8,
       scrollbarRadius = const Radius.circular(10);
 
+  /// Builds grid colors from the active [ColorScheme] so light and dark themes
+  /// stay aligned with the rest of the app.
+  factory PlutoGridStyleTheme.fromColorScheme(ColorScheme scheme) {
+    return PlutoGridStyleTheme(
+      borderColor: scheme.outlineVariant,
+      backgroundColor: scheme.surface,
+      factorCellBackground: scheme.surfaceContainerHighest,
+      borderRadius: AppRadius.smRadius,
+      rowHeight: 48,
+      columnHeight: 52,
+      scrollbarThickness: 8,
+      scrollbarRadius: const Radius.circular(10),
+    );
+  }
+
   final Color borderColor;
   final Color backgroundColor;
 

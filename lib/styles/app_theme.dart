@@ -76,8 +76,16 @@ class AppTheme {
       checkboxTheme: _checkboxTheme(colorScheme),
       chipTheme: _chipTheme(colorScheme),
       floatingActionButtonTheme: _fabTheme(colorScheme),
-      extensions: _extensions,
+      extensions: _extensionsFor(colorScheme),
     );
+  }
+
+  static List<ThemeExtension<dynamic>> _extensionsFor(ColorScheme colorScheme) {
+    return [
+      const FactorPaletteTheme.standard(),
+      const AnomrChartTheme.standard(),
+      PlutoGridStyleTheme.fromColorScheme(colorScheme),
+    ];
   }
 
   // ───────────────────────────── Typography ───────────────────────────────
@@ -374,10 +382,4 @@ class AppTheme {
       iconColor: colorScheme.onSurfaceVariant,
     );
   }
-
-  static const List<ThemeExtension<dynamic>> _extensions = [
-    FactorPaletteTheme.standard(),
-    AnomrChartTheme.standard(),
-    PlutoGridStyleTheme.standard(),
-  ];
 }

@@ -4,6 +4,8 @@
 *.pyc
 *.swp
 .DS_Store
+._*
+Thumbs.db
 .atom/
 .build/
 .buildlog/
@@ -25,6 +27,13 @@ migrate_working_dir/
 
 # Firebase deploy cache
 .firebase/
+
+# Icon design sources (commit PNG masters in assets/icon/, e.g. app_icon.png)
+assets/icon/*.psd
+assets/icon/*.ai
+assets/icon/*.sketch
+assets/icon/*.fig
+assets/icon/*.xd
 
 # Flutter/Dart/Pub related
 **/doc/api/

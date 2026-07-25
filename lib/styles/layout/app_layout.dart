@@ -48,6 +48,11 @@ class AppLayoutMetrics {
   double get formMaxWidth => isDesktop ? 1080 : double.infinity;
   double get resultsMaxWidth => isDesktop ? 1180 : double.infinity;
   double get matrixHeaderMaxWidth => isDesktop ? 1180 : double.infinity;
+
+  /// Help instructions sheet uses full width on mobile; 80% of the viewport
+  /// on tablet and desktop so long-form text stays readable without feeling narrow.
+  double get helpInstructionsMaxWidth =>
+      isMobile ? double.infinity : width * 0.8;
 }
 
 class AppLayoutBuilder extends StatelessWidget {

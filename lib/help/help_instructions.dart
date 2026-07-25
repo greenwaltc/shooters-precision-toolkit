@@ -40,7 +40,9 @@ Future<void> showHelpInstructionsSheet(BuildContext context) {
               return Align(
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: layout.formMaxWidth),
+                  constraints: BoxConstraints(
+                    maxWidth: layout.helpInstructionsMaxWidth,
+                  ),
                   child: HelpInstructionsSheet(
                     scrollController: scrollController,
                   ),

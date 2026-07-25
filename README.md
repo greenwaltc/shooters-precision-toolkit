@@ -89,6 +89,16 @@ Tests live in `test/` and cover the form model (factor persistence across struct
 flutter test
 ```
 
+## App icons
+
+Source artwork lives at `assets/icon/app_icon.png` (1024×1024 PNG). After replacing it, regenerate every platform size with:
+
+```bash
+dart run flutter_launcher_icons
+```
+
+Configuration is in `pubspec.yaml` under `flutter_launcher_icons` (Android adaptive icons, iOS, macOS, Windows, and web PWA/favicon).
+
 ## Deployment (web)
 
 The web app deploys to Firebase Hosting (project `bramwells-precision-test-kit`), serving `build/web` as a single-page app (`firebase.json`).

@@ -314,6 +314,13 @@ class AppDesign {
   /// Lines the projects banner tagline may wrap to before it is ellipsized.
   static const int homeBannerTaglineMaxLines = 2;
 
+  /// Uniform opacity of the Projects home atmosphere photo.
+  static const double homeAtmosphereOpacity = 0.18;
+
+  /// Extra body clearance above the copyright footer when [Scaffold.extendBody]
+  /// lets the Projects atmosphere paint behind it.
+  static const double homeFooterClearance = 56;
+
   /// Minimum height the Data Matrix body needs before the page scrolls as a
   /// whole on short viewports (header + grid + action row).
   static const double matrixMinBodyHeight = 460;

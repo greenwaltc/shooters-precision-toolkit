@@ -32,6 +32,8 @@ class ProjectHomePage extends StatelessWidget {
     return AppLayoutBuilder(
       builder: (context, layout) {
         return Scaffold(
+          // Let the atmosphere paint under the FAB across the full width.
+          extendBody: true,
           appBar: ProjectsBannerAppBar(
             metrics: ProjectsBannerMetrics.of(context),
             actions: [
@@ -42,11 +44,17 @@ class ProjectHomePage extends StatelessWidget {
               ...helpAppBarActionsFor(layout),
             ],
           ),
-          body: AppResponsiveBody(
-            maxWidth: (layout) => layout.homeMaxWidth,
-            builder: (context, layout) => !store.isLoaded
-                ? const Center(child: CircularProgressIndicator())
-                : _buildBody(context, store, layout),
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              const _ProjectsAtmosphere(),
+              AppResponsiveBody(
+                maxWidth: (layout) => layout.homeMaxWidth,
+                builder: (context, layout) => !store.isLoaded
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildBody(context, store, layout),
+              ),
+            ],
           ),
           floatingActionButton: helpFabFor(layout),
           floatingActionButtonLocation: helpFabLocation,
@@ -74,7 +82,9 @@ class ProjectHomePage extends StatelessWidget {
           final scheme = Theme.of(context).colorScheme;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+            padding: const EdgeInsets.only(
+              bottom: AppSpacing.xl + AppDesign.homeFooterClearance,
+            ),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: constraints.hasBoundedHeight
@@ -126,7 +136,10 @@ class ProjectHomePage extends StatelessWidget {
                         onPressed: () => _createProject(context, store),
                         icon: const Icon(Icons.add),
                         label: Text(
-                          ProjectConfiguration.current.uiCopy.createProjectLabel,
+                          ProjectConfiguration
+                              .current
+                              .uiCopy
+                              .createProjectLabel,
                         ),
                       ),
                     ],
@@ -142,7 +155,9 @@ class ProjectHomePage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+          padding: const EdgeInsets.only(
+            bottom: AppSpacing.xl + AppDesign.homeFooterClearance,
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: constraints.hasBoundedHeight
@@ -254,6 +269,36 @@ class _ProjectListTile extends StatelessWidget {
     if (!confirmed || !context.mounted) return;
 
     await store.deleteProject(project.id);
+  }
+}
+
+/// Full-bleed target photograph behind Projects content at a single opacity.
+///
+/// Painted edge-to-edge in the scaffold body stack (under the FAB) so it
+/// never competes for layout space with the projects column.
+class _ProjectsAtmosphere extends StatelessWidget {
+  const _ProjectsAtmosphere();
+
+  @override
+  Widget build(BuildContext context) {
+    final asset =
+        ProjectConfiguration.current.brand.projectsAtmosphereAsset;
+
+    return ExcludeSemantics(
+      child: IgnorePointer(
+        child: SizedBox.expand(
+          child: Opacity(
+            opacity: AppDesign.homeAtmosphereOpacity,
+            child: Image.asset(
+              asset,
+              fit: BoxFit.cover,
+              alignment: Alignment.center,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

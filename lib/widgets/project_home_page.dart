@@ -14,6 +14,7 @@ import '../model/theme_controller.dart';
 import '../navigation/app_routes.dart';
 import '../styles/app_design.dart';
 import '../styles/layout/app_layout.dart';
+import '../styles/tokens/app_headings.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
@@ -31,34 +32,40 @@ class ProjectHomePage extends StatelessWidget {
 
     return AppLayoutBuilder(
       builder: (context, layout) {
-        return Scaffold(
-          // Let the atmosphere paint under the FAB across the full width.
-          extendBody: true,
-          appBar: ProjectsBannerAppBar(
-            metrics: ProjectsBannerMetrics.of(context),
-            actions: [
-              if (ProjectConfiguration.current.featureFlags.isEnabled(
-                FeatureFlag.themeModeToggle,
-              ))
-                const _ThemeModeToggle(),
-              ...helpAppBarActionsFor(layout),
-            ],
-          ),
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              const _ProjectsAtmosphere(),
-              AppResponsiveBody(
+        final metrics = ProjectsBannerMetrics.of(context);
+        final scheme = Theme.of(context).colorScheme;
+
+        // Atmosphere + theme fill sit behind a transparent scaffold so the
+        // photo shows through the app bar and under the FAB without changing
+        // how the body lays out its content.
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            ColoredBox(color: scheme.surface),
+            const _ProjectsAtmosphere(),
+            Scaffold(
+              backgroundColor: Colors.transparent,
+              appBar: ProjectsBannerAppBar(
+                metrics: metrics,
+                actions: [
+                  if (ProjectConfiguration.current.featureFlags.isEnabled(
+                    FeatureFlag.themeModeToggle,
+                  ))
+                    const _ThemeModeToggle(),
+                  ...helpAppBarActionsFor(layout),
+                ],
+              ),
+              body: AppResponsiveBody(
                 maxWidth: (layout) => layout.homeMaxWidth,
                 builder: (context, layout) => !store.isLoaded
                     ? const Center(child: CircularProgressIndicator())
                     : _buildBody(context, store, layout),
               ),
-            ],
-          ),
-          floatingActionButton: helpFabFor(layout),
-          floatingActionButtonLocation: helpFabLocation,
-          bottomNavigationBar: const AppCopyrightFooter(),
+              floatingActionButton: helpFabFor(layout),
+              floatingActionButtonLocation: helpFabLocation,
+              bottomNavigationBar: const AppCopyrightFooter(),
+            ),
+          ],
         );
       },
     );
@@ -82,9 +89,7 @@ class ProjectHomePage extends StatelessWidget {
           final scheme = Theme.of(context).colorScheme;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.only(
-              bottom: AppSpacing.xl + AppDesign.homeFooterClearance,
-            ),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xl),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: constraints.hasBoundedHeight
@@ -155,9 +160,7 @@ class ProjectHomePage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.only(
-            bottom: AppSpacing.xl + AppDesign.homeFooterClearance,
-          ),
+          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: constraints.hasBoundedHeight
@@ -175,7 +178,7 @@ class ProjectHomePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
-                Text('Projects', style: Theme.of(context).textTheme.titleLarge),
+                Text('Projects', style: AppHeadings.h3(context)),
                 const SizedBox(height: AppSpacing.md),
                 ListView.separated(
                   shrinkWrap: true,
@@ -272,10 +275,10 @@ class _ProjectListTile extends StatelessWidget {
   }
 }
 
-/// Full-bleed target photograph behind Projects content at a single opacity.
+/// Full-bleed target photograph at a single opacity.
 ///
-/// Painted edge-to-edge in the scaffold body stack (under the FAB) so it
-/// never competes for layout space with the projects column.
+/// Sits above a solid [ColorScheme.surface] fill (and under the transparent
+/// app bar / FAB) so the fade stays light against the theme color.
 class _ProjectsAtmosphere extends StatelessWidget {
   const _ProjectsAtmosphere();
 

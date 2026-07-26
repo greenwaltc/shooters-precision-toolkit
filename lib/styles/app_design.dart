@@ -276,6 +276,9 @@ class AppDesign {
   /// Logo height in the standard (non-home) app bars.
   static const double appBarLogoHeight = 72;
 
+  /// Horizontal gap between the app-bar logo and its page label.
+  static const double appBarBrandTitleGap = space24;
+
   /// Breathing room above and below app-bar branding.
   static const double appBarBrandingPadding = space8;
 
@@ -316,10 +319,6 @@ class AppDesign {
 
   /// Uniform opacity of the Projects home atmosphere photo.
   static const double homeAtmosphereOpacity = 0.18;
-
-  /// Extra body clearance above the copyright footer when [Scaffold.extendBody]
-  /// lets the Projects atmosphere paint behind it.
-  static const double homeFooterClearance = 56;
 
   /// Minimum height the Data Matrix body needs before the page scrolls as a
   /// whole on short viewports (header + grid + action row).

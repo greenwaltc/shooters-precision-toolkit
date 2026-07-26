@@ -6,24 +6,23 @@
 import 'package:flutter/material.dart';
 
 import '../app_design.dart';
+import 'app_headings.dart';
 
 /// Text-style tokens layered on top of the active [ThemeData.textTheme].
 ///
 /// These helpers exist so widgets can write
 /// `style: AppTextStyles.statLabel(context)` instead of repeating
 /// `textTheme.labelSmall?.copyWith(letterSpacing: 0.8, color: ...)` literals
-/// in many places. Where a style is fully described by [TextTheme] alone
-/// (e.g. plain `titleLarge`), widgets should read it directly off the theme.
+/// in many places. For hierarchical titles prefer [AppHeadings]. Where a style
+/// is fully described by [TextTheme] alone, widgets may read it from the theme.
 class AppTextStyles {
   const AppTextStyles._();
 
   /// Section title styling for forms ("Choose your risk level", etc.).
-  static TextStyle? sectionTitle(BuildContext context) =>
-      Theme.of(context).textTheme.titleMedium;
+  static TextStyle? sectionTitle(BuildContext context) => AppHeadings.h4(context);
 
   /// Per-factor label inside a grouped form panel.
-  static TextStyle? factorLabel(BuildContext context) =>
-      Theme.of(context).textTheme.titleSmall;
+  static TextStyle? factorLabel(BuildContext context) => AppHeadings.h5(context);
 
   /// Uppercase + tracked label used by stat tiles and stat blocks.
   static TextStyle? statLabel(BuildContext context) {
@@ -41,9 +40,8 @@ class AppTextStyles {
   ).textTheme.titleMedium?.copyWith(fontWeight: AppDesign.weightBold);
 
   /// Heading inside the header summary card.
-  static TextStyle? headerSummaryTitle(BuildContext context) => Theme.of(
-    context,
-  ).textTheme.titleLarge?.copyWith(fontWeight: AppDesign.weightSemiBold);
+  static TextStyle? headerSummaryTitle(BuildContext context) =>
+      AppHeadings.h3(context);
 
   /// Header style for the form's risk-level / detection table.
   static TextStyle? formTableHeader(BuildContext context) => Theme.of(
@@ -55,15 +53,6 @@ class AppTextStyles {
     return TextStyle(
       fontWeight: AppDesign.weightMedium,
       color: Theme.of(context).colorScheme.onSurface,
-    );
-  }
-
-  /// Product tagline rendered beneath the logo on the projects banner.
-  static TextStyle? bannerTagline(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Theme.of(context).textTheme.bodyMedium?.copyWith(
-      color: scheme.onSurfaceVariant,
-      height: AppDesign.lineHeightBody,
     );
   }
 

@@ -9,14 +9,12 @@ import 'package:flutter/material.dart';
 
 import '../config/project_configuration.dart';
 import '../styles/app_design.dart';
-import '../styles/tokens/app_spacing.dart';
-import '../styles/tokens/app_text_styles.dart';
+import '../styles/tokens/app_headings.dart';
 
 /// Sizing rules for app-bar branding, reading its art and copy from
 /// [BrandConfiguration] and its dimensions from [AppDesign].
 abstract final class AppBrandAssets {
-  static BrandConfiguration get _brand =>
-      ProjectConfiguration.current.brand;
+  static BrandConfiguration get _brand => ProjectConfiguration.current.brand;
 
   static String get bannerLogo => _brand.bannerLogoAsset;
 
@@ -47,7 +45,7 @@ abstract final class AppBrandAssets {
     final painter = TextPainter(
       text: TextSpan(
         text: projectsSubtext,
-        style: AppTextStyles.bannerTagline(context),
+        style: AppHeadings.h2(context),
       ),
       textDirection: Directionality.of(context),
       maxLines: AppDesign.homeBannerTaglineMaxLines,
@@ -186,7 +184,7 @@ class AppProjectsBannerTitle extends StatelessWidget {
         Text(
           AppBrandAssets.projectsSubtext,
           textAlign: TextAlign.center,
-          style: AppTextStyles.bannerTagline(context),
+          style: AppHeadings.h2(context),
           maxLines: AppDesign.homeBannerTaglineMaxLines,
           overflow: TextOverflow.ellipsis,
         ),
@@ -199,6 +197,9 @@ class AppProjectsBannerTitle extends StatelessWidget {
 ///
 /// [metrics] must be measured by the caller because [preferredSize] is read
 /// before this widget builds and so has no context of its own.
+///
+/// Transparent by design so the Projects atmosphere can show through when the
+/// scaffold uses [Scaffold.extendBodyBehindAppBar].
 class ProjectsBannerAppBar extends StatelessWidget
     implements PreferredSizeWidget {
   const ProjectsBannerAppBar({
@@ -219,6 +220,12 @@ class ProjectsBannerAppBar extends StatelessWidget
       toolbarHeight: metrics.toolbarHeight,
       automaticallyImplyLeading: false,
       centerTitle: true,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      forceMaterialTransparency: true,
       title: AppProjectsBannerTitle(logoHeight: metrics.logoHeight),
       actions: actions,
     );
@@ -278,17 +285,26 @@ class AppBrandTitle extends StatelessWidget {
           availableWidth: maxWidth,
           height: logoHeight,
         );
-        final labelMaxWidth = maxWidth - logoWidth - AppSpacing.sm;
+        final labelMaxWidth =
+            maxWidth - logoWidth - AppDesign.appBarBrandTitleGap;
 
         if (labelMaxWidth <= 0) {
           return AppBrandTitleLogo(height: logoHeight, maxWidth: maxWidth);
         }
 
         return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             AppBrandTitleLogo(height: logoHeight, maxWidth: logoWidth),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
+            const SizedBox(width: AppDesign.appBarBrandTitleGap),
+            Expanded(
+              child: Text(
+                label,
+                style: AppHeadings.h2(context),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         );
       },

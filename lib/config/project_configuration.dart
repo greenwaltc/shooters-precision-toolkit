@@ -64,7 +64,7 @@ class BrandConfiguration {
   /// Product name used for the OS window/task title and as the logo alt text.
   final String appTitle;
 
-  /// Single-line descriptor shown beneath the logo on the projects banner.
+  /// Descriptor shown beneath the logo on the projects banner.
   final String tagline;
 
   /// Footer notice rendered at the bottom of every page.
@@ -95,7 +95,7 @@ class BrandConfiguration {
 /// User-facing chrome copy that is not part of the product brand itself.
 ///
 /// Kept here (rather than scattered string literals) so labels stay consistent
-/// across home, drawer, and any other entry points that share the same action.
+/// across every entry point that shares the same action.
 class UiCopyConfiguration {
   const UiCopyConfiguration({required this.createProjectLabel});
 
@@ -103,7 +103,7 @@ class UiCopyConfiguration {
     createProjectLabel: 'Create a New Project',
   );
 
-  /// Primary CTA used to start a new project from home and the drawer.
+  /// Primary CTA used to start a new project from the Projects home page.
   final String createProjectLabel;
 }
 

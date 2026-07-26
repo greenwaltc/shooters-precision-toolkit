@@ -238,6 +238,19 @@ class AppDesign {
     vertical: space12,
   );
 
+  /// Compact primary button used in app bars (e.g. Instructions).
+  ///
+  /// Same filled purple / white treatment as page CTAs, with tighter padding
+  /// so it does not dominate the toolbar.
+  static const double appBarFilledActionMinHeight = 32;
+  static const EdgeInsets appBarFilledActionPadding = EdgeInsets.symmetric(
+    horizontal: space24,
+    vertical: space16,
+  );
+  static const EdgeInsets appBarFilledActionMargin = EdgeInsets.symmetric(
+    horizontal: space12,
+  );
+
   // ───────────────────────────── 9. Inputs ────────────────────────────────
 
   static const double inputRadius = radiusMd;
@@ -279,12 +292,18 @@ class AppDesign {
   /// Horizontal gap between the app-bar logo and its page label.
   static const double appBarBrandTitleGap = space24;
 
+  /// Vertical gap when the app-bar logo stacks above the page label.
+  static const double appBarBrandStackedGap = space4;
+
   /// Breathing room above and below app-bar branding.
   static const double appBarBrandingPadding = space8;
 
-  /// App-bar height that fits [appBarLogoHeight] plus its padding.
+  /// App-bar height that fits [appBarLogoHeight] plus its padding (row layout).
   static const double appBarBrandedHeight =
       appBarLogoHeight + appBarBrandingPadding * 2;
+
+  /// Lines the stacked app-bar project label may wrap to.
+  static const int appBarBrandLabelMaxLinesStacked = 2;
 
   /// Logo height on the projects banner when the viewport has room for it.
   static const double homeBannerLogoHeight = kToolbarHeight * 3;
@@ -303,9 +322,9 @@ class AppDesign {
   /// Body height preserved beneath the projects banner on short viewports.
   static const double homeBannerMinBodyHeight = 260;
 
-  /// Horizontal space reserved for the help control on the projects banner
-  /// when predicting how many lines the tagline will wrap to.
-  static const double homeBannerHelpActionsReserve = 64;
+  /// Horizontal space reserved for the Instructions control on the projects
+  /// banner when predicting how many lines the tagline will wrap to.
+  static const double homeBannerHelpActionsReserve = 120;
 
   /// Extra horizontal reserve when the theme-mode toggle is shown beside help.
   static const double homeBannerThemeToggleActionsReserve = 48;
@@ -314,11 +333,15 @@ class AppDesign {
   /// meaningful on very narrow viewports.
   static const double homeBannerMinTaglineWidth = 200;
 
-  /// Lines the projects banner tagline may wrap to before it is ellipsized.
+  /// Lines the projects banner tagline may wrap to before it is ellipsized
+  /// on tablet/desktop.
   static const int homeBannerTaglineMaxLines = 2;
 
+  /// Lines the projects banner tagline may wrap to on mobile (h4 subtext).
+  static const int homeBannerTaglineMaxLinesMobile = 6;
+
   /// Uniform opacity of the Projects home atmosphere photo.
-  static const double homeAtmosphereOpacity = 0.18;
+  static const double homeAtmosphereOpacity = 0.4;
 
   /// Minimum height the Data Matrix body needs before the page scrolls as a
   /// whole on short viewports (header + grid + action row).

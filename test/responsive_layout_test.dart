@@ -210,7 +210,7 @@ void main() {
       _expectNoLayoutErrors(tester, 'delete confirmation dialog');
     });
 
-    testWidgets('project drawer lays out on a small phone at max text scale', (
+    testWidgets('app-bar overflow menu lays out on a small phone at max text scale', (
       WidgetTester tester,
     ) async {
       _configureViewport(tester, size: const Size(320, 568), textScale: 1.6);
@@ -218,10 +218,15 @@ void main() {
       await _pumpCompletedProject(tester);
       await _tapText(tester, 'Bench Rest Comparison');
 
-      await tester.tap(find.byIcon(Icons.menu));
+      final menu = find.byIcon(Icons.menu);
+      expect(menu, findsOneWidget);
+      await tester.tap(menu);
       await tester.pumpAndSettle();
 
-      _expectNoLayoutErrors(tester, 'project drawer');
+      expect(find.text('Instructions'), findsWidgets);
+      expect(find.text('Projects'), findsWidgets);
+      expect(find.text('Project setup'), findsOneWidget);
+      _expectNoLayoutErrors(tester, 'app-bar overflow menu');
     });
   });
 
@@ -382,19 +387,27 @@ Future<void> _tapText(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
-/// Opens help from whichever control the current layout exposes: an app-bar
-/// text button, an extended FAB, or the question-mark fallback.
+/// Opens help from the app-bar Instructions control, or the mobile overflow
+/// menu when actions are collapsed.
 Future<void> _openHelpSheet(WidgetTester tester) async {
-  for (final finder in <Finder>[
-    find.text('Instructions'),
-    find.text('INSTRUCTIONS'),
-    find.byIcon(Icons.question_mark_outlined),
-  ]) {
-    if (finder.evaluate().isEmpty) continue;
-    await tester.tap(finder.first);
+  final instructions = find.text('Instructions');
+  if (instructions.evaluate().isNotEmpty) {
+    await tester.tap(instructions.first);
     await tester.pumpAndSettle();
     return;
   }
+
+  final menu = find.byIcon(Icons.menu);
+  if (menu.evaluate().isNotEmpty) {
+    await tester.tap(menu.first);
+    await tester.pumpAndSettle();
+    final menuInstructions = find.text('Instructions');
+    expect(menuInstructions, findsWidgets);
+    await tester.tap(menuInstructions.last);
+    await tester.pumpAndSettle();
+    return;
+  }
+
   fail('No help control found in the current layout.');
 }
 

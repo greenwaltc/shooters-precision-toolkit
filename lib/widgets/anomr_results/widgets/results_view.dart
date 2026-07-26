@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 import 'package:provider/provider.dart';
 
-import '../../../help/help_access.dart';
 import '../../../model/project_form_model.dart';
 import '../../../model/project_store.dart';
 import '../../../styles/chart/chart_layout.dart';
@@ -16,10 +15,10 @@ import '../../../styles/layout/app_layout.dart';
 import '../../../styles/tokens/app_spacing.dart';
 import '../../../navigation/app_routes.dart';
 import '../../anomr_matrix/services/matrix_grid_data_builder.dart';
+import '../../app_bar_actions.dart';
 import '../../app_brand_bar.dart';
 import '../../app_copyright_footer.dart';
 import '../../app_nav_chrome.dart';
-import '../../project_drawer.dart';
 import '../models/anomr_summary.dart';
 import '../models/export_options.dart';
 import '../services/anomr_calculator.dart';
@@ -55,11 +54,37 @@ class _ResultsViewState extends State<ResultsView> {
 
     return AppLayoutBuilder(
       builder: (context, layout) {
+        final label = '${project.displayName} — Results';
+        final hasLeading = AppNavChrome.canPop(context);
+        final store = context.read<ProjectStore>();
+        final actionItems = [
+          AppBarActionBar.instructions(context),
+          AppBarActionItem(
+            label: 'Projects',
+            icon: Icons.home_outlined,
+            tooltip: 'Projects',
+            onPressed: () => _goHome(context, store, stateManager),
+          ),
+        ];
+        final actionsMetrics = AppBarActionsMetrics.of(
+          context,
+          layout: layout,
+          items: actionItems,
+          hasLeading: hasLeading,
+        );
+        final titleMetrics = AppBrandTitleMetrics.of(
+          context,
+          label: label,
+          titleMaxWidth: actionsMetrics.titleMaxWidth,
+        );
+
         return Scaffold(
-          drawer: const ProjectDrawer(),
           appBar: _ResultsAppBar(
-            displayName: project.displayName,
+            label: label,
             layout: layout,
+            hasLeading: hasLeading,
+            actionItems: actionItems,
+            titleMetrics: titleMetrics,
           ),
           body: previewSummary.hasEnoughData
               ? _ResultsBody(
@@ -75,12 +100,31 @@ class _ResultsViewState extends State<ResultsView> {
                   bottom: false,
                   child: EmptyResultsState(),
                 ),
-          floatingActionButton: helpFabFor(layout),
-          floatingActionButtonLocation: helpFabLocation,
           bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );
+  }
+
+  Future<void> _goHome(
+    BuildContext context,
+    ProjectStore store,
+    PlutoGridStateManager stateManager,
+  ) async {
+    final project = store.selectedProject;
+    if (project != null) {
+      // Results holds the live matrix manager; sync it before clearing the
+      // stack so Group Size values cannot be lost when the matrix is disposed.
+      MatrixGridDataBuilder.syncMatrixStateFromGrid(
+        project: project,
+        manager: stateManager,
+      );
+    }
+
+    final navigator = Navigator.of(context);
+    await store.persistSelectedProject();
+    if (!context.mounted) return;
+    await AppRoutes.goToProjects(navigator);
   }
 
   Future<void> _onExportPressed({
@@ -136,55 +180,37 @@ class _ResultsViewState extends State<ResultsView> {
 }
 
 class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ResultsAppBar({required this.displayName, required this.layout});
+  const _ResultsAppBar({
+    required this.label,
+    required this.layout,
+    required this.hasLeading,
+    required this.actionItems,
+    required this.titleMetrics,
+  });
 
-  final String displayName;
+  final String label;
   final AppLayoutMetrics layout;
+  final bool hasLeading;
+  final List<AppBarActionItem> actionItems;
+  final AppBrandTitleMetrics titleMetrics;
 
   @override
-  Size get preferredSize => const Size.fromHeight(AppBrandTitle.toolbarHeight);
+  Size get preferredSize => Size.fromHeight(titleMetrics.toolbarHeight);
 
   @override
   Widget build(BuildContext context) {
-    final store = context.read<ProjectStore>();
-    final stateManager = context.read<PlutoGridStateManager>();
-
     return AppBar(
-      toolbarHeight: AppBrandTitle.toolbarHeight,
+      toolbarHeight: titleMetrics.toolbarHeight,
       automaticallyImplyLeading: false,
       leading: AppNavChrome.backLeading(context),
-      title: AppBrandTitle(label: '$displayName — Results'),
-      actions: [
-        ...helpAppBarActionsFor(layout),
-        IconButton(
-          tooltip: 'Projects',
-          icon: const Icon(Icons.home_outlined),
-          onPressed: () => _goHome(context, store, stateManager),
-        ),
-        AppNavChrome.drawerAction(),
-      ],
+      title: AppBrandTitle(label: label, metrics: titleMetrics),
+      actions: AppBarActionBar.build(
+        context,
+        layout: layout,
+        items: actionItems,
+        hasLeading: hasLeading,
+      ),
     );
-  }
-
-  Future<void> _goHome(
-    BuildContext context,
-    ProjectStore store,
-    PlutoGridStateManager stateManager,
-  ) async {
-    final project = store.selectedProject;
-    if (project != null) {
-      // Results holds the live matrix manager; sync it before clearing the
-      // stack so Group Size values cannot be lost when the matrix is disposed.
-      MatrixGridDataBuilder.syncMatrixStateFromGrid(
-        project: project,
-        manager: stateManager,
-      );
-    }
-
-    final navigator = Navigator.of(context);
-    await store.persistSelectedProject();
-    if (!context.mounted) return;
-    await AppRoutes.goToProjects(navigator);
   }
 }
 

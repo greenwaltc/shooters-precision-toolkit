@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../model/project_store.dart';
 import '../navigation/app_routes.dart';
 import 'app_back_button.dart';
+import 'app_bar_actions.dart';
 
 /// Shared app-bar navigation controls used across project routes.
 abstract final class AppNavChrome {
@@ -17,30 +18,24 @@ abstract final class AppNavChrome {
     return AppBackButton(onPressed: () => Navigator.of(context).pop());
   }
 
+  /// Whether the current route can show a back leading control.
+  static bool canPop(BuildContext context) => Navigator.canPop(context);
+
   /// Home action that persists the selection and clears the stack to Projects.
-  static Widget homeAction({
+  static AppBarActionItem homeActionItem({
     required BuildContext context,
     required ProjectStore store,
   }) {
-    return IconButton(
+    return AppBarActionItem(
+      label: 'Projects',
+      icon: Icons.home_outlined,
       tooltip: 'Projects',
-      icon: const Icon(Icons.home_outlined),
-      onPressed: () => _goHome(context, store),
+      onPressed: () => goHome(context, store),
     );
   }
 
-  /// Opens the scaffold drawer (must be built under a [Scaffold]).
-  static Widget drawerAction() {
-    return Builder(
-      builder: (context) => IconButton(
-        icon: const Icon(Icons.menu),
-        tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-        onPressed: () => Scaffold.of(context).openDrawer(),
-      ),
-    );
-  }
-
-  static Future<void> _goHome(
+  /// Persists the selection and clears the stack to Projects.
+  static Future<void> goHome(
     BuildContext context,
     ProjectStore store,
   ) async {

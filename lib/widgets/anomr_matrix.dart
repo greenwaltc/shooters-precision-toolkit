@@ -12,7 +12,6 @@ import 'package:pluto_grid/pluto_grid.dart';
 import 'package:provider/provider.dart';
 
 import '../config/project_configuration.dart';
-import '../help/help_access.dart';
 import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
@@ -30,11 +29,11 @@ import 'anomr_matrix/services/matrix_grid_history.dart';
 import 'anomr_matrix/services/range_value_parser.dart';
 import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'anomr_results/services/anomr_calculator.dart';
+import 'app_bar_actions.dart';
 import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
 import 'app_nav_chrome.dart';
 import 'no_selected_project_page.dart';
-import 'project_drawer.dart';
 import 'range_entry_sheet.dart';
 
 /// Route that renders the selected project's ANOMR data-entry matrix.
@@ -98,7 +97,6 @@ class _AnomrMatrixScaffold extends StatelessWidget {
 
     return AppLayoutBuilder(
       builder: (context, layout) => Scaffold(
-        drawer: const ProjectDrawer(),
         appBar: _buildAppBar(context, layout, store),
         body: _buildBody(context, layout, formModel),
         bottomNavigationBar: const AppCopyrightFooter(),
@@ -111,21 +109,43 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     AppLayoutMetrics layout,
     ProjectStore store,
   ) {
+    final hasLeading = AppNavChrome.canPop(context);
+    final actionItems = [
+      AppBarActionBar.instructions(context),
+      AppNavChrome.homeActionItem(context: context, store: store),
+      AppBarActionItem(
+        label: 'Project setup',
+        icon: Icons.tune,
+        tooltip: 'Project setup',
+        onPressed: () => _goToProjectSetup(context, store),
+      ),
+    ];
+    final actionsMetrics = AppBarActionsMetrics.of(
+      context,
+      layout: layout,
+      items: actionItems,
+      hasLeading: hasLeading,
+    );
+    final titleMetrics = AppBrandTitleMetrics.of(
+      context,
+      label: project.displayName,
+      titleMaxWidth: actionsMetrics.titleMaxWidth,
+    );
+
     return AppBar(
-      toolbarHeight: AppBrandTitle.toolbarHeight,
+      toolbarHeight: titleMetrics.toolbarHeight,
       automaticallyImplyLeading: false,
       leading: AppNavChrome.backLeading(context),
-      title: AppBrandTitle(label: project.displayName),
-      actions: [
-        ...helpAppBarActionsFor(layout, preferAppBar: true),
-        AppNavChrome.homeAction(context: context, store: store),
-        IconButton(
-          tooltip: 'Project setup',
-          onPressed: () => _goToProjectSetup(context, store),
-          icon: const Icon(Icons.tune),
-        ),
-        AppNavChrome.drawerAction(),
-      ],
+      title: AppBrandTitle(
+        label: project.displayName,
+        metrics: titleMetrics,
+      ),
+      actions: AppBarActionBar.build(
+        context,
+        layout: layout,
+        items: actionItems,
+        hasLeading: hasLeading,
+      ),
     );
   }
 

@@ -6,15 +6,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../help/help_access.dart';
 import '../model/project_form_model.dart';
 import '../model/project_store.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
+import 'app_bar_actions.dart';
 import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
 import 'app_nav_chrome.dart';
-import 'project_drawer.dart';
 import 'project_form.dart';
 import 'no_selected_project_page.dart';
 
@@ -39,18 +38,38 @@ class ProjectFormPage extends StatelessWidget {
 
           return AppLayoutBuilder(
             builder: (context, layout) {
+              final hasLeading = AppNavChrome.canPop(context);
+              final actionItems = [
+                AppBarActionBar.instructions(context),
+                AppNavChrome.homeActionItem(context: context, store: store),
+              ];
+              final actionsMetrics = AppBarActionsMetrics.of(
+                context,
+                layout: layout,
+                items: actionItems,
+                hasLeading: hasLeading,
+              );
+              final titleMetrics = AppBrandTitleMetrics.of(
+                context,
+                label: project.displayName,
+                titleMaxWidth: actionsMetrics.titleMaxWidth,
+              );
+
               return Scaffold(
-                drawer: const ProjectDrawer(),
                 appBar: AppBar(
-                  toolbarHeight: AppBrandTitle.toolbarHeight,
+                  toolbarHeight: titleMetrics.toolbarHeight,
                   automaticallyImplyLeading: false,
                   leading: AppNavChrome.backLeading(context),
-                  title: AppBrandTitle(label: project.displayName),
-                  actions: [
-                    ...helpAppBarActionsFor(layout),
-                    AppNavChrome.homeAction(context: context, store: store),
-                    AppNavChrome.drawerAction(),
-                  ],
+                  title: AppBrandTitle(
+                    label: project.displayName,
+                    metrics: titleMetrics,
+                  ),
+                  actions: AppBarActionBar.build(
+                    context,
+                    layout: layout,
+                    items: actionItems,
+                    hasLeading: hasLeading,
+                  ),
                 ),
                 body: AppResponsiveBody(
                   maxWidth: (layout) => layout.formMaxWidth,
@@ -59,8 +78,6 @@ class ProjectFormPage extends StatelessWidget {
                     onSubmit: () => _goToMatrix(context, store),
                   ),
                 ),
-                floatingActionButton: helpFabFor(layout),
-                floatingActionButtonLocation: helpFabLocation,
                 bottomNavigationBar: const AppCopyrightFooter(),
               );
             },

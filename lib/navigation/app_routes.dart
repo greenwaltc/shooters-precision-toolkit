@@ -42,21 +42,4 @@ class AppRoutes {
       arguments: projectFormOpenedFromMatrix,
     );
   }
-
-  /// Opens [routeName] with [projects] as the only page beneath it.
-  ///
-  /// Used when the selected project changes out from under the stack (drawer
-  /// switches and drawer-created projects). Every page renders whichever
-  /// project is currently selected, so leaving the old project's pages in
-  /// place would make "back" replay the same screen instead of returning
-  /// somewhere meaningful.
-  static Future<void> openFromProjects(
-    NavigatorState navigator,
-    String routeName,
-  ) {
-    return navigator.pushNamedAndRemoveUntil(
-      routeName,
-      ModalRoute.withName(projects),
-    );
-  }
 }

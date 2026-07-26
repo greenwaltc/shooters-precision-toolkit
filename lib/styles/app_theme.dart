@@ -57,7 +57,6 @@ class AppTheme {
       bottomSheetTheme: _bottomSheetTheme(colorScheme),
       inputDecorationTheme: _inputDecorationTheme(colorScheme),
       snackBarTheme: _snackBarTheme(colorScheme),
-      drawerTheme: _drawerTheme(colorScheme),
       appBarTheme: _appBarTheme(colorScheme, textTheme),
       dividerTheme: _dividerTheme(colorScheme),
       listTileTheme: _listTileTheme(colorScheme),
@@ -75,7 +74,6 @@ class AppTheme {
       radioTheme: _toggleableTheme(colorScheme),
       checkboxTheme: _checkboxTheme(colorScheme),
       chipTheme: _chipTheme(colorScheme),
-      floatingActionButtonTheme: _fabTheme(colorScheme),
       extensions: _extensionsFor(colorScheme),
     );
   }
@@ -317,17 +315,6 @@ class AppTheme {
     );
   }
 
-  static FloatingActionButtonThemeData _fabTheme(ColorScheme colorScheme) {
-    return FloatingActionButtonThemeData(
-      elevation: AppDesign.elevationFloating,
-      backgroundColor: colorScheme.secondaryContainer,
-      foregroundColor: colorScheme.onSecondaryContainer,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDesign.radiusLg),
-      ),
-    );
-  }
-
   // ───────────────────────────── Chrome ───────────────────────────────────
 
   static SnackBarThemeData _snackBarTheme(ColorScheme colorScheme) {
@@ -339,13 +326,6 @@ class AppTheme {
       ),
       backgroundColor: colorScheme.inverseSurface,
       contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
-    );
-  }
-
-  static DrawerThemeData _drawerTheme(ColorScheme colorScheme) {
-    return DrawerThemeData(
-      backgroundColor: colorScheme.surface,
-      surfaceTintColor: Colors.transparent,
     );
   }
 

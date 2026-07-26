@@ -32,13 +32,6 @@ class AppLayoutMetrics {
   bool get useTwoColumnForms => width >= 900;
   bool get useStackedActions => width < 560;
 
-  /// Minimum viewport width before help controls show a text label instead of
-  /// the question-mark icon (app bar: "Instructions", FAB: "INSTRUCTIONS").
-  static const double helpInstructionsLabelBreakpoint = 560;
-
-  bool get showHelpInstructionsLabel =>
-      width >= helpInstructionsLabelBreakpoint;
-
   double get pageGutter => isMobile ? AppSpacing.lg : AppSpacing.xxxxl;
 
   EdgeInsets get pagePadding => EdgeInsets.all(pageGutter);

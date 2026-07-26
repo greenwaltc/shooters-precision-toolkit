@@ -371,7 +371,6 @@ class _ProjectFormState extends State<ProjectForm> {
             return RadioListTile<ExperimentStructure>(
               value: structure,
               title: Text(structure.label),
-              selected: widget.formModel.experimentStructure == structure,
             );
           }).toList(),
         ),
@@ -455,7 +454,6 @@ class _ProjectFormState extends State<ProjectForm> {
             return RadioListTile<RiskLevel>(
               value: level,
               title: Text(level.label),
-              selected: widget.formModel.riskLevel == level,
             );
           }).toList(),
         ),
@@ -494,7 +492,6 @@ class _ProjectFormState extends State<ProjectForm> {
           padding: const EdgeInsets.only(top: AppSpacing.md),
           child: _buildDetectableDifferenceTable(option),
         ),
-        selected: widget.formModel.sampleSizeOption == option,
         isThreeLine: true,
       ),
     );
@@ -557,17 +554,22 @@ class _ProjectFormState extends State<ProjectForm> {
       label: const Text('Submit'),
     );
 
-    return Padding(
-      padding: AppSpacing.fieldPadding,
-      child: layout.useStackedActions
-          ? SizedBox(width: double.infinity, child: button)
-          : Align(
-              alignment: Alignment.centerRight,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 160),
-                child: button,
+    // Opaque bar so scrolled field chrome cannot show through beside the
+    // right-aligned Submit control on wide desktop layouts.
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: Padding(
+        padding: AppSpacing.fieldPadding,
+        child: layout.useStackedActions
+            ? SizedBox(width: double.infinity, child: button)
+            : Align(
+                alignment: Alignment.centerRight,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 160),
+                  child: button,
+                ),
               ),
-            ),
+      ),
     );
   }
 

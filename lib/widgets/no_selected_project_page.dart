@@ -5,11 +5,12 @@
 
 import 'package:flutter/material.dart';
 
-import '../help/help_access.dart';
 import '../navigation/app_routes.dart';
 import '../styles/layout/app_layout.dart';
+import 'app_bar_actions.dart';
 import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
+import 'app_nav_chrome.dart';
 
 class NoSelectedProjectPage extends StatelessWidget {
   const NoSelectedProjectPage({super.key, required this.title});
@@ -20,11 +21,32 @@ class NoSelectedProjectPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppLayoutBuilder(
       builder: (context, layout) {
+        final hasLeading = AppNavChrome.canPop(context);
+        final actionItems = [AppBarActionBar.instructions(context)];
+        final actionsMetrics = AppBarActionsMetrics.of(
+          context,
+          layout: layout,
+          items: actionItems,
+          hasLeading: hasLeading,
+        );
+        final titleMetrics = AppBrandTitleMetrics.of(
+          context,
+          label: title,
+          titleMaxWidth: actionsMetrics.titleMaxWidth,
+        );
+
         return Scaffold(
           appBar: AppBar(
-            toolbarHeight: AppBrandTitle.toolbarHeight,
-            title: AppBrandTitle(label: title),
-            actions: helpAppBarActionsFor(layout),
+            toolbarHeight: titleMetrics.toolbarHeight,
+            automaticallyImplyLeading: false,
+            leading: AppNavChrome.backLeading(context),
+            title: AppBrandTitle(label: title, metrics: titleMetrics),
+            actions: AppBarActionBar.build(
+              context,
+              layout: layout,
+              items: actionItems,
+              hasLeading: hasLeading,
+            ),
           ),
           body: Center(
             child: FilledButton.icon(
@@ -34,8 +56,6 @@ class NoSelectedProjectPage extends StatelessWidget {
               label: const Text('Projects'),
             ),
           ),
-          floatingActionButton: helpFabFor(layout),
-          floatingActionButtonLocation: helpFabLocation,
           bottomNavigationBar: const AppCopyrightFooter(),
         );
       },

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/project_configuration.dart';
-import '../help/help_access.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../model/theme_controller.dart';
@@ -18,6 +17,7 @@ import '../styles/tokens/app_headings.dart';
 import '../styles/tokens/app_radius.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../util/format_timestamp.dart';
+import 'app_bar_actions.dart';
 import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
 import 'confirm_delete_project_dialog.dart';
@@ -36,8 +36,8 @@ class ProjectHomePage extends StatelessWidget {
         final scheme = Theme.of(context).colorScheme;
 
         // Atmosphere + theme fill sit behind a transparent scaffold so the
-        // photo shows through the app bar and under the FAB without changing
-        // how the body lays out its content.
+        // photo shows through the app bar without changing how the body lays
+        // out its content.
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -47,13 +47,17 @@ class ProjectHomePage extends StatelessWidget {
               backgroundColor: Colors.transparent,
               appBar: ProjectsBannerAppBar(
                 metrics: metrics,
-                actions: [
-                  if (ProjectConfiguration.current.featureFlags.isEnabled(
-                    FeatureFlag.themeModeToggle,
-                  ))
-                    const _ThemeModeToggle(),
-                  ...helpAppBarActionsFor(layout),
-                ],
+                actions: AppBarActionBar.build(
+                  context,
+                  layout: layout,
+                  items: [
+                    if (ProjectConfiguration.current.featureFlags.isEnabled(
+                      FeatureFlag.themeModeToggle,
+                    ))
+                      _themeModeAction(context),
+                    AppBarActionBar.instructions(context),
+                  ],
+                ),
               ),
               body: AppResponsiveBody(
                 maxWidth: (layout) => layout.homeMaxWidth,
@@ -61,8 +65,6 @@ class ProjectHomePage extends StatelessWidget {
                     ? const Center(child: CircularProgressIndicator())
                     : _buildBody(context, store, layout),
               ),
-              floatingActionButton: helpFabFor(layout),
-              floatingActionButtonLocation: helpFabLocation,
               bottomNavigationBar: const AppCopyrightFooter(),
             ),
           ],
@@ -278,7 +280,7 @@ class _ProjectListTile extends StatelessWidget {
 /// Full-bleed target photograph at a single opacity.
 ///
 /// Sits above a solid [ColorScheme.surface] fill (and under the transparent
-/// app bar / FAB) so the fade stays light against the theme color.
+/// app bar) so the fade stays light against the theme color.
 class _ProjectsAtmosphere extends StatelessWidget {
   const _ProjectsAtmosphere();
 
@@ -305,22 +307,16 @@ class _ProjectsAtmosphere extends StatelessWidget {
   }
 }
 
-/// App-bar control that flips the app between light and dark themes and
-/// persists the choice via [ThemeController].
-class _ThemeModeToggle extends StatelessWidget {
-  const _ThemeModeToggle();
+AppBarActionItem _themeModeAction(BuildContext context) {
+  final controller = context.watch<ThemeController>();
+  final isDark = controller.isDarkActive(context);
 
-  @override
-  Widget build(BuildContext context) {
-    final controller = context.watch<ThemeController>();
-    final isDark = controller.isDarkActive(context);
-
-    return IconButton(
-      tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
-      icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
-      onPressed: () => controller.setDarkMode(enabled: !isDark),
-    );
-  }
+  return AppBarActionItem(
+    label: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+    icon: isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+    tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+    onPressed: () => controller.setDarkMode(enabled: !isDark),
+  );
 }
 
 /// Tinted, rounded badge that frames a leading icon on list/hero surfaces.

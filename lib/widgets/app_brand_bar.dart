@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../config/project_configuration.dart';
 import '../styles/app_design.dart';
+import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_headings.dart';
 
 /// Sizing rules for app-bar branding, reading its art and copy from
@@ -28,6 +29,25 @@ abstract final class AppBrandAssets {
 
   static double get bannerAspectRatio => _brand.bannerLogoAspectRatio;
 
+  /// Whether the projects banner is laid out at a mobile width.
+  static bool isMobileBanner(BuildContext context) {
+    return MediaQuery.sizeOf(context).width < AppLayoutMetrics.mobileBreakpoint;
+  }
+
+  /// Tagline style: h4 on mobile, h2 on larger viewports.
+  static TextStyle? taglineStyle(BuildContext context) {
+    return isMobileBanner(context)
+        ? AppHeadings.h4(context)
+        : AppHeadings.h2(context);
+  }
+
+  /// Tagline wrap limit for the current viewport.
+  static int taglineMaxLines(BuildContext context) {
+    return isMobileBanner(context)
+        ? AppDesign.homeBannerTaglineMaxLinesMobile
+        : AppDesign.homeBannerTaglineMaxLines;
+  }
+
   /// Returns true when [availableWidth] cannot fit [bannerLogo] at [height].
   static bool shouldUseCompactLogo({
     required double availableWidth,
@@ -45,10 +65,10 @@ abstract final class AppBrandAssets {
     final painter = TextPainter(
       text: TextSpan(
         text: projectsSubtext,
-        style: AppHeadings.h2(context),
+        style: taglineStyle(context),
       ),
       textDirection: Directionality.of(context),
-      maxLines: AppDesign.homeBannerTaglineMaxLines,
+      maxLines: taglineMaxLines(context),
       textScaler: MediaQuery.textScalerOf(context),
     )..layout(maxWidth: maxWidth);
 
@@ -184,8 +204,8 @@ class AppProjectsBannerTitle extends StatelessWidget {
         Text(
           AppBrandAssets.projectsSubtext,
           textAlign: TextAlign.center,
-          style: AppHeadings.h2(context),
-          maxLines: AppDesign.homeBannerTaglineMaxLines,
+          style: AppBrandAssets.taglineStyle(context),
+          maxLines: AppBrandAssets.taglineMaxLines(context),
           overflow: TextOverflow.ellipsis,
         ),
       ],
@@ -260,17 +280,124 @@ class AppBrandTitleLogo extends StatelessWidget {
   }
 }
 
-/// Standard app-bar title row: brand mark plus a page-specific label.
+/// Layout metrics for [AppBrandTitle]: row vs stacked logo/label and the
+/// toolbar height that fits the chosen arrangement.
+@immutable
+class AppBrandTitleMetrics {
+  const AppBrandTitleMetrics({
+    required this.stacked,
+    required this.toolbarHeight,
+  });
+
+  final bool stacked;
+  final double toolbarHeight;
+
+  /// App-bar height that fits the logo in the default horizontal layout.
+  static const double rowToolbarHeight = AppDesign.appBarBrandedHeight;
+
+  /// Decides whether [label] fits beside the logo in [titleMaxWidth].
+  factory AppBrandTitleMetrics.of(
+    BuildContext context, {
+    required String label,
+    required double titleMaxWidth,
+  }) {
+    const logoHeight = AppDesign.appBarLogoHeight;
+    final logoWidth = AppBrandAssets.logoSlotWidth(
+      availableWidth: titleMaxWidth,
+      height: logoHeight,
+    );
+    final labelMaxWidth =
+        titleMaxWidth - logoWidth - AppDesign.appBarBrandTitleGap;
+
+    final fitsBeside =
+        labelMaxWidth > 0 &&
+        !_labelExceedsWidth(
+          context: context,
+          label: label,
+          maxWidth: labelMaxWidth,
+          style: AppHeadings.h2(context),
+        );
+
+    if (fitsBeside) {
+      return const AppBrandTitleMetrics(
+        stacked: false,
+        toolbarHeight: rowToolbarHeight,
+      );
+    }
+
+    final labelHeight = _measureLabelHeight(
+      context: context,
+      label: label,
+      maxWidth: titleMaxWidth,
+      maxLines: AppDesign.appBarBrandLabelMaxLinesStacked,
+      style: AppHeadings.h2(context),
+    );
+
+    final toolbarHeight =
+        AppDesign.appBarBrandingPadding * 2 +
+        logoHeight +
+        AppDesign.appBarBrandStackedGap +
+        labelHeight;
+
+    return AppBrandTitleMetrics(stacked: true, toolbarHeight: toolbarHeight);
+  }
+
+  static bool _labelExceedsWidth({
+    required BuildContext context,
+    required String label,
+    required double maxWidth,
+    required TextStyle? style,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: maxWidth);
+    final exceeds = painter.didExceedMaxLines;
+    painter.dispose();
+    return exceeds;
+  }
+
+  static double _measureLabelHeight({
+    required BuildContext context,
+    required String label,
+    required double maxWidth,
+    required int maxLines,
+    required TextStyle? style,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: maxLines,
+    )..layout(maxWidth: math.max(0, maxWidth));
+    final height = painter.height;
+    painter.dispose();
+    return height;
+  }
+}
+
+/// Standard app-bar title: brand mark plus a page-specific label.
+///
+/// When [metrics.stacked] is true the logo sits above the label (start-aligned)
+/// so the label is not forced into a single-line ellipsis beside a wide mark.
 class AppBrandTitle extends StatelessWidget {
-  const AppBrandTitle({super.key, required this.label});
+  const AppBrandTitle({
+    super.key,
+    required this.label,
+    required this.metrics,
+  });
 
   final String label;
+  final AppBrandTitleMetrics metrics;
 
   static const double logoHeight = AppDesign.appBarLogoHeight;
 
-  /// App-bar height that fits [logoHeight]. Pages that host an [AppBrandTitle]
-  /// must apply this as their `AppBar.toolbarHeight`.
-  static const double toolbarHeight = AppDesign.appBarBrandedHeight;
+  /// Default (row) app-bar height. Prefer [AppBrandTitleMetrics.toolbarHeight]
+  /// when the label may need to stack beneath the logo.
+  static const double toolbarHeight = AppBrandTitleMetrics.rowToolbarHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +407,23 @@ class AppBrandTitle extends StatelessWidget {
             constraints.maxWidth.isFinite && constraints.maxWidth > 0
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
+
+        if (metrics.stacked) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppBrandTitleLogo(height: logoHeight, maxWidth: maxWidth),
+              const SizedBox(height: AppDesign.appBarBrandStackedGap),
+              Text(
+                label,
+                style: AppHeadings.h2(context),
+                maxLines: AppDesign.appBarBrandLabelMaxLinesStacked,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          );
+        }
 
         final logoWidth = AppBrandAssets.logoSlotWidth(
           availableWidth: maxWidth,

@@ -48,7 +48,7 @@ class BrandConfiguration {
     required this.bannerLogoAsset,
     required this.compactLogoAsset,
     required this.bannerLogoAspectRatio,
-    required this.projectsAtmosphereAsset,
+    required this.atmosphereAsset,
   });
 
   static const BrandConfiguration defaults = BrandConfiguration(
@@ -58,7 +58,7 @@ class BrandConfiguration {
     bannerLogoAsset: 'assets/projects_banner_logo.png',
     compactLogoAsset: 'assets/icon/app_icon.png',
     bannerLogoAspectRatio: 1801 / 504,
-    projectsAtmosphereAsset: 'assets/img/target_bg.png',
+    atmosphereAsset: 'assets/img/target_bg.png',
   );
 
   /// Product name used for the OS window/task title and as the logo alt text.
@@ -80,8 +80,9 @@ class BrandConfiguration {
   /// the banner needs at a given height before it is laid out.
   final double bannerLogoAspectRatio;
 
-  /// Soft photographic atmosphere behind the Projects home body.
-  final String projectsAtmosphereAsset;
+  /// Soft photographic atmosphere painted behind every page (under transparent
+  /// scaffolds and app bars).
+  final String atmosphereAsset;
 
   /// Canonical public origin for the Firebase Hosting web build (no trailing
   /// slash). Used by `web/sitemap.xml` / `web/robots.txt` and any absolute

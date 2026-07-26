@@ -27,7 +27,7 @@ class AppCopyrightFooter extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: theme.colorScheme.surface,
+      type: MaterialType.transparency,
       child: MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: AppViewport.footerTextScaler(context),

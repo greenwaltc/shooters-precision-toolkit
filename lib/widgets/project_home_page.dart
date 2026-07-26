@@ -33,41 +33,31 @@ class ProjectHomePage extends StatelessWidget {
     return AppLayoutBuilder(
       builder: (context, layout) {
         final metrics = ProjectsBannerMetrics.of(context);
-        final scheme = Theme.of(context).colorScheme;
 
-        // Atmosphere + theme fill sit behind a transparent scaffold so the
-        // photo shows through the app bar without changing how the body lays
-        // out its content.
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            ColoredBox(color: scheme.surface),
-            const _ProjectsAtmosphere(),
-            Scaffold(
-              backgroundColor: Colors.transparent,
-              appBar: ProjectsBannerAppBar(
-                metrics: metrics,
-                actions: AppBarActionBar.build(
-                  context,
-                  layout: layout,
-                  items: [
-                    if (ProjectConfiguration.current.featureFlags.isEnabled(
-                      FeatureFlag.themeModeToggle,
-                    ))
-                      _themeModeAction(context),
-                    AppBarActionBar.instructions(context),
-                  ],
-                ),
-              ),
-              body: AppResponsiveBody(
-                maxWidth: (layout) => layout.homeMaxWidth,
-                builder: (context, layout) => !store.isLoaded
-                    ? const Center(child: CircularProgressIndicator())
-                    : _buildBody(context, store, layout),
-              ),
-              bottomNavigationBar: const AppCopyrightFooter(),
+        // Atmosphere is painted app-wide in [MaterialApp.builder]; this scaffold
+        // stays transparent so it shows through the banner as well.
+        return Scaffold(
+          appBar: ProjectsBannerAppBar(
+            metrics: metrics,
+            actions: AppBarActionBar.build(
+              context,
+              layout: layout,
+              items: [
+                if (ProjectConfiguration.current.featureFlags.isEnabled(
+                  FeatureFlag.themeModeToggle,
+                ))
+                  _themeModeAction(context),
+                AppBarActionBar.instructions(context),
+              ],
             ),
-          ],
+          ),
+          body: AppResponsiveBody(
+            maxWidth: (layout) => layout.homeMaxWidth,
+            builder: (context, layout) => !store.isLoaded
+                ? const Center(child: CircularProgressIndicator())
+                : _buildBody(context, store, layout),
+          ),
+          bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );
@@ -274,36 +264,6 @@ class _ProjectListTile extends StatelessWidget {
     if (!confirmed || !context.mounted) return;
 
     await store.deleteProject(project.id);
-  }
-}
-
-/// Full-bleed target photograph at a single opacity.
-///
-/// Sits above a solid [ColorScheme.surface] fill (and under the transparent
-/// app bar) so the fade stays light against the theme color.
-class _ProjectsAtmosphere extends StatelessWidget {
-  const _ProjectsAtmosphere();
-
-  @override
-  Widget build(BuildContext context) {
-    final asset =
-        ProjectConfiguration.current.brand.projectsAtmosphereAsset;
-
-    return ExcludeSemantics(
-      child: IgnorePointer(
-        child: SizedBox.expand(
-          child: Opacity(
-            opacity: AppDesign.homeAtmosphereOpacity,
-            child: Image.asset(
-              asset,
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              filterQuality: FilterQuality.medium,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

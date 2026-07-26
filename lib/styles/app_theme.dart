@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../navigation/app_page_transitions.dart';
 import 'app_design.dart';
 import 'theme_extensions/anomr_chart_theme.dart';
 import 'theme_extensions/factor_palette_theme.dart';
@@ -49,7 +50,10 @@ class AppTheme {
 
     return base.copyWith(
       textTheme: textTheme,
-      scaffoldBackgroundColor: colorScheme.surface,
+      // Transparent so [AppAtmosphere] (mounted in MaterialApp.builder) shows
+      // through every scaffold, including behind app bars.
+      scaffoldBackgroundColor: Colors.transparent,
+      pageTransitionsTheme: buildAppPageTransitionsTheme(),
       visualDensity: VisualDensity.standard,
       splashFactory: InkSparkle.splashFactory,
       cardTheme: _cardTheme(colorScheme),
@@ -332,11 +336,12 @@ class AppTheme {
   static AppBarTheme _appBarTheme(ColorScheme colorScheme, TextTheme textTheme) {
     return AppBarTheme(
       elevation: AppDesign.elevationNone,
-      scrolledUnderElevation: AppDesign.appBarScrolledElevation,
+      scrolledUnderElevation: AppDesign.elevationNone,
       centerTitle: AppDesign.appBarCenterTitle,
-      backgroundColor: colorScheme.surface,
+      backgroundColor: Colors.transparent,
       foregroundColor: colorScheme.onSurface,
       surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
       titleTextStyle: textTheme.titleLarge,
     );
   }

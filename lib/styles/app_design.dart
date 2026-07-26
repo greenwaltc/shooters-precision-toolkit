@@ -340,8 +340,8 @@ class AppDesign {
   /// Lines the projects banner tagline may wrap to on mobile (h4 subtext).
   static const int homeBannerTaglineMaxLinesMobile = 6;
 
-  /// Uniform opacity of the Projects home atmosphere photo.
-  static const double homeAtmosphereOpacity = 0.4;
+  /// Uniform opacity of the app-wide atmosphere photo.
+  static const double atmosphereOpacity = 0.3;
 
   /// Minimum height the Data Matrix body needs before the page scrolls as a
   /// whole on short viewports (header + grid + action row).

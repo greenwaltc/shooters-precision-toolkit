@@ -554,22 +554,17 @@ class _ProjectFormState extends State<ProjectForm> {
       label: const Text('Submit'),
     );
 
-    // Opaque bar so scrolled field chrome cannot show through beside the
-    // right-aligned Submit control on wide desktop layouts.
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: Padding(
-        padding: AppSpacing.fieldPadding,
-        child: layout.useStackedActions
-            ? SizedBox(width: double.infinity, child: button)
-            : Align(
-                alignment: Alignment.centerRight,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 160),
-                  child: button,
-                ),
+    return Padding(
+      padding: AppSpacing.fieldPadding.copyWith(bottom: 0),
+      child: layout.useStackedActions
+          ? SizedBox(width: double.infinity, child: button)
+          : Align(
+              alignment: Alignment.centerRight,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 160),
+                child: button,
               ),
-      ),
+            ),
     );
   }
 

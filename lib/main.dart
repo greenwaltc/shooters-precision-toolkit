@@ -11,12 +11,14 @@ import 'package:provider/provider.dart';
 import 'config/project_configuration.dart';
 import 'model/project_store.dart';
 import 'model/theme_controller.dart';
+import 'navigation/app_page_transitions.dart';
 import 'navigation/app_routes.dart';
 import 'storage/project_storage.dart';
 import 'styles/app_theme.dart';
 import 'styles/layout/app_viewport.dart';
 import 'widgets/anomr_matrix.dart';
 import 'widgets/anomr_results_page.dart';
+import 'widgets/app_atmosphere.dart';
 import 'widgets/project_form_page.dart';
 import 'widgets/project_home_page.dart';
 
@@ -25,6 +27,13 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
+
+final Map<String, WidgetBuilder> _appRoutes = {
+  AppRoutes.projects: (_) => const ProjectHomePage(),
+  AppRoutes.projectForm: (_) => const ProjectFormPage(),
+  AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),
+  AppRoutes.anomrResults: (_) => const AnomrResultsPage(),
+};
 
 /// Root widget that owns the project store and theme controller unless they
 /// are injected (e.g. for tests).
@@ -95,16 +104,26 @@ class _MyAppState extends State<MyApp> {
             themeMode: _resolveThemeMode(themeController),
             initialRoute: AppRoutes.projects,
             builder: (context, child) {
+              final scheme = Theme.of(context).colorScheme;
               return MediaQuery(
                 data: AppViewport.applyWebSafeArea(MediaQuery.of(context)),
-                child: child ?? const SizedBox.shrink(),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ColoredBox(color: scheme.surface),
+                    const AppAtmosphere(),
+                    child ?? const SizedBox.shrink(),
+                  ],
+                ),
               );
             },
-            routes: {
-              AppRoutes.projects: (_) => const ProjectHomePage(),
-              AppRoutes.projectForm: (_) => const ProjectFormPage(),
-              AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),
-              AppRoutes.anomrResults: (_) => const AnomrResultsPage(),
+            onGenerateRoute: (settings) {
+              final builder = _appRoutes[settings.name];
+              if (builder == null) return null;
+              return AppPageRoute<void>(
+                settings: settings,
+                builder: builder,
+              );
             },
           );
         },

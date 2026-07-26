@@ -19,8 +19,14 @@ import '../tokens/app_spacing.dart';
 class AppViewport {
   const AppViewport._();
 
-  /// Minimum bottom clearance applied on Windows web when the platform reports none.
-  static const double webMinimumBottomInset = 48;
+  /// Minimum bottom clearance applied on Windows web when the platform reports
+  /// none. Kept modest — the copyright footer owns the visible bottom pad, and
+  /// a large inset here used to stack empty space above that footer.
+  static const double webMinimumBottomInset = 16;
+
+  /// Cap applied to the copyright footer so OS-level large text does not make
+  /// the pinned bar dominate short viewports (especially Windows).
+  static const double maxFooterTextScaleFactor = 1.15;
 
   /// Lower bound applied to the user's text-scale preference.
   ///
@@ -82,13 +88,21 @@ class AppViewport {
     return math.max(mediaQuery.padding.bottom, mediaQuery.viewPadding.bottom);
   }
 
-  /// Extra padding for the last item in a scroll view.
+  /// Extra padding for the last item in a scroll view above a pinned action.
+  ///
+  /// Does not include [bottomInset] — pages that pin
+  /// [AppCopyrightFooter] as `bottomNavigationBar` already clear the system
+  /// gesture/taskbar region in the footer, and re-adding that inset here only
+  /// created a dead band above the pinned button.
   static EdgeInsets scrollBottomPadding(BuildContext context) {
-    return EdgeInsets.only(bottom: AppSpacing.xxxl + bottomInset(context));
+    return const EdgeInsets.only(bottom: AppSpacing.xl);
   }
 
-  /// Minimum [SafeArea] insets for page bodies on Windows web.
-  static EdgeInsets get safeAreaMinimum => needsWebBottomClearance
-      ? const EdgeInsets.only(bottom: webMinimumBottomInset)
-      : EdgeInsets.zero;
+  /// Text scaler for the pinned copyright footer.
+  static TextScaler footerTextScaler(BuildContext context) {
+    return MediaQuery.textScalerOf(context).clamp(
+      minScaleFactor: minTextScaleFactor,
+      maxScaleFactor: maxFooterTextScaleFactor,
+    );
+  }
 }

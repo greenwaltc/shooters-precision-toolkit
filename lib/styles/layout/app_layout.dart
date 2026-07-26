@@ -7,7 +7,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'app_viewport.dart';
 import '../tokens/app_spacing.dart';
 
 typedef AppLayoutWidgetBuilder =
@@ -87,8 +86,10 @@ class AppResponsiveBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Bottom inset is owned by [AppCopyrightFooter] (bottomNavigationBar) so
+    // page actions are not separated from the footer by a second SafeArea pad.
     return SafeArea(
-      minimum: AppViewport.safeAreaMinimum,
+      bottom: false,
       child: AppLayoutBuilder(
         builder: (context, layout) {
           return Padding(

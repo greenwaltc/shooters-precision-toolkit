@@ -6,12 +6,15 @@
 import 'package:flutter/material.dart';
 
 import '../config/project_configuration.dart';
+import '../styles/layout/app_viewport.dart';
 import '../styles/tokens/app_spacing.dart';
 
 /// Slim copyright notice pinned to the bottom of every page.
 ///
 /// Designed to be used as a [Scaffold.bottomNavigationBar] so it sits below
 /// the page body without participating in the body's scroll or layout flow.
+/// This is also the single owner of bottom system-inset clearance (taskbar /
+/// gesture bar) so page bodies do not pad a second time above the footer.
 class AppCopyrightFooter extends StatelessWidget {
   const AppCopyrightFooter({super.key});
 
@@ -25,18 +28,29 @@ class AppCopyrightFooter extends StatelessWidget {
 
     return Material(
       color: theme.colorScheme.surface,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-          child: Text(
-            noticeText,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+      child: MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: AppViewport.footerTextScaler(context),
+        ),
+        child: SafeArea(
+          top: false,
+          minimum: AppViewport.needsWebBottomClearance
+              ? const EdgeInsets.only(bottom: AppViewport.webMinimumBottomInset)
+              : EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xs,
+            ),
+            child: Text(
+              noticeText,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.2,
+              ),
             ),
           ),
         ),

@@ -21,7 +21,6 @@ import '../styles/app_design.dart';
 import '../styles/components/matrix_grid_style.dart';
 import '../styles/components/scroll_cue_style.dart';
 import '../styles/layout/app_layout.dart';
-import '../styles/layout/app_viewport.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
@@ -135,8 +134,10 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     AppLayoutMetrics layout,
     ProjectFormModel formModel,
   ) {
+    // Bottom inset is owned by [AppCopyrightFooter]; padding here used to leave
+    // a dead band under the action buttons when OS text size was large.
     return SafeArea(
-      minimum: AppViewport.safeAreaMinimum,
+      bottom: false,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final content = Column(
@@ -1463,9 +1464,8 @@ class _MatrixActions extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(
         top: layout.isMobile ? AppSpacing.md : AppSpacing.lg,
-        // Desktop/web place the action row above the page bottom; add
-        // breathing room so the buttons aren't cramped against the edge.
-        bottom: layout.isMobile ? 0 : AppSpacing.xl,
+        // Footer already separates actions from the window edge.
+        bottom: AppSpacing.sm,
       ),
       child: SizedBox(
         width: double.infinity,

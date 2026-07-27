@@ -27,6 +27,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
+  msix: ^3.18.0
 
 flutter:
   uses-material-design: true
@@ -56,3 +57,16 @@ flutter_launcher_icons:
     image_path: assets/icon/app_icon.png
     background_color: "#000000"
     theme_color: "#000000"
+
+msix_config:
+  display_name: "Bramwell's Precision Test Kit"
+  publisher_display_name: "Noremac9"
+  identity_name: "Noremac9.BramwellsPrecisionTestKit"
+  publisher: "CN=66EC1A2D-375B-4035-8E74-7F7530CB5F93"
+  msix_version: 1.0.0.0
+  logo_path: assets/icon/app_icon.png
+  architecture: x64
+  capabilities: internetClient
+  store: true
+  output_path: build/store
+  output_name: BramwellsPrecisionTestKit_1.0.0.0_x64

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../config/project_configuration.dart';
 import '../styles/layout/app_viewport.dart';
 import '../styles/tokens/app_spacing.dart';
+import 'app_brand_bar.dart';
 
 /// Slim copyright notice pinned to the bottom of every page.
 ///
@@ -38,14 +39,16 @@ class AppCopyrightFooter extends StatelessWidget {
               ? const EdgeInsets.only(bottom: AppViewport.webMinimumBottomInset)
               : EdgeInsets.zero,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
+            padding: EdgeInsets.symmetric(
               horizontal: AppSpacing.lg,
-              vertical: AppSpacing.xs,
+              vertical: AppBrandAssets.isMobileLandscapeBanner(context)
+                  ? 0
+                  : AppSpacing.xs,
             ),
             child: Text(
               noticeText,
               textAlign: TextAlign.center,
-              maxLines: 2,
+              maxLines: AppBrandAssets.isMobileLandscapeBanner(context) ? 1 : 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,

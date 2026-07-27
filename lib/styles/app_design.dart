@@ -289,8 +289,14 @@ class AppDesign {
   /// Logo height in the standard (non-home) app bars.
   static const double appBarLogoHeight = 72;
 
+  /// Compact logo height for mobile landscape (short viewports).
+  static const double appBarLogoHeightCompact = 40;
+
   /// Horizontal gap between the app-bar logo and its page label.
   static const double appBarBrandTitleGap = space24;
+
+  /// Tighter logo/label gap used with [appBarLogoHeightCompact].
+  static const double appBarBrandTitleGapCompact = space12;
 
   /// Vertical gap when the app-bar logo stacks above the page label.
   static const double appBarBrandStackedGap = space4;
@@ -298,9 +304,16 @@ class AppDesign {
   /// Breathing room above and below app-bar branding.
   static const double appBarBrandingPadding = space8;
 
+  /// Tighter branding padding used with [appBarLogoHeightCompact].
+  static const double appBarBrandingPaddingCompact = space4;
+
   /// App-bar height that fits [appBarLogoHeight] plus its padding (row layout).
   static const double appBarBrandedHeight =
       appBarLogoHeight + appBarBrandingPadding * 2;
+
+  /// Compact row app-bar height for mobile landscape.
+  static const double appBarBrandedHeightCompact =
+      appBarLogoHeightCompact + appBarBrandingPaddingCompact * 2;
 
   /// Lines the stacked app-bar project label may wrap to.
   static const int appBarBrandLabelMaxLinesStacked = 2;
@@ -310,6 +323,9 @@ class AppDesign {
 
   /// Floor the projects banner logo shrinks to on short viewports.
   static const double homeBannerMinLogoHeight = kToolbarHeight * 2;
+
+  /// Floor for the projects banner logo in mobile landscape.
+  static const double homeBannerMinLogoHeightLandscape = kToolbarHeight;
 
   /// Gap separating the projects banner logo from its tagline.
   static const double homeBannerTaglineGap = space4;

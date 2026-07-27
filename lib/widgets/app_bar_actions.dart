@@ -141,6 +141,7 @@ class AppBarActionsMetrics {
     final inlineWidth = _estimateInlineWidth(context, items);
     final titleWithInline =
         (screenWidth - leadingWidth - inlineWidth).clamp(0.0, screenWidth);
+    final compact = layout.preferCompactChrome;
 
     // Collapse on mobile when inline actions would leave the brand title too
     // narrow for logo + label in a row, and collapsing to one menu control
@@ -149,7 +150,7 @@ class AppBarActionsMetrics {
         layout.isMobile &&
         items.isNotEmpty &&
         inlineWidth > AppBarActionBar.iconActionWidth &&
-        !_rowBrandTitleFits(titleWithInline);
+        !_rowBrandTitleFits(titleWithInline, compact: compact);
 
     final actionsWidth =
         collapsed ? AppBarActionBar.iconActionWidth : inlineWidth;
@@ -164,12 +165,19 @@ class AppBarActionsMetrics {
   }
 
   /// Whether [titleWidth] can hold the logo beside a short single-line label.
-  static bool _rowBrandTitleFits(double titleWidth) {
-    const logoHeight = AppDesign.appBarLogoHeight;
+  static bool _rowBrandTitleFits(
+    double titleWidth, {
+    required bool compact,
+  }) {
+    final logoHeight = compact
+        ? AppDesign.appBarLogoHeightCompact
+        : AppDesign.appBarLogoHeight;
+    final gap = compact
+        ? AppDesign.appBarBrandTitleGapCompact
+        : AppDesign.appBarBrandTitleGap;
     // Compact logo is square at [logoHeight]; require a modest label slot too.
     const minLabelSlot = 64.0;
-    return titleWidth >=
-        logoHeight + AppDesign.appBarBrandTitleGap + minLabelSlot;
+    return titleWidth >= logoHeight + gap + minLabelSlot;
   }
 
   static double _estimateInlineWidth(

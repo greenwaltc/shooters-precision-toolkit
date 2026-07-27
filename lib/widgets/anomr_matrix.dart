@@ -233,9 +233,9 @@ class _MatrixHeader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         layout.pageGutter,
-        layout.isMobile ? AppSpacing.sm : AppSpacing.md,
+        layout.pageGutterVertical,
         layout.pageGutter,
-        AppSpacing.lg,
+        layout.preferCompactChrome ? AppSpacing.sm : AppSpacing.lg,
       ),
       child: Align(
         alignment: Alignment.centerLeft,
@@ -255,8 +255,10 @@ class _MatrixHeader extends StatelessWidget {
           'Factors and Group Size',
           style: Theme.of(context).textTheme.titleLarge,
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(formModel.experimentStructure.label),
+        if (!layout.preferCompactChrome) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(formModel.experimentStructure.label),
+        ],
       ],
     );
   }
@@ -1481,30 +1483,38 @@ class _MatrixActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final showResults = FilledButton.icon(
+      onPressed: canShowResults ? onShowResults : null,
+      icon: const Icon(Icons.analytics),
+      label: const Text('Show Results'),
+    );
+    final clearAll = OutlinedButton.icon(
+      onPressed: onClearRanges,
+      icon: const Icon(Icons.clear_all),
+      label: const Text('Clear All Group Sizes'),
+      style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
+    );
+
+    // Narrow/stacked: primary action on top. Desktop row: Clear All on the
+    // left, Show Results on the right (mirrors Setup's right-aligned Submit).
+    final children = layout.useStackedActions
+        ? <Widget>[showResults, clearAll]
+        : <Widget>[clearAll, showResults];
+
     return Padding(
       padding: EdgeInsets.only(
-        top: layout.isMobile ? AppSpacing.md : AppSpacing.lg,
+        top: layout.preferCompactChrome
+            ? AppSpacing.sm
+            : (layout.isMobile ? AppSpacing.md : AppSpacing.lg),
         // Footer already separates actions from the window edge.
-        bottom: AppSpacing.sm,
+        bottom: layout.preferCompactChrome ? 0 : AppSpacing.sm,
       ),
       child: SizedBox(
         width: double.infinity,
         child: AppResponsiveActions(
           layout: layout,
           desktopAlignment: WrapAlignment.spaceBetween,
-          children: [
-            ElevatedButton.icon(
-              onPressed: canShowResults ? onShowResults : null,
-              icon: const Icon(Icons.analytics),
-              label: const Text('Show Results'),
-            ),
-            OutlinedButton.icon(
-              onPressed: onClearRanges,
-              icon: const Icon(Icons.clear_all),
-              label: const Text('Clear All Group Sizes'),
-              style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
-            ),
-          ],
+          children: children,
         ),
       ),
     );

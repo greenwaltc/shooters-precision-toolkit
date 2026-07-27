@@ -19,9 +19,16 @@ typedef AppLayoutWidgetBuilder =
 /// thresholds.
 @immutable
 class AppLayoutMetrics {
-  const AppLayoutMetrics({required this.width});
+  const AppLayoutMetrics({
+    required this.width,
+    required this.height,
+  });
 
+  /// Content/viewport width used for breakpoints.
   final double width;
+
+  /// Full viewport height (from [MediaQuery]), used for orientation chrome.
+  final double height;
 
   static const double mobileBreakpoint = 720;
   static const double desktopBreakpoint = 1024;
@@ -29,12 +36,25 @@ class AppLayoutMetrics {
   bool get isMobile => width < mobileBreakpoint;
   bool get isDesktop => width >= desktopBreakpoint;
 
+  /// Mobile width with a landscape viewport — prioritize body height.
+  bool get isMobileLandscape => isMobile && height < width;
+
+  /// Shrink app bars, banners, and vertical page padding.
+  bool get preferCompactChrome => isMobileLandscape;
+
   bool get useTwoColumnForms => width >= 900;
   bool get useStackedActions => width < 560;
 
   double get pageGutter => isMobile ? AppSpacing.lg : AppSpacing.xxxxl;
 
-  EdgeInsets get pagePadding => EdgeInsets.all(pageGutter);
+  /// Vertical gutter; tighter on mobile landscape to reclaim body height.
+  double get pageGutterVertical =>
+      preferCompactChrome ? AppSpacing.sm : pageGutter;
+
+  EdgeInsets get pagePadding => EdgeInsets.symmetric(
+    horizontal: pageGutter,
+    vertical: pageGutterVertical,
+  );
 
   double get homeMaxWidth => isDesktop ? 980 : double.infinity;
   double get formMaxWidth => isDesktop ? 1080 : double.infinity;
@@ -56,10 +76,14 @@ class AppLayoutBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        final mediaSize = MediaQuery.sizeOf(context);
         final width = constraints.hasBoundedWidth
             ? constraints.maxWidth
-            : MediaQuery.of(context).size.width;
-        return builder(context, AppLayoutMetrics(width: width));
+            : mediaSize.width;
+        return builder(
+          context,
+          AppLayoutMetrics(width: width, height: mediaSize.height),
+        );
       },
     );
   }

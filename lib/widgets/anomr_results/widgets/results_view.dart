@@ -241,9 +241,10 @@ class _ResultsBody extends StatelessWidget {
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         layout.pageGutter,
+        layout.pageGutterVertical,
         layout.pageGutter,
-        layout.pageGutter,
-        layout.pageGutter + AppSpacing.xl,
+        layout.pageGutterVertical +
+            (layout.preferCompactChrome ? AppSpacing.sm : AppSpacing.xl),
       ),
       child: Align(
         alignment: Alignment.topCenter,

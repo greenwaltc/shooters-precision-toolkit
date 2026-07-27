@@ -46,7 +46,10 @@ class HeaderSummary extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
           LayoutBuilder(
             builder: (context, constraints) {
-              final layout = AppLayoutMetrics(width: constraints.maxWidth);
+              final layout = AppLayoutMetrics(
+                width: constraints.maxWidth,
+                height: MediaQuery.sizeOf(context).height,
+              );
               final stats = [
                 StatTile(
                   label: 'Grand Mean',

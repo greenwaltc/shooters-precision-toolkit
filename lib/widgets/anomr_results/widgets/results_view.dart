@@ -264,13 +264,13 @@ class _ResultsBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildHeader(summary),
+        SizedBox(height: scale.chartOuterPadding + AppSpacing.sm),
+        _buildChart(summary, scale),
         SizedBox(height: scale.chartOuterPadding),
         ExportActionButton(
           onPressed: onExportPressed,
           isExporting: isExporting,
         ),
-        SizedBox(height: scale.chartOuterPadding + AppSpacing.sm),
-        _buildChart(summary, scale),
       ],
     );
   }

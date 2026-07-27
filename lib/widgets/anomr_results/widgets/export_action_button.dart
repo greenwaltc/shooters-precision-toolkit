@@ -5,8 +5,8 @@
 
 import 'package:flutter/material.dart';
 
-/// Right-aligned export button. Shows a small spinner and disables itself
-/// while [isExporting] is `true`.
+/// Right-aligned export control shown below the results chart. Shows a small
+/// spinner and disables itself while [isExporting] is `true`.
 class ExportActionButton extends StatelessWidget {
   const ExportActionButton({
     super.key,

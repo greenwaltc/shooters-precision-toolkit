@@ -343,6 +343,10 @@ class AppDesign {
   /// Uniform opacity of the app-wide atmosphere photo.
   static const double atmosphereOpacity = 0.3;
 
+  /// Bottom padding on the Projects body when the Instructions FAB is shown so
+  /// list / empty-state actions stay clear of it.
+  static const double homeInstructionsFabClearance = 88;
+
   /// Minimum height the Data Matrix body needs before the page scrolls as a
   /// whole on short viewports (header + grid + action row).
   static const double matrixMinBodyHeight = 460;

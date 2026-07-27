@@ -387,12 +387,16 @@ Future<void> _tapText(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
-/// Opens help from the app-bar Instructions control, or the mobile overflow
-/// menu when actions are collapsed.
+/// Opens help from the Instructions control (app-bar button, Projects FAB, or
+/// the mobile overflow menu when actions are collapsed).
 Future<void> _openHelpSheet(WidgetTester tester) async {
-  final instructions = find.text('Instructions');
-  if (instructions.evaluate().isNotEmpty) {
-    await tester.tap(instructions.first);
+  for (final finder in <Finder>[
+    find.text('Instructions'),
+    find.byTooltip('Instructions'),
+    find.byIcon(Icons.menu_book_outlined),
+  ]) {
+    if (finder.evaluate().isEmpty) continue;
+    await tester.tap(finder.first);
     await tester.pumpAndSettle();
     return;
   }

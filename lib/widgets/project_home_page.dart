@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/project_configuration.dart';
+import '../help/help_instructions.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../model/theme_controller.dart';
@@ -26,13 +27,34 @@ import 'confirm_delete_project_dialog.dart';
 class ProjectHomePage extends StatelessWidget {
   const ProjectHomePage({super.key});
 
+  /// Mobile portrait: Instructions moves to a bottom-right FAB so the banner
+  /// keeps more room for the logo and tagline.
+  static bool _useInstructionsFab(
+    BuildContext context,
+    AppLayoutMetrics layout,
+  ) {
+    return layout.isMobile &&
+        MediaQuery.orientationOf(context) == Orientation.portrait;
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ProjectStore>();
 
     return AppLayoutBuilder(
       builder: (context, layout) {
-        final metrics = ProjectsBannerMetrics.of(context);
+        final instructionsAsFab = _useInstructionsFab(context, layout);
+        final metrics = ProjectsBannerMetrics.of(
+          context,
+          includeHelpAction: !instructionsAsFab,
+        );
+        final appBarActions = <AppBarActionItem>[
+          if (ProjectConfiguration.current.featureFlags.isEnabled(
+            FeatureFlag.themeModeToggle,
+          ))
+            _themeModeAction(context),
+          if (!instructionsAsFab) AppBarActionBar.instructions(context),
+        ];
 
         // Atmosphere is painted app-wide in [MaterialApp.builder]; this scaffold
         // stays transparent so it shows through the banner as well.
@@ -42,21 +64,24 @@ class ProjectHomePage extends StatelessWidget {
             actions: AppBarActionBar.build(
               context,
               layout: layout,
-              items: [
-                if (ProjectConfiguration.current.featureFlags.isEnabled(
-                  FeatureFlag.themeModeToggle,
-                ))
-                  _themeModeAction(context),
-                AppBarActionBar.instructions(context),
-              ],
+              items: appBarActions,
             ),
           ),
           body: AppResponsiveBody(
             maxWidth: (layout) => layout.homeMaxWidth,
             builder: (context, layout) => !store.isLoaded
                 ? const Center(child: CircularProgressIndicator())
-                : _buildBody(context, store, layout),
+                : _buildBody(
+                    context,
+                    store,
+                    layout,
+                    clearFloatingAction: instructionsAsFab,
+                  ),
           ),
+          floatingActionButton: instructionsAsFab
+              ? const _InstructionsFab()
+              : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
@@ -66,9 +91,13 @@ class ProjectHomePage extends StatelessWidget {
   Widget _buildBody(
     BuildContext context,
     ProjectStore store,
-    AppLayoutMetrics _,
-  ) {
+    AppLayoutMetrics _, {
+    bool clearFloatingAction = false,
+  }) {
     final projects = store.projects;
+    final bottomClearance = clearFloatingAction
+        ? AppDesign.homeInstructionsFabClearance
+        : AppSpacing.xl;
 
     if (projects.isEmpty) {
       // Center the empty state when there is room, but allow it to scroll so
@@ -81,7 +110,7 @@ class ProjectHomePage extends StatelessWidget {
           final scheme = Theme.of(context).colorScheme;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+            padding: EdgeInsets.only(bottom: bottomClearance),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: constraints.hasBoundedHeight
@@ -152,7 +181,7 @@ class ProjectHomePage extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+          padding: EdgeInsets.only(bottom: bottomClearance),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: constraints.hasBoundedHeight
@@ -277,6 +306,25 @@ AppBarActionItem _themeModeAction(BuildContext context) {
     tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
     onPressed: () => controller.setDarkMode(enabled: !isDark),
   );
+}
+
+/// Compact primary FAB used for Instructions on mobile portrait Projects.
+class _InstructionsFab extends StatelessWidget {
+  const _InstructionsFab();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return FloatingActionButton(
+      tooltip: 'Instructions',
+      backgroundColor: scheme.primary,
+      foregroundColor: scheme.onPrimary,
+      elevation: AppDesign.elevationFloating,
+      onPressed: () => showHelpInstructionsSheet(context),
+      child: const Icon(Icons.menu_book_outlined),
+    );
+  }
 }
 
 /// Tinted, rounded badge that frames a leading icon on list/hero surfaces.

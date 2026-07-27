@@ -27,19 +27,25 @@ class AppPageTransitionsBuilder extends PageTransitionsBuilder {
     return AnimatedBuilder(
       animation: Listenable.merge([animation, secondaryAnimation]),
       builder: (context, child) {
-        // Covered by a route on top — drop out of the tree immediately so
-        // nothing slides away over the shared atmosphere.
-        if (secondaryAnimation.value > 0) {
-          return const SizedBox.shrink();
-        }
+        // Covered by a route on top (another page *or* a modal sheet): hide
+        // immediately so nothing slides away over the shared atmosphere, but
+        // keep the subtree mounted so awaited modal results can still mutate
+        // page state (e.g. mobile Group Size entry).
+        final covered = secondaryAnimation.value > 0;
 
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: animation,
-            curve: AppDesign.motionCurve,
-            reverseCurve: AppDesign.motionCurve.flipped,
+        return Offstage(
+          offstage: covered,
+          child: TickerMode(
+            enabled: !covered,
+            child: FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: AppDesign.motionCurve,
+                reverseCurve: AppDesign.motionCurve.flipped,
+              ),
+              child: child,
+            ),
           ),
-          child: child,
         );
       },
       child: child,

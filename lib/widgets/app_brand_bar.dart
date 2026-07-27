@@ -78,8 +78,11 @@ abstract final class AppBrandAssets {
   }
 
   /// Width reserved for projects-banner actions when estimating tagline wrap.
-  static double bannerActionsReserve() {
-    var reserve = AppDesign.homeBannerHelpActionsReserve;
+  static double bannerActionsReserve({bool includeHelpAction = true}) {
+    var reserve = 0.0;
+    if (includeHelpAction) {
+      reserve += AppDesign.homeBannerHelpActionsReserve;
+    }
     if (ProjectConfiguration.current.featureFlags.isEnabled(
       FeatureFlag.themeModeToggle,
     )) {
@@ -153,13 +156,22 @@ class ProjectsBannerMetrics {
   /// viewport is tall enough; on shorter screens it shrinks (never past
   /// [AppDesign.homeBannerMinLogoHeight]) so the page body keeps a workable
   /// amount of room beneath the banner.
-  factory ProjectsBannerMetrics.of(BuildContext context) {
+  ///
+  /// Pass [includeHelpAction]: false when Instructions is shown as a FAB
+  /// instead of an app-bar action so the tagline can use the extra width.
+  factory ProjectsBannerMetrics.of(
+    BuildContext context, {
+    bool includeHelpAction = true,
+  }) {
     final viewport = MediaQuery.sizeOf(context);
     final taglineHeight = AppBrandAssets.measureTaglineHeight(
       context: context,
       maxWidth: math.max(
         AppDesign.homeBannerMinTaglineWidth,
-        viewport.width - AppBrandAssets.bannerActionsReserve(),
+        viewport.width -
+            AppBrandAssets.bannerActionsReserve(
+              includeHelpAction: includeHelpAction,
+            ),
       ),
     );
 

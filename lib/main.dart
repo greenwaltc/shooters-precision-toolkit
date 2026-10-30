@@ -5,6 +5,7 @@
 
 import 'dart:async';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -22,10 +23,15 @@ import 'widgets/app_atmosphere.dart';
 import 'widgets/project_form_page.dart';
 import 'widgets/project_home_page.dart';
 
+import 'firebase/firebase_bootstrap.dart';
+import 'auth/auth_service.dart';
+
 /// Boots Flutter and mounts the application.
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  final services = await bootstrapFirebase();
+  // Pass these services to the auth gate/session scope described below.
+  runApp(FirebaseApplication(services: services));
 }
 
 final Map<String, WidgetBuilder> _appRoutes = {
@@ -120,10 +126,7 @@ class _MyAppState extends State<MyApp> {
             onGenerateRoute: (settings) {
               final builder = _appRoutes[settings.name];
               if (builder == null) return null;
-              return AppPageRoute<void>(
-                settings: settings,
-                builder: builder,
-              );
+              return AppPageRoute<void>(settings: settings, builder: builder);
             },
           );
         },

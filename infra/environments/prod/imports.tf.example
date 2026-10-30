@@ -1,0 +1,28 @@
+# Verify existing resources, then copy this to imports.tf before the first plan.
+# Firebase enablement belongs to the existing production Google Cloud project.
+import {
+  to = module.firebase.google_firebase_project.this
+  id = "projects/bramwells-precision-test-kit"
+}
+
+# Verify this existing Hosting site ID before activating its import.
+import {
+  to = module.firebase.google_firebase_hosting_site.web
+  id = "projects/bramwells-precision-test-kit/sites/bramwells-precision-test-kit"
+}
+
+# Add imports for any existing registrations using their actual production IDs:
+# module.firebase.google_firebase_web_app.web
+#   projects/bramwells-precision-test-kit/webApps/PRODUCTION_WEB_APP_ID
+# module.firebase.google_firebase_android_app.android
+#   projects/bramwells-precision-test-kit/androidApps/PRODUCTION_ANDROID_APP_ID
+# module.firebase.google_firebase_apple_app.apple["com.bramwell.bramwellsPrecisionTestKit"]
+#   projects/bramwells-precision-test-kit/iosApps/PRODUCTION_APPLE_APP_ID
+#
+# If the default Standard database exists, add an import for:
+# module.firebase.google_firestore_database.projects
+#   projects/bramwells-precision-test-kit/databases/(default)
+#
+# If a rules release exists, add an import for:
+# module.firebase.google_firebaserules_release.firestore
+#   projects/bramwells-precision-test-kit/releases/cloud.firestore

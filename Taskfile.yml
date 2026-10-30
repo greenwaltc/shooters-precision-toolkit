@@ -23,6 +23,46 @@ tasks:
       - flutter analyze
       - flutter test
 
+  local:
+    desc: Start local emulators and Flutter in Chrome; Ctrl+C stops both
+    requires: &local_environment
+      vars:
+        - name: ENV
+          enum: [dev]
+    cmds:
+      - sh scripts/firebase_emulators.sh emulators:exec --ui --config firebase.emulators.json --only auth,firestore --project demo-bramwellsprecisiontestkit 'task local:run'
+
+  local:run:
+    desc: Run Flutter against already-running emulators (second terminal)
+    requires: *local_environment
+    cmds:
+      - node scripts/check_emulators.mjs
+      - flutter run -d chrome --web-hostname=127.0.0.1 --web-port=7357 --dart-define=APP_ENV=dev --dart-define=USE_FIREBASE_EMULATORS=true
+
+  emulators:start:
+    desc: Start local Auth, Firestore, and Emulator UI; Ctrl+C stops them
+    requires: *local_environment
+    cmds:
+      - sh scripts/firebase_emulators.sh emulators:start --config firebase.emulators.json --only auth,firestore --project demo-bramwellsprecisiontestkit
+
+  emulators:check:
+    desc: Check that local Auth and Firestore services are listening
+    cmds:
+      - node scripts/check_emulators.mjs
+
+  emulators:test:
+    desc: Start fresh emulators, test Flutter in headless Chrome, and stop services
+    requires: *local_environment
+    cmds:
+      - sh scripts/firebase_emulators.sh emulators:exec --config firebase.emulators.json --only auth,firestore --project demo-bramwellsprecisiontestkit 'task local:test'
+
+  local:test:
+    desc: Run Flutter emulator smoke tests against already-running services
+    requires: *local_environment
+    cmds:
+      - node scripts/check_emulators.mjs
+      - flutter test --platform chrome test/emulators/firebase_emulators_test.dart --dart-define=APP_ENV=dev --dart-define=USE_FIREBASE_EMULATORS=true
+
   web:run:
     desc: Run in Chrome (ENV=dev or prod; default dev)
     requires: &environment

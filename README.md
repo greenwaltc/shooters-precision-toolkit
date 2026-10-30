@@ -30,9 +30,35 @@ Prerequisites: a recent [Flutter](https://docs.flutter.dev/get-started/install) 
 
 ```bash
 task deps
-task web:run              # Chrome connected to dev Firebase
+task local                # Local emulators + Flutter in Chrome
 task                      # List all available commands
 ```
+
+### Local services
+
+`task local` starts the Auth and Standard Firestore emulators, waits for them, and launches Flutter in Chrome at `http://127.0.0.1:7357`. Use Flutter's `r`/`R` commands to reload/restart after changes, and `q` to quit. Ctrl+C also shuts down the session. The Emulator UI is at [127.0.0.1:4000](http://127.0.0.1:4000).
+
+The first start downloads the Firebase CLI and emulator binaries, so it needs internet access. Install Node.js 20+ and Java 21+; on this Mac the launcher automatically uses Android Studio's bundled Java 21 when the default Java is older. No Firebase login, cloud deployment, or Terraform apply is needed. Local services use `demo-bramwellsprecisiontestkit`, with separate dummy SDK configuration. All emulator listeners are restricted to this computer.
+
+For separate terminals:
+
+```bash
+task emulators:start      # Terminal 1: leave running
+task local:run            # Terminal 2: Flutter with local services
+```
+
+Test the full local connection:
+
+```bash
+task emulators:test       # Starts fresh services, tests in headless Chrome, stops services
+task local:test           # Same tests when emulators are already running
+```
+
+Stop an existing emulator session before `emulators:test` because both use the same ports. `task emulators:check` checks the running services. Emulator Auth accounts and database data reset when the services stop. Browser Auth and Firestore persistence are disabled in local mode to avoid stale sessions/cache after a reset.
+
+At this migration checkpoint the workspace still uses SharedPreferences, and Firestore rules deny client reads/writes. You can test UI changes locally now; the smoke test checks local Auth connectivity, Firestore's expected permission rejections, and workspace startup. Sign-in screens and cloud project storage come in later migration steps. Use `task web:run` when you deliberately want local Flutter connected to **cloud dev** instead. Production emulator builds are rejected.
+
+See [Firebase's emulator connection guide](https://firebase.google.com/docs/emulator-suite/connect_firestore) for demo-project isolation and [Emulator Suite setup](https://firebase.google.com/docs/emulator-suite/install_and_configure) for emulator options.
 
 Run the checks:
 

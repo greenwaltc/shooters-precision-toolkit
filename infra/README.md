@@ -98,3 +98,5 @@ Each root stores private state in its own `terraform.tfstate`, created by Terraf
 Terraform owns the rules release and index overrides once applied. Avoid deploying the same policy/index resources independently through the Firebase CLI. Keep basic Auth settings in the environment checklists and use the separate provider-provisioning instructions in the guide; adding a Terraform Identity Platform resource would violate this scaffold's Spark boundary.
 
 Full implementation instructions: [Firebase migration guide](../docs/firebase_migration_guide.md). Provider documentation: [Google 8.9.0](https://registry.terraform.io/providers/hashicorp/google/8.9.0/docs), [Google Beta 8.9.0](https://registry.terraform.io/providers/hashicorp/google-beta/8.9.0/docs).
+
+Current verification: dev and prod are applied; both plans reported no changes on October 29, 2026. Basic email/password is enabled in both, but prod reports Identity Platform Auth with billing disabled. See the environment Auth checklists for verified settings and remaining manual checks.

@@ -9,7 +9,7 @@ class AuthService {
       email: email.trim(),
       password: password,
     );
-    await credential.user!.sendEmailVerification();
+    await credential.user!.sendEmailVerification(_emailActionSettings);
   }
 
   Future<void> signIn(String email, String password) async {
@@ -19,8 +19,10 @@ class AuthService {
     );
   }
 
-  Future<void> resetPassword(String email) =>
-      auth.sendPasswordResetEmail(email: email.trim());
+  Future<void> resetPassword(String email) => auth.sendPasswordResetEmail(
+    email: email.trim(),
+    actionCodeSettings: _emailActionSettings,
+  );
 
   Future<void> refreshVerification() async {
     await auth.currentUser?.reload();
@@ -28,4 +30,16 @@ class AuthService {
   }
 
   Future<void> signOut() => auth.signOut();
+
+  ActionCodeSettings get _emailActionSettings {
+    final returnUrl = switch (auth.app.options.projectId) {
+      'bramwellsprecisiontestkitdev' =>
+        'https://bramwellsprecisiontestkitdev.web.app',
+      'bramwells-precision-test-kit' =>
+        'https://bramwells-precision-test-kit.web.app',
+      _ => throw StateError('Unknown Firebase project.'),
+    };
+
+    return ActionCodeSettings(url: returnUrl, handleCodeInApp: false);
+  }
 }

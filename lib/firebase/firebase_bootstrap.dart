@@ -17,14 +17,19 @@ Future<FirebaseServices> bootstrapFirebase() async {
   const environment = String.fromEnvironment('APP_ENV');
   const useEmulators = bool.fromEnvironment('USE_FIREBASE_EMULATORS');
   const emulatorHost = String.fromEnvironment(
-    'FIREBASE_EMULATOR_HOST', defaultValue: 'localhost',
+    'FIREBASE_EMULATOR_HOST',
+    defaultValue: 'localhost',
   );
 
   final (options, expectedProject) = switch (environment) {
-    'dev' => (dev.DefaultFirebaseOptions.currentPlatform,
-    'bramwellsprecisiontestkitdev'),
-    'prod' => (prod.DefaultFirebaseOptions.currentPlatform,
-    'bramwells-precision-test-kit'),
+    'dev' => (
+      dev.DefaultFirebaseOptions.currentPlatform,
+      'bramwellsprecisiontestkitdev',
+    ),
+    'prod' => (
+      prod.DefaultFirebaseOptions.currentPlatform,
+      'bramwells-precision-test-kit',
+    ),
     _ => throw StateError('Build with APP_ENV=dev or APP_ENV=prod.'),
   };
   if (appFlavor != null && appFlavor != environment) {

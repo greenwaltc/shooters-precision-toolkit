@@ -26,31 +26,46 @@ Full usage instructions live in the app under the **Instructions** button (sourc
 
 ## Getting started (development)
 
-Prerequisites: a recent [Flutter](https://docs.flutter.dev/get-started/install) stable release (Dart SDK ≥ 3.11, per `pubspec.yaml`).
+Prerequisites: a recent [Flutter](https://docs.flutter.dev/get-started/install) stable release (Dart SDK ≥ 3.11, per `pubspec.yaml`) and [Task](https://taskfile.dev/docs/installation). On macOS, install Task with `brew install go-task`. Infrastructure/deployment commands also use Terraform, Node.js/npm, and the Google Cloud CLI.
 
 ```bash
-flutter pub get
-flutter run -d chrome     # web
-flutter run -d macos      # macOS desktop
-flutter run               # any connected device/emulator
+task deps
+task web:run              # Chrome connected to dev Firebase
+task                      # List all available commands
 ```
 
 Run the checks:
 
 ```bash
-flutter analyze
-flutter test
+task check
 ```
 
-Release builds:
+Build and publish web releases:
 
 ```bash
-flutter build web --release
-flutter build apk --release        # Android
-flutter build ios --release        # iOS (requires Xcode + signing)
-flutter build macos --release
-flutter build windows --release    # requires a Windows host
+task web:build            # build/web-dev
+task web:build ENV=prod   # build/web-prod
+task web:deploy           # Check, rebuild, and publish to dev Hosting
+task web:deploy ENV=prod  # Check, rebuild, and publish to production Hosting
 ```
+
+Environment commands default to `dev` and accept only `dev` or `prod`. Each deployment uses the matching Firebase project and Hosting configuration; it rebuilds before uploading. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates. Firebase options currently support web; native environment configuration is deferred to step 12 of the [migration guide](docs/firebase_migration_guide.md).
+
+For first-time authentication, run `task login:firebase` for Firebase CLI deployments, `task login:terraform` for Terraform, and `task login:gcloud` for billing inspection. These maintain separate credentials.
+
+To change infrastructure:
+
+```bash
+task infra:plan           # Initialize, validate, and save the dev plan
+task infra:show           # Review the saved changes
+task infra:apply          # Apply that exact plan
+task infra:output         # Show app IDs and Hosting URL
+task billing:check        # Expect False for Spark
+```
+
+Add `ENV=prod` to each command for production. `infra:apply` changes cloud resources and applies the saved plan without an additional confirmation prompt. Plans and local state stay out of Git; back up state privately after applies and use one infrastructure operator. Do not run competing applies or builds in the same checkout.
+
+Auth settings are separate: `task auth:deploy` deploys only the selected provider configuration. It does not complete the Console checklist, disable omitted providers, or downgrade Identity Platform. Email/password is already enabled in both projects, so this task is only needed for deliberate configuration changes. See [infra/README.md](infra/README.md) and each environment's Auth checklist before changing it. Terraform continues to own Firestore rules; web deployment uploads Hosting content only.
 
 ## Project structure
 

@@ -1,0 +1,133 @@
+version: '3'
+
+# Defaults to dev. Select production explicitly with ENV=prod.
+# Task runs these commands from the repository root, even from a subdirectory.
+vars:
+  ENV: dev
+  PROJECT_ID: '{{if eq .ENV "prod"}}bramwells-precision-test-kit{{else}}bramwellsprecisiontestkitdev{{end}}'
+
+tasks:
+  default:
+    desc: List available commands
+    cmds:
+      - task --list
+
+  deps:
+    desc: Install Flutter dependencies
+    cmds:
+      - flutter pub get
+
+  check:
+    desc: Analyze Flutter code and run all tests
+    cmds:
+      - flutter analyze
+      - flutter test
+
+  web:run:
+    desc: Run in Chrome (ENV=dev or prod; default dev)
+    requires: &environment
+      vars:
+        - name: ENV
+          enum: [dev, prod]
+    cmds:
+      - flutter run -d chrome --dart-define=APP_ENV={{.ENV}}
+
+  web:build:
+    desc: Build release web files into build/web-ENV
+    requires: *environment
+    cmds:
+      - flutter build web --release --dart-define=APP_ENV={{.ENV}} --output=build/web-{{.ENV}}
+
+  web:deploy:
+    desc: Check, rebuild, and publish the selected environment's live Hosting site
+    requires: *environment
+    cmds:
+      - task: check
+      - task: web:build
+      - npx -y firebase-tools@latest deploy --only hosting --config firebase.{{.ENV}}.json --project {{.PROJECT_ID}}
+
+  login:firebase:
+    desc: Sign in to Firebase CLI for Hosting and Auth deployments
+    cmds:
+      - npx -y firebase-tools@latest login
+
+  login:terraform:
+    desc: Sign in with application-default credentials for Terraform
+    cmds:
+      - gcloud auth application-default login
+
+  login:gcloud:
+    desc: Sign in to gcloud for billing and project inspection
+    cmds:
+      - gcloud auth login
+
+  infra:init:
+    desc: Initialize the selected environment's local Terraform backend
+    requires: *environment
+    cmds:
+      - terraform -chdir=infra/environments/{{.ENV}} init -input=false -lockfile=readonly
+
+  infra:fmt:
+    desc: Format all Terraform configuration
+    cmds:
+      - terraform fmt -recursive infra
+
+  infra:validate:
+    desc: Initialize and validate the selected environment; check formatting
+    requires: *environment
+    cmds:
+      - task: infra:init
+      - terraform fmt -check -recursive infra
+      - terraform -chdir=infra/environments/{{.ENV}} validate
+
+  infra:plan:
+    desc: Validate and save a plan for review (does not apply changes)
+    requires: *environment
+    cmds:
+      - task: infra:validate
+      # Remove an old plan first so a failed plan cannot leave it available to apply.
+      - rm -f infra/environments/{{.ENV}}/{{.ENV}}.tfplan
+      - terraform -chdir=infra/environments/{{.ENV}} plan -input=false -var-file={{.ENV}}.tfvars -out={{.ENV}}.tfplan
+
+  infra:show:
+    desc: Show the saved plan for the selected environment
+    requires: *environment
+    preconditions: &saved_plan
+      - sh: test -f infra/environments/{{.ENV}}/{{.ENV}}.tfplan
+        msg: 'No saved plan. Run task infra:plan ENV={{.ENV}} first.'
+    cmds:
+      - terraform -chdir=infra/environments/{{.ENV}} show -no-color {{.ENV}}.tfplan
+
+  infra:apply:
+    desc: Apply the previously reviewed saved plan (changes cloud resources)
+    requires: *environment
+    preconditions: *saved_plan
+    cmds:
+      # Applying a saved plan is explicit approval; Terraform does not prompt again.
+      - terraform -chdir=infra/environments/{{.ENV}} apply -input=false {{.ENV}}.tfplan
+      - rm -f infra/environments/{{.ENV}}/{{.ENV}}.tfplan
+
+  infra:output:
+    desc: Show Firebase app IDs and infrastructure outputs
+    requires: *environment
+    cmds:
+      - terraform -chdir=infra/environments/{{.ENV}} output
+
+  firebase:inspect:
+    desc: List app registrations and inspect the default Firestore database
+    requires: *environment
+    cmds:
+      - npx -y firebase-tools@latest apps:list --project {{.PROJECT_ID}}
+      - npx -y firebase-tools@latest firestore:databases:get '(default)' --project {{.PROJECT_ID}}
+
+  billing:check:
+    desc: Show whether Cloud Billing is enabled (expect false for Spark)
+    requires: *environment
+    cmds:
+      - gcloud billing projects describe {{.PROJECT_ID}} --format='value(billingEnabled)'
+
+  auth:deploy:
+    desc: Deploy the selected Auth provider configuration (review Auth subtype first)
+    requires: *environment
+    cmds:
+      - npx -y firebase-tools@latest deploy --only auth --config firebase.auth.{{.ENV}}.json --project {{.PROJECT_ID}}

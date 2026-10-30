@@ -1,6 +1,6 @@
 # Firebase Spark migration and environment implementation guide
 
-Prepared for Bramwell's Precision Test Kit on October 11, 2026; revised for the no-cost Firebase Spark plan. The infrastructure scaffold and provider pins were updated on October 29, 2026. These are implementation examples and rollout instructions; the scaffold has not been applied to Firebase.
+Prepared for Bramwell's Precision Test Kit on October 11, 2026; revised for the no-cost Firebase Spark plan. The infrastructure scaffold and provider pins were updated on October 29, 2026. Dev and production infrastructure are applied; both live Terraform plans reported no changes on October 29, 2026. Application migration beyond the step-6 service scope remains in progress.
 
 The deployment target is Spark in both dev and prod, without linking a Cloud Billing account. A Blaze project operating below a no-cost allowance is a different arrangement and is outside this guide's cost constraint. Linking billing automatically upgrades a Firebase project to Blaze. [Firebase pricing plans](https://firebase.google.com/docs/projects/billing/firebase-pricing-plans)
 
@@ -56,15 +56,15 @@ The repository currently has:
 
 - Firebase Hosting configuration and two GitHub workflows pointing to `bramwells-precision-test-kit`.
 - `firebase_core`, `firebase_auth`, and `cloud_firestore` already added to `pubspec.yaml`.
-- A new `Firebase.initializeApp()` call in `main.dart` that is unawaited and runs before Flutter binding initialization. Replace it with the bootstrap in step 6.
-- FlutterFire has now generated `lib/firebase_options.dart` and native service files for the dev project. The existing dev registrations are adopted by `infra/environments/dev/imports.tf`; separate environment options remain a later application change.
+- Startup initializes Flutter bindings, awaits Firebase through `FirebaseStartup`, and displays loading/error UI. `FirebaseApplication` provides Firebase services to the existing local-data `MyApp`.
+- Canonical web options exist at `lib/firebase/firebase_options_dev.dart` and `lib/firebase/firebase_options_prod.dart`. Native registrations exist, but native environment options/flavors remain step 12; these web-only options deliberately reject native startup.
 - Local project JSON under `anomr_projects_v1`; theme under `anomr_theme_mode_v1`.
 - A whole-workspace `ProjectStorage` interface, and a `ProjectStore` that loads once and rewrites all projects.
 - Android application ID `com.bramwell.bramwells_precision_test_kit`.
 - iOS and macOS bundle ID `com.bramwell.bramwellsPrecisionTestKit`.
 - iOS deployment targets are now set to 15.0, matching the minimum in the current Firebase Flutter setup guide; keep Podfile, Xcode targets, and dependencies aligned. It also lists Android API 24 or later and macOS 11 or later. [Flutter prerequisites](https://firebase.google.com/docs/flutter/setup)
 
-The shell could not reach npm during preparation, so live Firebase databases, app registrations, enabled providers, billing, and IAM were not inspected. Run these discovery commands locally before applying the examples:
+Both projects have been inspected and provisioned. Billing is disabled in both. Re-run discovery before future infrastructure changes:
 
 ```bash
 npx -y firebase-tools@latest --version
@@ -559,7 +559,7 @@ After Terraform creates/adopts the web app, provision basic Email/Password authe
 }
 ```
 
-Use the same provider declaration in `firebase.auth.prod.json`. The current Firebase CLI source supports deploying this Auth configuration; verify command support and test in dev first:
+Use the same provider declaration in `firebase.auth.prod.json`. The current Firebase CLI supports this configuration, but may initialize Identity Platform rather than legacy basic Auth. In this deployment, dev remains `FIREBASE_AUTH`; production reports `IDENTITY_PLATFORM` after provider provisioning. Billing remains disabled in both. Production must use the Spark Identity Platform limits (including its daily active-user allowance), not the basic-Auth assumptions elsewhere. Do not rerun provisioning to attempt a downgrade. Verify command support and the resulting subtype:
 
 ```bash
 npx -y firebase-tools@latest deploy --help
@@ -657,18 +657,9 @@ Future<FirebaseServices> bootstrapFirebase() async {
 }
 ```
 
-Replace startup in `main.dart`:
+The checked-in `main.dart` initializes Flutter bindings and mounts `FirebaseStartup`, which awaits `bootstrapFirebase`, shows a loading indicator, and handles initialization failures with a user-facing error screen. On success it mounts `FirebaseApplication`, which provides `FirebaseServices` and `AuthService` above the existing `MyApp`.
 
-```dart
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final services = await bootstrapFirebase();
-  // Pass these services to the auth gate/session scope described below.
-  runApp(FirebaseApplication(services: services));
-}
-```
-
-`FirebaseApplication` is a new root widget you implement using the auth gate in step 7 and your existing `MyApp`. Keep injected-store widget tests independent of real Firebase startup. Use an explicit startup-error screen for initialization failures instead of leaving a blank window. Both cloud and emulator paths use `(default)`. If retaining a different existing free-quota database, adapt the SDK database ID, Terraform database declaration, and rules-release name together after checking its edition and eligibility.
+This is the runnable step-6 checkpoint: projects still use local SharedPreferences. Do not put the existing shared local store behind an account gate and assume it is account-isolated. Implement the account scope and cloud repository together in steps 7–8. Existing injected-store widget tests remain independent of Firebase.
 
 Build and deployment are two separate decisions:
 
@@ -1578,3 +1569,10 @@ Project change checklist:
 | `test/`, `security-tests/` | Account isolation, rules, importer retries, outbox conflicts, offline behavior |
 
 Spark revision verification: five JSON examples parsed successfully and code fences were balanced. Seven Dart examples passed static analysis against this project's resolved dependencies, with placeholder generated options and a placeholder application-root widget for integration points. Both executable JavaScript examples passed Node syntax checks. The prototype rules were reviewed against the rules-auditor checklist. Terraform plans, emulator Security Rules execution, CLI Auth provisioning, live Spark-plan eligibility, and end-to-end cleanup were not run here; validate those in dev before deployment.
+
+**Step-6 verification and deployment prerequisites (October 29, 2026)**
+
+- Use `firebase.dev.json` with `build/web-dev` and `firebase.prod.json` with `build/web-prod`. CI selects the matching file as `firebase.json` on its temporary runner.
+- PR previews require the GitHub Actions secret `FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV`, containing a dev-only Hosting deployment credential. The production workflow retains its separate production secret. Provision that repository secret before the first preview run; it cannot be supplied by a checked-in file.
+- Auth provider JSON is checked in for both environments. Email/password and authorized domains were verified through the Auth configuration API. Password policies, email templates, and end-to-end action links remain explicit Console/application checks; do not mark them verified merely because the provider is enabled.
+- Native options/flavors remain step 12. Android Internet and macOS outgoing-network permissions are present; those permissions alone do not configure native environment selection.

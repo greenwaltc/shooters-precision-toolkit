@@ -13,13 +13,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check deployment credential project
+        env:
+          DEPLOY_CREDENTIAL: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV }}
+        run: |
+          python3 - <<'PYTHON'
+          import json, os, sys
+          value = os.environ.get("DEPLOY_CREDENTIAL", "")
+          if not value:
+              sys.exit("Configure the FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV GitHub Actions secret before deploying.")
+          if json.loads(value).get("project_id") != "bramwellsprecisiontestkitdev":
+              sys.exit("Deployment credential belongs to the wrong Firebase project.")
+          PYTHON
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
       - run: flutter pub get
-      - run: flutter build web --release --dart-define=APP_ENV="dev"
+      - run: flutter analyze
+      - run: flutter test
+      - run: flutter build web --release --dart-define=APP_ENV=dev --output=build/web-dev
+      - run: cp firebase.dev.json firebase.json
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BRAMWELLS_PRECISION_TEST_KIT }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV }}
           projectId: bramwellsprecisiontestkitdev

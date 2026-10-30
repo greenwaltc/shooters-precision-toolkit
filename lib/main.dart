@@ -5,7 +5,6 @@
 
 import 'dart:async';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -25,13 +24,33 @@ import 'widgets/project_home_page.dart';
 
 import 'firebase/firebase_bootstrap.dart';
 import 'auth/auth_service.dart';
+import 'firebase/firebase_startup.dart';
 
 /// Boots Flutter and mounts the application.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final services = await bootstrapFirebase();
-  // Pass these services to the auth gate/session scope described below.
-  runApp(FirebaseApplication(services: services));
+  runApp(
+    FirebaseStartup(
+      initialize: bootstrapFirebase,
+      applicationBuilder: (services) => FirebaseApplication(services: services),
+    ),
+  );
+}
+
+/// Step-6 service scope. Account-scoped storage is introduced in steps 7–8.
+class FirebaseApplication extends StatelessWidget {
+  const FirebaseApplication({super.key, required this.services});
+
+  final FirebaseServices services;
+
+  @override
+  Widget build(BuildContext context) => MultiProvider(
+    providers: [
+      Provider<FirebaseServices>.value(value: services),
+      Provider<AuthService>(create: (_) => AuthService(services.auth)),
+    ],
+    child: const MyApp(),
+  );
 }
 
 final Map<String, WidgetBuilder> _appRoutes = {

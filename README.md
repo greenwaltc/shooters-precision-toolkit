@@ -130,6 +130,16 @@ Tests live in `test/` and cover the form model (factor persistence across struct
 flutter test
 ```
 
+Authentication coverage also checks verification gating, verified workspace access, per-account local storage, logout and route disposal, verification-email retries, and generic password-reset responses. The regular suite injects controlled Auth failures and advances the cooldown clock without real delays.
+
+```bash
+task check               # Analysis and regular tests
+task emulators:test      # Fresh emulators and browser Auth/Firestore tests
+task local:test          # Browser tests against already-running emulators
+```
+
+The browser suite applies a real emulator verification code and signs out from a private workspace route. It creates uniquely named test accounts and deletes only those accounts; it does not clear existing emulator users. Stop other emulator sessions before running `emulators:test`.
+
 ## App icons
 
 Source artwork lives at `assets/icon/app_icon.png` (1024×1024 PNG). After replacing it, regenerate every platform size with:

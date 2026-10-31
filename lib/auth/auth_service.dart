@@ -1,5 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../firebase/firebase_bootstrap.dart';
+
 class AuthService {
   AuthService(this.auth);
   final FirebaseAuth auth;
@@ -19,20 +21,43 @@ class AuthService {
     );
   }
 
-  Future<void> resetPassword(String email) => auth.sendPasswordResetEmail(
-    email: email.trim(),
-    actionCodeSettings: _emailActionSettings,
-  );
+  Future<void> sendVerification() async {
+    final user = auth.currentUser;
 
-  Future<void> refreshVerification() async {
+    if (user == null) {
+      throw StateError('Sign in before requesting verification.');
+    }
+
+    await user.sendEmailVerification(_emailActionSettings);
+  }
+
+  Future<bool> refreshVerification() async {
     await auth.currentUser?.reload();
-    await auth.currentUser?.getIdToken(true);
+
+    final user = auth.currentUser;
+    if (user == null || !user.emailVerified) return false;
+
+    await user.getIdToken(true);
+    return true;
+  }
+
+  Future<void> resetPassword(String email) async {
+    try {
+      await auth.sendPasswordResetEmail(
+        email: email.trim(),
+        actionCodeSettings: _emailActionSettings,
+      );
+    } on FirebaseAuthException catch (error) {
+      // Keep the response the same for unknown addresses.
+      if (error.code != 'user-not-found') rethrow;
+    }
   }
 
   Future<void> signOut() => auth.signOut();
 
   ActionCodeSettings get _emailActionSettings {
     final returnUrl = switch (auth.app.options.projectId) {
+      localFirebaseProjectId => 'http://127.0.0.1:7357',
       'bramwellsprecisiontestkitdev' =>
         'https://bramwellsprecisiontestkitdev.web.app',
       'bramwells-precision-test-kit' =>

@@ -28,6 +28,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _saveDebounceTimer;
   bool _isLoaded = false;
   String? _selectedProjectId;
+  bool _disposed = false;
 
   /// Whether projects have been loaded from storage.
   bool get isLoaded => _isLoaded;
@@ -54,6 +55,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (_isLoaded) return;
 
     final projectsJson = await storage.readProjectsJson();
+    if (_disposed) return;
     _projects
       ..clear()
       ..addAll(_decodeProjects(projectsJson));
@@ -71,7 +73,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _selectedProjectId = _projects.isEmpty ? null : projects.first.id;
     }
     _isLoaded = true;
-    notifyListeners();
+    _notifyIfActive();
   }
 
   /// Creates, selects, persists, and returns a new project.
@@ -89,7 +91,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _selectedProjectId = project.id;
     _attachProjectListener(project);
     await _saveProjects();
-    notifyListeners();
+    _notifyIfActive();
 
     return project;
   }
@@ -100,7 +102,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (!projectExists || _selectedProjectId == projectId) return;
 
     _selectedProjectId = projectId;
-    notifyListeners();
+    _notifyIfActive();
   }
 
   /// Deletes a project and returns whether the selected project was removed.
@@ -123,7 +125,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     await _saveProjects();
-    notifyListeners();
+    _notifyIfActive();
 
     return deletedSelectedProject;
   }
@@ -135,7 +137,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _invalidateProjectOrder();
     }
     await _saveProjects();
-    if (markModified) notifyListeners();
+    if (markModified) _notifyIfActive();
   }
 
   /// Marks the selected project's setup form as submitted, unlocking the
@@ -152,7 +154,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     project.touch();
     _invalidateProjectOrder();
     await _saveProjects();
-    notifyListeners();
+    _notifyIfActive();
     return true;
   }
 
@@ -167,6 +169,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _disposed = true;
     _saveDebounceTimer?.cancel();
     for (final project in _projects) {
       final listener = _projectListeners[project.id];
@@ -174,6 +177,15 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  Future<void> flush() async {
+    if (!_isLoaded) {
+      throw StateError('The workspace is still loading.');
+    }
+
+    _saveDebounceTimer?.cancel();
+    await _saveProjects();
   }
 
   void _syncSetupComplete(SavedProject project) {
@@ -226,7 +238,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       project.touch();
       _invalidateProjectOrder();
       _syncSetupComplete(project);
-      notifyListeners();
+      _notifyIfActive();
       _scheduleSave();
     }
 
@@ -235,6 +247,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _scheduleSave() {
+    if (_disposed) return;
     _saveDebounceTimer?.cancel();
     _saveDebounceTimer = Timer(const Duration(milliseconds: 400), () {
       unawaited(_saveProjects());
@@ -254,5 +267,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         })
         .then((_) => storage.writeProjectsJson(payload));
     return _saveOperation;
+  }
+
+  void _notifyIfActive() {
+    if (!_disposed) notifyListeners();
   }
 }

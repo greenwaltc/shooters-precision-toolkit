@@ -3,8 +3,12 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
-import 'package:flutter/material.dart';
+import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../auth/workspace_sign_out.dart';
 import '../help/help_instructions.dart';
 import '../styles/app_design.dart';
 import '../styles/layout/app_layout.dart';
@@ -37,6 +41,21 @@ class AppBarActionItem {
 abstract final class AppBarActionBar {
   /// Estimated width of a standard [IconButton] app-bar action.
   static const double iconActionWidth = kMinInteractiveDimension;
+
+  /// Authenticated app bars share the same save-and-sign-out operation.
+  /// Standalone workspace previews/tests can omit the session provider.
+  static List<AppBarActionItem> signOutActions(BuildContext context) {
+    final operation = context.read<WorkspaceSignOut?>();
+    if (operation == null) return const [];
+    return [
+      AppBarActionItem(
+        label: 'Sign out',
+        icon: Icons.logout,
+        tooltip: 'Sign out',
+        onPressed: () => unawaited(operation.run(context)),
+      ),
+    ];
+  }
 
   /// Builds the widgets for [AppBar.actions].
   static List<Widget> build(
@@ -139,8 +158,10 @@ class AppBarActionsMetrics {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final leadingWidth = hasLeading ? kMinInteractiveDimension : 0.0;
     final inlineWidth = _estimateInlineWidth(context, items);
-    final titleWithInline =
-        (screenWidth - leadingWidth - inlineWidth).clamp(0.0, screenWidth);
+    final titleWithInline = (screenWidth - leadingWidth - inlineWidth).clamp(
+      0.0,
+      screenWidth,
+    );
     final compact = layout.preferCompactChrome;
 
     // Collapse on mobile when inline actions would leave the brand title too
@@ -152,10 +173,13 @@ class AppBarActionsMetrics {
         inlineWidth > AppBarActionBar.iconActionWidth &&
         !_rowBrandTitleFits(titleWithInline, compact: compact);
 
-    final actionsWidth =
-        collapsed ? AppBarActionBar.iconActionWidth : inlineWidth;
-    final titleMaxWidth =
-        (screenWidth - leadingWidth - actionsWidth).clamp(0.0, screenWidth);
+    final actionsWidth = collapsed
+        ? AppBarActionBar.iconActionWidth
+        : inlineWidth;
+    final titleMaxWidth = (screenWidth - leadingWidth - actionsWidth).clamp(
+      0.0,
+      screenWidth,
+    );
 
     return AppBarActionsMetrics(
       collapsed: collapsed,
@@ -165,10 +189,7 @@ class AppBarActionsMetrics {
   }
 
   /// Whether [titleWidth] can hold the logo beside a short single-line label.
-  static bool _rowBrandTitleFits(
-    double titleWidth, {
-    required bool compact,
-  }) {
+  static bool _rowBrandTitleFits(double titleWidth, {required bool compact}) {
     final logoHeight = compact
         ? AppDesign.appBarLogoHeightCompact
         : AppDesign.appBarLogoHeight;

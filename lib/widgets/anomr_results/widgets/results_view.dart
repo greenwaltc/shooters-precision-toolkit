@@ -65,6 +65,7 @@ class _ResultsViewState extends State<ResultsView> {
             tooltip: 'Projects',
             onPressed: () => _goHome(context, store, stateManager),
           ),
+          ...AppBarActionBar.signOutActions(context),
         ];
         final actionsMetrics = AppBarActionsMetrics.of(
           context,
@@ -96,10 +97,7 @@ class _ResultsViewState extends State<ResultsView> {
                     stateManager: stateManager,
                   ),
                 )
-              : const SafeArea(
-                  bottom: false,
-                  child: EmptyResultsState(),
-                ),
+              : const SafeArea(bottom: false, child: EmptyResultsState()),
           bottomNavigationBar: const AppCopyrightFooter(),
         );
       },

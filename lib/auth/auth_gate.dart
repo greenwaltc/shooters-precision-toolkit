@@ -20,10 +20,16 @@ class AuthGate extends StatelessWidget {
     stream: auth.userChanges(),
     builder: (context, snapshot) {
       if (snapshot.hasError) {
-        return const Center(child: Text('Unable to restore your session.'));
+        return const MaterialApp(
+          home: Scaffold(
+            body: Center(child: Text('Unable to restore your session.')),
+          ),
+        );
       }
       if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
+        return const MaterialApp(
+          home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        );
       }
       final user = snapshot.data;
       if (user == null) return signedOutBuilder(context);

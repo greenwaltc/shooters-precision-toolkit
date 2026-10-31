@@ -75,10 +75,7 @@ abstract final class AppBrandAssets {
     required double maxWidth,
   }) {
     final painter = TextPainter(
-      text: TextSpan(
-        text: projectsSubtext,
-        style: taglineStyle(context),
-      ),
+      text: TextSpan(text: projectsSubtext, style: taglineStyle(context)),
       textDirection: Directionality.of(context),
       maxLines: taglineMaxLines(context),
       textScaler: MediaQuery.textScalerOf(context),
@@ -175,6 +172,7 @@ class ProjectsBannerMetrics {
   factory ProjectsBannerMetrics.of(
     BuildContext context, {
     bool includeHelpAction = true,
+    double? actionsWidth,
   }) {
     final viewport = MediaQuery.sizeOf(context);
     final compact = AppBrandAssets.isMobileLandscapeBanner(context);
@@ -185,9 +183,10 @@ class ProjectsBannerMetrics {
             maxWidth: math.max(
               AppDesign.homeBannerMinTaglineWidth,
               viewport.width -
-                  AppBrandAssets.bannerActionsReserve(
-                    includeHelpAction: includeHelpAction,
-                  ),
+                  (actionsWidth ??
+                      AppBrandAssets.bannerActionsReserve(
+                        includeHelpAction: includeHelpAction,
+                      )),
             ),
           )
         : 0.0;
@@ -465,11 +464,7 @@ class AppBrandTitleMetrics {
 /// When [metrics.stacked] is true the logo sits above the label (start-aligned)
 /// so the label is not forced into a single-line ellipsis beside a wide mark.
 class AppBrandTitle extends StatelessWidget {
-  const AppBrandTitle({
-    super.key,
-    required this.label,
-    required this.metrics,
-  });
+  const AppBrandTitle({super.key, required this.label, required this.metrics});
 
   final String label;
   final AppBrandTitleMetrics metrics;
@@ -536,4 +531,3 @@ class AppBrandTitle extends StatelessWidget {
     );
   }
 }
-

@@ -24,7 +24,7 @@ import 'app_copyright_footer.dart';
 import 'confirm_delete_project_dialog.dart';
 
 /// Home route listing saved projects and the create-project action.
-class ProjectHomePage extends StatelessWidget {
+class ProjectHomePage extends StatefulWidget {
   const ProjectHomePage({super.key});
 
   /// Mobile portrait: Instructions moves to a bottom-right FAB so the banner
@@ -38,15 +38,19 @@ class ProjectHomePage extends StatelessWidget {
   }
 
   @override
+  State<ProjectHomePage> createState() => _ProjectHomePageState();
+}
+
+class _ProjectHomePageState extends State<ProjectHomePage> {
+  @override
   Widget build(BuildContext context) {
     final store = context.watch<ProjectStore>();
 
     return AppLayoutBuilder(
       builder: (context, layout) {
-        final instructionsAsFab = _useInstructionsFab(context, layout);
-        final metrics = ProjectsBannerMetrics.of(
+        final instructionsAsFab = ProjectHomePage._useInstructionsFab(
           context,
-          includeHelpAction: !instructionsAsFab,
+          layout,
         );
         final appBarActions = <AppBarActionItem>[
           if (ProjectConfiguration.current.featureFlags.isEnabled(
@@ -54,7 +58,18 @@ class ProjectHomePage extends StatelessWidget {
           ))
             _themeModeAction(context),
           if (!instructionsAsFab) AppBarActionBar.instructions(context),
+          ...AppBarActionBar.signOutActions(context),
         ];
+
+        final actionsMetrics = AppBarActionsMetrics.of(
+          context,
+          layout: layout,
+          items: appBarActions,
+        );
+        final metrics = ProjectsBannerMetrics.of(
+          context,
+          actionsWidth: actionsMetrics.actionsWidth,
+        );
 
         // Atmosphere is painted app-wide in [MaterialApp.builder]; this scaffold
         // stays transparent so it shows through the banner as well.

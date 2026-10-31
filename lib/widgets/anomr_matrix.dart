@@ -119,6 +119,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
         tooltip: 'Project setup',
         onPressed: () => _goToProjectSetup(context, store),
       ),
+      ...AppBarActionBar.signOutActions(context),
     ];
     final actionsMetrics = AppBarActionsMetrics.of(
       context,
@@ -136,10 +137,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
       toolbarHeight: titleMetrics.toolbarHeight,
       automaticallyImplyLeading: false,
       leading: AppNavChrome.backLeading(context),
-      title: AppBrandTitle(
-        label: project.displayName,
-        metrics: titleMetrics,
-      ),
+      title: AppBrandTitle(label: project.displayName, metrics: titleMetrics),
       actions: AppBarActionBar.build(
         context,
         layout: layout,
@@ -168,7 +166,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             ],
           );
 
-          final minHeight = AppDesign.matrixMinBodyHeight *
+          final minHeight =
+              AppDesign.matrixMinBodyHeight *
               MediaQuery.textScalerOf(context).scale(1);
           if (!constraints.hasBoundedHeight ||
               constraints.maxHeight >= minHeight) {
@@ -294,8 +293,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   VoidCallback? _rangeEditSyncListener;
   final MatrixGridHistoryController _history = MatrixGridHistoryController();
 
-  static const Duration _rangeEditSelectionGuardDuration =
-      Duration(milliseconds: 150);
+  static const Duration _rangeEditSelectionGuardDuration = Duration(
+    milliseconds: 150,
+  );
 
   static const double _scrollEpsilon = 1;
 
@@ -623,10 +623,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       columnTextStyle: AppTextStyles.plutoColumn.copyWith(
         color: scheme.onSurface,
       ),
-      cellTextStyle: TextStyle(
-        color: scheme.onSurface,
-        fontSize: 14,
-      ),
+      cellTextStyle: TextStyle(color: scheme.onSurface, fontSize: 14),
       rowHeight: plutoTheme.rowHeight,
       columnHeight: plutoTheme.columnHeight,
       gridBackgroundColor: plutoTheme.backgroundColor,
@@ -738,40 +735,28 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               left: 0,
               top: 0,
               bottom: 0,
-              child: GridScrollCue(
-                edge: ScrollCueEdge.left,
-                scheme: scheme,
-              ),
+              child: GridScrollCue(edge: ScrollCueEdge.left, scheme: scheme),
             ),
           if (_scrollCues.showRight)
             Positioned(
               right: 0,
               top: 0,
               bottom: 0,
-              child: GridScrollCue(
-                edge: ScrollCueEdge.right,
-                scheme: scheme,
-              ),
+              child: GridScrollCue(edge: ScrollCueEdge.right, scheme: scheme),
             ),
           if (_scrollCues.showTop)
             Positioned(
               left: 0,
               right: 0,
               top: _bodyRowsTopInset(plutoTheme),
-              child: GridScrollCue(
-                edge: ScrollCueEdge.top,
-                scheme: scheme,
-              ),
+              child: GridScrollCue(edge: ScrollCueEdge.top, scheme: scheme),
             ),
           if (_scrollCues.showBottom)
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: GridScrollCue(
-                edge: ScrollCueEdge.bottom,
-                scheme: scheme,
-              ),
+              child: GridScrollCue(edge: ScrollCueEdge.bottom, scheme: scheme),
             ),
         ],
       ),
@@ -1375,7 +1360,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     context.read<ProjectStore>().persistSelectedProject();
   }
 
-  void _applyOrderedRows(PlutoGridStateManager manager, List<PlutoRow> ordered) {
+  void _applyOrderedRows(
+    PlutoGridStateManager manager,
+    List<PlutoRow> ordered,
+  ) {
     _renumberRunOrder(ordered);
 
     _rows = ordered;
@@ -1407,9 +1395,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   List<PlutoRow> _applySequence(List<PlutoRow> rows, List<int> sequence) {
-    final rowsByStorage = {
-      for (final row in rows) _storageIndexOf(row): row,
-    };
+    final rowsByStorage = {for (final row in rows) _storageIndexOf(row): row};
     return [for (final index in sequence) rowsByStorage[index]!];
   }
 

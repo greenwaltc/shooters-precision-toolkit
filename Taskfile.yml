@@ -57,7 +57,7 @@ tasks:
       - sh scripts/firebase_emulators.sh emulators:exec --config firebase.emulators.json --only auth,firestore --project demo-bramwellsprecisiontestkit 'task local:test'
 
   local:test:
-    desc: Run Flutter emulator smoke tests against already-running services
+    desc: Run browser Firebase connection and auth-flow tests against running services
     requires: *local_environment
     cmds:
       - node scripts/check_emulators.mjs

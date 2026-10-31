@@ -19,6 +19,7 @@ dependencies:
   pdf: ^3.12.0
   pluto_grid: ^8.1.0
   provider: ^6.1.5
+  clock: ^1.1.2
   shared_preferences: ^2.5.5
   url_launcher: ^6.3.2
   firebase_core: ^4.15.2
@@ -34,6 +35,7 @@ dev_dependencies:
   firebase_core_web: ^3.12.0
   firebase_auth_web: ^6.3.0
   cloud_firestore_web: ^5.7.3
+  web: ^1.1.1
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
   msix: ^3.18.0

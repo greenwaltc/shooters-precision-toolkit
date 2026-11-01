@@ -27,16 +27,17 @@ class GroupedFieldPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: outerPadding,
-      child: Container(
-        padding: innerPadding,
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainerLow,
-          border: Border.all(color: scheme.outline, width: AppBorders.regular),
+      child: Material(
+        color: scheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: scheme.outline, width: AppBorders.regular),
           borderRadius: AppRadius.mdRadius,
         ),
-        child: child,
+        clipBehavior: Clip.antiAlias,
+        child: Padding(padding: innerPadding, child: child),
       ),
     );
   }

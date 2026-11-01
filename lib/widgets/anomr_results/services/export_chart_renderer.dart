@@ -73,7 +73,7 @@ class ExportChartRenderer {
     try {
       await WidgetsBinding.instance.endOfFrame;
       await WidgetsBinding.instance.endOfFrame;
-      return ChartCapture.capture(
+      return await ChartCapture.capture(
         chartKey,
         pixelRatio: ChartScale.exportPixelRatio,
       );

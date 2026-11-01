@@ -12,5 +12,50 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "appId": "1:723783645502:android:46f1aaa714fe25fc6c146f",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "appId": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "macos": {
+        "default": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "appId": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
+          "uploadDebugSymbols": false,
+          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase/firebase_options_dev.dart": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "configurations": {
+            "android": "1:723783645502:android:46f1aaa714fe25fc6c146f",
+            "ios": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
+            "macos": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
+            "web": "1:723783645502:web:0afce571413c389a6c146f",
+            "windows": "1:723783645502:web:553254ed6b94e9686c146f"
+          }
+        },
+        "lib/firebase/firebase_options_prod.dart": {
+          "projectId": "bramwells-precision-test-kit",
+          "configurations": {
+            "web": "1:653363090089:web:060e48e9dc6b13acde0fb8"
+          }
+        }
+      }
+    }
   }
 }

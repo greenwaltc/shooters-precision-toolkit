@@ -24,7 +24,7 @@ import 'app_copyright_footer.dart';
 import 'confirm_delete_project_dialog.dart';
 
 /// Home route listing saved projects and the create-project action.
-class ProjectHomePage extends StatelessWidget {
+class ProjectHomePage extends StatefulWidget {
   const ProjectHomePage({super.key});
 
   /// Mobile portrait: Instructions moves to a bottom-right FAB so the banner
@@ -38,15 +38,19 @@ class ProjectHomePage extends StatelessWidget {
   }
 
   @override
+  State<ProjectHomePage> createState() => _ProjectHomePageState();
+}
+
+class _ProjectHomePageState extends State<ProjectHomePage> {
+  @override
   Widget build(BuildContext context) {
     final store = context.watch<ProjectStore>();
 
     return AppLayoutBuilder(
       builder: (context, layout) {
-        final instructionsAsFab = _useInstructionsFab(context, layout);
-        final metrics = ProjectsBannerMetrics.of(
+        final instructionsAsFab = ProjectHomePage._useInstructionsFab(
           context,
-          includeHelpAction: !instructionsAsFab,
+          layout,
         );
         final appBarActions = <AppBarActionItem>[
           if (ProjectConfiguration.current.featureFlags.isEnabled(
@@ -54,7 +58,18 @@ class ProjectHomePage extends StatelessWidget {
           ))
             _themeModeAction(context),
           if (!instructionsAsFab) AppBarActionBar.instructions(context),
+          ...AppBarActionBar.signOutActions(context),
         ];
+
+        final actionsMetrics = AppBarActionsMetrics.of(
+          context,
+          layout: layout,
+          items: appBarActions,
+        );
+        final metrics = ProjectsBannerMetrics.of(
+          context,
+          actionsWidth: actionsMetrics.actionsWidth,
+        );
 
         // Atmosphere is painted app-wide in [MaterialApp.builder]; this scaffold
         // stays transparent so it shows through the banner as well.
@@ -69,8 +84,23 @@ class ProjectHomePage extends StatelessWidget {
           ),
           body: AppResponsiveBody(
             maxWidth: (layout) => layout.homeMaxWidth,
-            builder: (context, layout) => !store.isLoaded
-                ? const Center(child: CircularProgressIndicator())
+            builder: (context, layout) =>
+                store.loadState == WorkspaceLoadState.loading ||
+                    store.loadState == WorkspaceLoadState.error
+                ? Center(
+                    child: store.loadError == null
+                        ? const CircularProgressIndicator()
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Unable to load your projects.'),
+                              TextButton(
+                                onPressed: store.load,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                  )
                 : _buildBody(
                     context,
                     store,
@@ -211,6 +241,27 @@ class ProjectHomePage extends StatelessWidget {
                     return _ProjectListTile(project: projects[index]);
                   },
                 ),
+                if (store.olderProjectsError != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  const Text(
+                    'Unable to load older projects. Please try again.',
+                  ),
+                ],
+                if (store.hasMoreProjects || store.isLoadingOlder) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton(
+                    onPressed: store.isLoadingOlder
+                        ? null
+                        : store.loadOlderProjects,
+                    child: Text(
+                      store.isLoadingOlder
+                          ? 'Loading older projects…'
+                          : store.olderProjectsError != null
+                          ? 'Retry loading older projects'
+                          : 'Load older projects',
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

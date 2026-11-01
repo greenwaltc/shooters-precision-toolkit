@@ -11,7 +11,7 @@ import 'package:bramwells_precision_test_kit/config/project_configuration.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
-import 'package:bramwells_precision_test_kit/storage/project_storage.dart';
+import 'support/fake_project_repository.dart';
 import 'package:bramwells_precision_test_kit/styles/chart/chart_scale.dart';
 import 'package:bramwells_precision_test_kit/widgets/anomr_results/widgets/empty_results_state.dart';
 import 'package:bramwells_precision_test_kit/widgets/range_entry_sheet.dart';
@@ -64,10 +64,7 @@ void main() {
           );
           _expectNoLayoutErrors(tester, '$label — empty setup form');
 
-          await _tapText(
-            tester,
-            'Test how four factors influence precision',
-          );
+          await _tapText(tester, 'Test how four factors influence precision');
           _expectNoLayoutErrors(tester, '$label — four-factor setup form');
         });
       }
@@ -146,10 +143,8 @@ void main() {
             home: Scaffold(
               body: Builder(
                 builder: (context) => TextButton(
-                  onPressed: () => showRangeEntrySheet(
-                    context,
-                    entry: _fourFactorEntry,
-                  ),
+                  onPressed: () =>
+                      showRangeEntrySheet(context, entry: _fourFactorEntry),
                   child: const Text('open'),
                 ),
               ),
@@ -210,10 +205,10 @@ void main() {
       _expectNoLayoutErrors(tester, 'delete confirmation dialog');
     });
 
-    testWidgets('app-bar overflow menu lays out on a small phone at max text scale', (
-      WidgetTester tester,
-    ) async {
-      _configureViewport(tester, size: const Size(320, 568), textScale: 1.6);
+    testWidgets(
+      'app-bar overflow menu lays out on a small phone at max text scale',
+      (WidgetTester tester) async {
+        _configureViewport(tester, size: const Size(320, 568), textScale: 1.6);
 
       await _pumpCompletedProject(tester);
       await _tapText(tester, 'Bench Rest Comparison');
@@ -223,11 +218,12 @@ void main() {
       await tester.tap(menu);
       await tester.pumpAndSettle();
 
-      expect(find.text('Instructions'), findsWidgets);
-      expect(find.text('Projects'), findsWidgets);
-      expect(find.text('Project setup'), findsOneWidget);
-      _expectNoLayoutErrors(tester, 'app-bar overflow menu');
-    });
+        expect(find.text('Instructions'), findsWidgets);
+        expect(find.text('Projects'), findsWidgets);
+        expect(find.text('Project setup'), findsOneWidget);
+        _expectNoLayoutErrors(tester, 'app-bar overflow menu');
+      },
+    );
   });
 
   group('empty states', () {
@@ -318,7 +314,11 @@ void _configureViewport(
 }
 
 Future<void> _pumpApp(WidgetTester tester) async {
-  final store = ProjectStore(storage: InMemoryProjectStorage());
+  final store = ProjectStore(
+    repository: FakeProjectRepository(),
+    saveDebounce: Duration.zero,
+  );
+  addTearDown(store.dispose);
   await store.load();
   await tester.pumpWidget(MyApp(projectStore: store));
   await tester.pumpAndSettle();
@@ -330,7 +330,11 @@ Future<void> _pumpCompletedProject(
   WidgetTester tester, {
   int factorCount = 1,
 }) async {
-  final store = ProjectStore(storage: InMemoryProjectStorage());
+  final store = ProjectStore(
+    repository: FakeProjectRepository(),
+    saveDebounce: Duration.zero,
+  );
+  addTearDown(store.dispose);
   await store.load();
 
   final project = await store.createProject();

@@ -22,7 +22,10 @@ class NoSelectedProjectPage extends StatelessWidget {
     return AppLayoutBuilder(
       builder: (context, layout) {
         final hasLeading = AppNavChrome.canPop(context);
-        final actionItems = [AppBarActionBar.instructions(context)];
+        final actionItems = [
+          AppBarActionBar.instructions(context),
+          ...AppBarActionBar.signOutActions(context),
+        ];
         final actionsMetrics = AppBarActionsMetrics.of(
           context,
           layout: layout,
@@ -50,8 +53,7 @@ class NoSelectedProjectPage extends StatelessWidget {
           ),
           body: Center(
             child: FilledButton.icon(
-              onPressed: () =>
-                  AppRoutes.goToProjects(Navigator.of(context)),
+              onPressed: () => AppRoutes.goToProjects(Navigator.of(context)),
               icon: const Icon(Icons.home_outlined),
               label: const Text('Projects'),
             ),

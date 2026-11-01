@@ -42,6 +42,7 @@ class ProjectFormPage extends StatelessWidget {
               final actionItems = [
                 AppBarActionBar.instructions(context),
                 AppNavChrome.homeActionItem(context: context, store: store),
+                ...AppBarActionBar.signOutActions(context),
               ];
               final actionsMetrics = AppBarActionsMetrics.of(
                 context,

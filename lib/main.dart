@@ -13,19 +13,70 @@ import 'model/project_store.dart';
 import 'model/theme_controller.dart';
 import 'navigation/app_page_transitions.dart';
 import 'navigation/app_routes.dart';
-import 'storage/project_storage.dart';
+import 'storage/firestore_project_repository.dart';
+import 'storage/project_draft_storage.dart';
 import 'styles/app_theme.dart';
-import 'styles/layout/app_viewport.dart';
 import 'widgets/anomr_matrix.dart';
 import 'widgets/anomr_results_page.dart';
-import 'widgets/app_atmosphere.dart';
+import 'widgets/app_background.dart';
 import 'widgets/project_form_page.dart';
 import 'widgets/project_home_page.dart';
+import 'widgets/project_save_status.dart';
+
+import 'firebase/firebase_bootstrap.dart';
+import 'auth/auth_service.dart';
+import 'firebase/firebase_startup.dart';
+import 'auth/auth_gate.dart';
+import 'auth/auth_page.dart';
+import 'auth/workspace_sign_out.dart';
 
 /// Boots Flutter and mounts the application.
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+  runApp(
+    FirebaseStartup(
+      initialize: bootstrapFirebase,
+      applicationBuilder: (services) => FirebaseApplication(services: services),
+    ),
+  );
+}
+
+/// Firebase services and one repository per signed-in account.
+class FirebaseApplication extends StatelessWidget {
+  const FirebaseApplication({
+    super.key,
+    required this.services,
+    this.repositoryForUser,
+  });
+
+  final FirebaseServices services;
+  final ProjectRepository Function(String uid)? repositoryForUser;
+
+  @override
+  Widget build(BuildContext context) => MultiProvider(
+    providers: [
+      Provider<FirebaseServices>.value(value: services),
+      Provider<AuthService>(create: (_) => AuthService(services.auth)),
+    ],
+    child: AuthGate(
+      auth: services.auth,
+      signedOutBuilder: (_) => const AuthPage(key: ValueKey('signed-out')),
+      verifyEmailBuilder: (_) => AuthPage(
+        key: ValueKey('verify/${services.auth.currentUser?.uid}'),
+        verification: true,
+      ),
+      signedInBuilder: (_, user) => MyApp(
+        key: ValueKey('${services.app.options.projectId}/${user.uid}'),
+        projectRepository:
+            repositoryForUser?.call(user.uid) ??
+            FirestoreProjectRepository(db: services.db, uid: user.uid),
+        projectDraftStorage: SharedPreferencesProjectDraftStorage(
+          projectId: services.app.options.projectId,
+          uid: user.uid,
+        ),
+      ),
+    ),
+  );
 }
 
 final Map<String, WidgetBuilder> _appRoutes = {
@@ -38,16 +89,25 @@ final Map<String, WidgetBuilder> _appRoutes = {
 /// Root widget that owns the project store and theme controller unless they
 /// are injected (e.g. for tests).
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, this.projectStore, this.themeController});
+  const MyApp({
+    super.key,
+    this.projectStore,
+    this.themeController,
+    this.projectRepository,
+    this.projectDraftStorage,
+  }) : assert(projectStore != null || projectRepository != null);
 
   final ProjectStore? projectStore;
   final ThemeController? themeController;
+  final ProjectRepository? projectRepository;
+  final ProjectDraftStorage? projectDraftStorage;
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
   late final ProjectStore _projectStore;
   late final ThemeController _themeController;
   late final bool _ownsProjectStore;
@@ -60,7 +120,10 @@ class _MyAppState extends State<MyApp> {
     _ownsProjectStore = widget.projectStore == null;
     _projectStore =
         widget.projectStore ??
-        ProjectStore(storage: SharedPreferencesProjectStorage());
+        ProjectStore(
+          repository: widget.projectRepository!,
+          draftStorage: widget.projectDraftStorage,
+        );
     unawaited(_projectStore.load());
 
     _ownsThemeController = widget.themeController == null;
@@ -90,40 +153,40 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.read<AuthService?>();
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<ProjectStore>.value(value: _projectStore),
         ChangeNotifierProvider<ThemeController>.value(value: _themeController),
+        if (auth != null)
+          Provider<WorkspaceSignOut>(
+            create: (_) => WorkspaceSignOut(
+              flush: _projectStore.flush,
+              signOut: auth.signOut,
+            ),
+          ),
       ],
       child: Consumer<ThemeController>(
         builder: (context, themeController, _) {
           return MaterialApp(
+            navigatorKey: _navigatorKey,
             title: ProjectConfiguration.current.brand.appTitle,
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: _resolveThemeMode(themeController),
             initialRoute: AppRoutes.projects,
-            builder: (context, child) {
-              final scheme = Theme.of(context).colorScheme;
-              return MediaQuery(
-                data: AppViewport.applyWebSafeArea(MediaQuery.of(context)),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ColoredBox(color: scheme.surface),
-                    const AppAtmosphere(),
-                    child ?? const SizedBox.shrink(),
-                  ],
-                ),
-              );
-            },
+            builder: (context, child) => AppBackground(
+              child: Column(
+                children: [
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                  ProjectSaveStatus(navigatorKey: _navigatorKey),
+                ],
+              ),
+            ),
             onGenerateRoute: (settings) {
               final builder = _appRoutes[settings.name];
               if (builder == null) return null;
-              return AppPageRoute<void>(
-                settings: settings,
-                builder: builder,
-              );
+              return AppPageRoute<void>(settings: settings, builder: builder);
             },
           );
         },

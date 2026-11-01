@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:bramwells_precision_test_kit/config/project_configuration.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
-import 'package:bramwells_precision_test_kit/storage/project_storage.dart';
+import 'support/fake_project_repository.dart';
 
 void main() {
   testWidgets('project home renders empty state and create action', (
@@ -36,10 +36,7 @@ void main() {
       find.text('Test how one factor (two states) influences precision'),
       findsOneWidget,
     );
-    expect(
-      find.text('8 total group sizes in 2 groups of 4'),
-      findsOneWidget,
-    );
+    expect(find.text('8 total group sizes in 2 groups of 4'), findsOneWidget);
   });
 
   testWidgets('home page hides theme toggle when feature flag is off', (
@@ -92,8 +89,9 @@ void main() {
     await _pumpApp(tester);
     await _createProject(tester);
 
-    final threeFactorOption =
-        find.text('Test how three factors influence precision');
+    final threeFactorOption = find.text(
+      'Test how three factors influence precision',
+    );
     await tester.ensureVisible(threeFactorOption);
     await tester.pumpAndSettle();
     await tester.tap(threeFactorOption);
@@ -135,8 +133,12 @@ void main() {
   testWidgets('project state persists to storage and reloads on home page', (
     WidgetTester tester,
   ) async {
-    final storage = InMemoryProjectStorage();
-    final store = ProjectStore(storage: storage);
+    final storage = FakeProjectRepository();
+    final store = ProjectStore(
+      repository: storage,
+      saveDebounce: Duration.zero,
+    );
+    addTearDown(store.dispose);
     await store.load();
 
     await tester.pumpWidget(MyApp(projectStore: store));
@@ -147,7 +149,11 @@ void main() {
     await tester.tap(find.byIcon(Icons.home_outlined));
     await tester.pumpAndSettle();
 
-    final reloadedStore = ProjectStore(storage: storage);
+    final reloadedStore = ProjectStore(
+      repository: storage,
+      saveDebounce: Duration.zero,
+    );
+    addTearDown(reloadedStore.dispose);
     await reloadedStore.load();
 
     expect(reloadedStore.projects.single.formModel.projectTitle, 'Range Test');
@@ -157,8 +163,12 @@ void main() {
   testWidgets('project deletion requires confirmation and removes storage', (
     WidgetTester tester,
   ) async {
-    final storage = InMemoryProjectStorage();
-    final store = ProjectStore(storage: storage);
+    final storage = FakeProjectRepository();
+    final store = ProjectStore(
+      repository: storage,
+      saveDebounce: Duration.zero,
+    );
+    addTearDown(store.dispose);
     await store.load();
 
     await tester.pumpWidget(MyApp(projectStore: store));
@@ -184,7 +194,11 @@ void main() {
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
-    final reloadedStore = ProjectStore(storage: storage);
+    final reloadedStore = ProjectStore(
+      repository: storage,
+      saveDebounce: Duration.zero,
+    );
+    addTearDown(reloadedStore.dispose);
     await reloadedStore.load();
 
     expect(find.text('No projects yet'), findsOneWidget);
@@ -193,7 +207,11 @@ void main() {
 }
 
 Future<ProjectStore> _pumpApp(WidgetTester tester) async {
-  final store = ProjectStore(storage: InMemoryProjectStorage());
+  final store = ProjectStore(
+    repository: FakeProjectRepository(),
+    saveDebounce: Duration.zero,
+  );
+  addTearDown(store.dispose);
   await store.load();
   await tester.pumpWidget(MyApp(projectStore: store));
   await tester.pumpAndSettle();

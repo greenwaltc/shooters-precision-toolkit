@@ -1,6 +1,7 @@
 @TestOn('browser')
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 
@@ -9,6 +10,8 @@ import 'package:bramwells_precision_test_kit/auth/auth_service.dart';
 import 'package:bramwells_precision_test_kit/firebase/firebase_bootstrap.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
+import 'package:bramwells_precision_test_kit/model/saved_project.dart';
+import 'package:bramwells_precision_test_kit/storage/firestore_project_repository.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_home_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -77,30 +80,30 @@ void main() {
                 as Map<String, dynamic>;
         expect(claims['aud'], localFirebaseProjectId);
 
-          // The checked-in bootstrap policy denies client access until migration
-          // rules are implemented. A server rejection proves emulator connectivity.
-          final document = services.db.doc('emulatorSmoke/connection');
-          final permissionDenied = isA<FirebaseException>().having(
-            (error) => error.code,
-            'code',
-            'permission-denied',
-          );
-          await expectLater(
-            document.set({'smoke': true}).timeout(const Duration(seconds: 15)),
-            throwsA(permissionDenied),
-          );
-          await expectLater(
-            document
-                .get(const GetOptions(source: Source.server))
-                .timeout(const Duration(seconds: 15)),
-            throwsA(permissionDenied),
-          );
-        } finally {
-          await credential.user!.delete();
-          await services.auth.signOut();
-        }
-        return services;
-      });
+        // The checked-in bootstrap policy denies client access until migration
+        // rules are implemented. A server rejection proves emulator connectivity.
+        final document = services.db.doc('emulatorSmoke/connection');
+        final permissionDenied = isA<FirebaseException>().having(
+          (error) => error.code,
+          'code',
+          'permission-denied',
+        );
+        await expectLater(
+          document.set({'smoke': true}).timeout(const Duration(seconds: 15)),
+          throwsA(permissionDenied),
+        );
+        await expectLater(
+          document
+              .get(const GetOptions(source: Source.server))
+              .timeout(const Duration(seconds: 15)),
+          throwsA(permissionDenied),
+        );
+      } finally {
+        await credential.user!.delete();
+        await services.auth.signOut();
+      }
+      return services;
+    });
 
     if (services == null) return; // runAsync already reports the failure.
     await tester.pumpWidget(FirebaseApplication(services: services));
@@ -245,6 +248,176 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+  test(
+    'store preserves newer edits across real Firestore acknowledgements and conflicts',
+    () async {
+      final services = emulatorServices;
+      final auth = AuthService(services.auth);
+      final email =
+          'save-state-${DateTime.now().microsecondsSinceEpoch}@example.test';
+      ProjectStore? store;
+      String? id;
+      try {
+        await auth.register(email, 'Local-test-password-123!');
+        final response = await web.window
+            .fetch(
+              'http://127.0.0.1:9099/emulator/v1/projects/$localFirebaseProjectId/oobCodes'
+                  .toJS,
+            )
+            .toDart;
+        expect(response.ok, isTrue);
+        final data = (await response.json().toDart).dartify() as Map;
+        final code = (data['oobCodes'] as List).cast<Map>().lastWhere(
+          (code) =>
+              code['email'] == email && code['requestType'] == 'VERIFY_EMAIL',
+        );
+        await services.auth.applyActionCode(code['oobCode'] as String);
+        expect(await auth.refreshVerification(), isTrue);
+        final repository = FirestoreProjectRepository(
+          db: services.db,
+          uid: services.auth.currentUser!.uid,
+        );
+        final delayed = _DelayedAcknowledgementRepository(repository);
+        final workspace = ProjectStore(
+          repository: delayed,
+          saveDebounce: const Duration(seconds: 2),
+        );
+        store = workspace;
+        expect(workspace.loadState, WorkspaceLoadState.loading);
+        await workspace.load();
+        expect(workspace.loadError, isNull);
+        expect(workspace.loadState, WorkspaceLoadState.empty);
+        final project = await workspace.createProject();
+        id = project.id;
+        expect(workspace.loadState, WorkspaceLoadState.ready);
+        project.formModel.setProjectTitle('Submitted snapshot');
+        final editCounter = workspace.editStateFor(project.id)!.editCounter;
+        final release = Completer<void>();
+        final committed = Completer<int>();
+        delayed.holdNextAcknowledgement = release.future;
+        delayed.nextCommitted = committed;
+        final saving = workspace.persistSelectedProject();
+        expect(await committed.future, 2);
+        // The server has committed revision 2, but the store has not received its
+        // acknowledgement yet. A second edit must survive that acknowledgement.
+        expect(workspace.editStateFor(project.id)!.isSaving, isTrue);
+        project.formModel.setProjectTitle('Newer unsaved edit');
+        expect(
+          workspace.editStateFor(project.id)!.editCounter,
+          greaterThan(editCounter),
+        );
+        release.complete();
+        await saving;
+        expect(workspace.revisionFor(project.id), 2);
+        expect(workspace.editStateFor(project.id)!.isDirty, isTrue);
+        await _waitForStore(
+          () =>
+              workspace.revisionFor(project.id) == 3 &&
+              workspace.saveStateFor(project.id) == ProjectSaveState.saved,
+        );
+        final ref = services.db
+            .collection('users')
+            .doc(repository.uid)
+            .collection('projects')
+            .doc(project.id);
+        final saved = (await ref.get(
+          const GetOptions(source: Source.server),
+        )).data()!;
+        expect(
+          (saved['formModel'] as Map)['projectTitle'],
+          'Newer unsaved edit',
+        );
+        expect(saved['revision'], 3);
+
+        project.formModel.setProjectTitle('Keep this local draft');
+        final remote = SavedProject.fromJson(
+          jsonDecode(jsonEncode(project.toJson())) as Map<String, dynamic>,
+        );
+        remote.formModel.setProjectTitle('Competing cloud edit');
+        await repository.saveProject(remote, expectedRevision: 3);
+        await expectLater(
+          repository.deleteProject(project.id, expectedRevision: 3),
+          throwsA(isA<ProjectConflict>()),
+        );
+        await expectLater(
+          workspace.persistSelectedProject(),
+          throwsA(isA<ProjectConflict>()),
+        );
+        expect(workspace.editStateFor(project.id)!.hasConflict, isTrue);
+        expect(workspace.editStateFor(project.id)!.isDirty, isTrue);
+        expect(workspace.selectedProject!.displayName, 'Keep this local draft');
+        await _waitForStore(() => workspace.canDiscardDraft(project.id));
+        workspace.discardConflictingDraft(project.id);
+        expect(workspace.selectedProject!.displayName, 'Competing cloud edit');
+        expect(workspace.saveStateFor(project.id), ProjectSaveState.saved);
+        expect(workspace.revisionFor(project.id), 4);
+      } finally {
+        store?.dispose();
+        final user = services.auth.currentUser;
+        if (user != null) {
+          if (id != null) {
+            await services.db
+                .collection('users')
+                .doc(user.uid)
+                .collection('projects')
+                .doc(id)
+                .delete();
+          }
+          await user.delete();
+        }
+        await services.auth.signOut();
+      }
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+}
+
+Future<void> _waitForStore(bool Function() ready) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 15));
+  while (!ready() && DateTime.now().isBefore(deadline)) {
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  }
+  expect(
+    ready(),
+    isTrue,
+    reason: 'store did not reach the expected save state',
+  );
+}
+
+/// Writes go to the real emulator. Only delivery of one acknowledgement is held
+/// to reproduce a user editing while an earlier save is still in flight.
+class _DelayedAcknowledgementRepository implements ProjectRepository {
+  _DelayedAcknowledgementRepository(this.delegate);
+  final ProjectRepository delegate;
+  Future<void>? holdNextAcknowledgement;
+  Completer<int>? nextCommitted;
+
+  @override
+  String newProjectId() => delegate.newProjectId();
+  @override
+  Stream<List<CloudProject>> watchProjects() => delegate.watchProjects();
+  @override
+  Stream<CloudProject?> watchProject(String id) => delegate.watchProject(id);
+  @override
+  Future<void> deleteProject(String id, {required int expectedRevision}) =>
+      delegate.deleteProject(id, expectedRevision: expectedRevision);
+  @override
+  Future<int> saveProject(
+    SavedProject project, {
+    required int expectedRevision,
+  }) async {
+    final hold = holdNextAcknowledgement;
+    final committed = nextCommitted;
+    holdNextAcknowledgement = null;
+    nextCommitted = null;
+    final revision = await delegate.saveProject(
+      project,
+      expectedRevision: expectedRevision,
+    );
+    committed?.complete(revision);
+    await hold;
+    return revision;
+  }
 }
 
 Future<void> _waitForAuth(

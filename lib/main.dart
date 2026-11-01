@@ -20,6 +20,7 @@ import 'widgets/anomr_results_page.dart';
 import 'widgets/app_background.dart';
 import 'widgets/project_form_page.dart';
 import 'widgets/project_home_page.dart';
+import 'widgets/project_save_status.dart';
 
 import 'firebase/firebase_bootstrap.dart';
 import 'auth/auth_service.dart';
@@ -99,6 +100,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
   late final ProjectStore _projectStore;
   late final ThemeController _themeController;
   late final bool _ownsProjectStore;
@@ -157,12 +159,20 @@ class _MyAppState extends State<MyApp> {
       child: Consumer<ThemeController>(
         builder: (context, themeController, _) {
           return MaterialApp(
+            navigatorKey: _navigatorKey,
             title: ProjectConfiguration.current.brand.appTitle,
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: _resolveThemeMode(themeController),
             initialRoute: AppRoutes.projects,
-            builder: (context, child) => AppBackground(child: child),
+            builder: (context, child) => AppBackground(
+              child: Column(
+                children: [
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                  ProjectSaveStatus(navigatorKey: _navigatorKey),
+                ],
+              ),
+            ),
             onGenerateRoute: (settings) {
               final builder = _appRoutes[settings.name];
               if (builder == null) return null;

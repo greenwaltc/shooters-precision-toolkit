@@ -1178,6 +1178,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       cell.value = normalizedValue;
     }
     widget.project.matrixState[storageKey] = normalizedValue;
+    context.read<ProjectStore>().markProjectChanged(widget.project.id);
 
     if (persist) {
       context.read<ProjectStore>().persistSelectedProject(markModified: true);

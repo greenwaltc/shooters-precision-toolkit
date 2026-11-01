@@ -33,6 +33,148 @@ void main() {
     },
   );
 
+  test('workspace distinguishes loading, empty, ready and errors', () async {
+    final backend = FakeProjectRepository();
+    final workspace = ProjectStore(repository: backend);
+    expect(workspace.loadState, WorkspaceLoadState.loading);
+    await workspace.load();
+    expect(workspace.loadState, WorkspaceLoadState.empty);
+    final project = await workspace.createProject();
+    expect(workspace.loadState, WorkspaceLoadState.ready);
+    backend.emitError(StateError('query failed'));
+    await _events();
+    expect(workspace.loadState, WorkspaceLoadState.error);
+    expect(workspace.projects.single.id, project.id);
+    await workspace.load();
+    expect(workspace.loadState, WorkspaceLoadState.ready);
+    workspace.dispose();
+    await backend.dispose();
+  });
+
+  test('edit state captures metadata independently for each project', () async {
+    final first = await store.createProject();
+    final second = await store.createProject();
+    final before = store.editStateFor(first.id)!;
+    first.formModel.setProjectTitle('Edited');
+    final after = store.editStateFor(first.id)!;
+    expect(after.project, same(first));
+    expect(after.revision, before.revision);
+    expect(after.editCounter, before.editCounter + 1);
+    expect(after.isDirty, isTrue);
+    expect(after.isSaving, isFalse);
+    expect(after.hasConflict, isFalse);
+    expect(before.isDirty, isFalse);
+    expect(store.editStateFor(second.id)!.saveState, ProjectSaveState.saved);
+    await store.flush();
+    expect(store.editStateFor(first.id)!.revision, before.revision + 1);
+    expect(store.editStateFor(first.id)!.editCounter, after.editCounter);
+    expect(store.editStateFor(first.id)!.isDirty, isFalse);
+    expect(store.editStateFor('missing'), isNull);
+  });
+
+  test(
+    'active matrix edits mark dirty once without starting an immediate write',
+    () async {
+      final project = await store.createProject();
+      final before = store.editStateFor(project.id)!;
+      repository.savedIds.clear();
+      project.matrixState['range_0'] = '1.75';
+      store.markProjectChanged(project.id);
+      expect(
+        store.editStateFor(project.id)!.editCounter,
+        before.editCounter + 1,
+      );
+      expect(store.saveStateFor(project.id), ProjectSaveState.dirty);
+      expect(repository.savedIds, isEmpty);
+      store.markProjectChanged(project.id);
+      expect(
+        store.editStateFor(project.id)!.editCounter,
+        before.editCounter + 1,
+      );
+      await store.flush();
+      expect(repository.savedIds, [project.id]);
+      expect(store.saveStateFor(project.id), ProjectSaveState.saved);
+    },
+  );
+
+  test(
+    'in-flight map edits automatically save after the older snapshot',
+    () async {
+      final backend = FakeProjectRepository();
+      final workspace = ProjectStore(
+        repository: backend,
+        saveDebounce: const Duration(milliseconds: 20),
+      );
+      await workspace.load();
+      final project = await workspace.createProject();
+      project.formModel.setProjectTitle('Submitted');
+      final barrier = Completer<void>();
+      backend.saveBarrier = barrier.future;
+      final saving = workspace.persistSelectedProject();
+      await _events();
+      final submitted = workspace.editStateFor(project.id)!;
+      expect(submitted.isSaving, isTrue);
+      // Direct matrix changes have no form-model notification or debounce timer.
+      project.matrixState['range_0'] = '2.5';
+      barrier.complete();
+      await saving;
+      final newer = workspace.editStateFor(project.id)!;
+      expect(newer.revision, 2);
+      expect(newer.editCounter, greaterThan(submitted.editCounter));
+      expect(newer.isDirty, isTrue);
+      expect(newer.isSaving, isFalse);
+      expect(
+        (await backend.watchProject(project.id).first)!.project.matrixState,
+        isEmpty,
+      );
+      final saved = Completer<void>();
+      void observe() {
+        if (workspace.revisionFor(project.id) == 3 &&
+            !workspace.hasUnsavedChanges) {
+          if (!saved.isCompleted) saved.complete();
+        }
+      }
+
+      workspace.addListener(observe);
+      await saved.future.timeout(const Duration(seconds: 2));
+      expect(
+        (await backend.watchProject(project.id).first)!.project.matrixState,
+        {'range_0': '2.5'},
+      );
+      expect(
+        workspace.editStateFor(project.id)!.saveState,
+        ProjectSaveState.saved,
+      );
+      workspace.dispose();
+      await backend.dispose();
+    },
+  );
+
+  test(
+    'conflict can keep the draft or explicitly accept the cloud version',
+    () async {
+      final project = await store.createProject();
+      final remote = (await repository.watchProject(project.id).first)!;
+      project.formModel.setProjectTitle('Local draft');
+      remote.project.formModel.setProjectTitle('Cloud version');
+      await repository.saveProject(remote.project, expectedRevision: 1);
+      await _events();
+      await expectLater(
+        store.persistSelectedProject(),
+        throwsA(isA<ProjectConflict>()),
+      );
+      final conflict = store.editStateFor(project.id)!;
+      expect(conflict.hasConflict, isTrue);
+      expect(conflict.isDirty, isTrue);
+      expect(conflict.project.displayName, 'Local draft');
+      expect(store.canDiscardDraft(project.id), isTrue);
+      store.discardConflictingDraft(project.id);
+      expect(store.selectedProject!.displayName, 'Cloud version');
+      expect(store.revisionFor(project.id), 2);
+      expect(store.editStateFor(project.id)!.saveState, ProjectSaveState.saved);
+    },
+  );
+
   test(
     'initial subscription failure is observable and can be retried',
     () async {

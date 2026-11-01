@@ -15,6 +15,37 @@ import 'saved_project.dart';
 
 enum ProjectSaveState { saved, dirty, saving, conflict, error }
 
+enum WorkspaceLoadState { loading, empty, ready, error }
+
+/// A point-in-time view of one editable project's persistence state.
+/// The project is the live editing model; the metadata is captured by value.
+@immutable
+class ProjectEditState {
+  const ProjectEditState({
+    required this.project,
+    required this.revision,
+    required this.editCounter,
+    required this.isDirty,
+    required this.isSaving,
+    required this.error,
+  });
+
+  final SavedProject project;
+  final int revision;
+  final int editCounter;
+  final bool isDirty;
+  final bool isSaving;
+  final Object? error;
+  bool get hasConflict => error is ProjectConflict;
+
+  ProjectSaveState get saveState {
+    if (isSaving) return ProjectSaveState.saving;
+    if (hasConflict) return ProjectSaveState.conflict;
+    if (error != null) return ProjectSaveState.error;
+    return isDirty ? ProjectSaveState.dirty : ProjectSaveState.saved;
+  }
+}
+
 /// Owns editable projects for one account, independently of the persistence SDK.
 class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   ProjectStore({
@@ -53,18 +84,57 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get isLoaded => _isLoaded;
   Object? get loadError => _loadError;
+  WorkspaceLoadState get loadState {
+    if (_loadError != null) return WorkspaceLoadState.error;
+    if (!_isLoaded) return WorkspaceLoadState.loading;
+    return _projects.isEmpty
+        ? WorkspaceLoadState.empty
+        : WorkspaceLoadState.ready;
+  }
+
   bool get hasUnsavedChanges => _dirty.isNotEmpty;
   SavedProject? get selectedProject => _projects[_selectedProjectId];
   int revisionFor(String id) => _revisions[id] ?? 0;
   Object? saveErrorFor(String id) => _saveErrors[id];
 
-  ProjectSaveState saveStateFor(String id) {
-    if (_saving.contains(id)) return ProjectSaveState.saving;
-    if (_saveErrors[id] is ProjectConflict) return ProjectSaveState.conflict;
-    if (_saveErrors.containsKey(id)) return ProjectSaveState.error;
-    return _dirty.contains(id)
-        ? ProjectSaveState.dirty
-        : ProjectSaveState.saved;
+  ProjectEditState? editStateFor(String id) {
+    final project = _projects[id];
+    if (project == null) return null;
+    return ProjectEditState(
+      project: project,
+      revision: revisionFor(id),
+      editCounter: _editVersions[id] ?? 0,
+      isDirty: _dirty.contains(id),
+      isSaving: _saving.contains(id),
+      error: _saveErrors[id],
+    );
+  }
+
+  ProjectSaveState saveStateFor(String id) =>
+      editStateFor(id)?.saveState ?? ProjectSaveState.saved;
+
+  bool canDiscardDraft(String id) =>
+      !_saving.contains(id) &&
+      !_deleting.contains(id) &&
+      (_remoteDeletions.contains(id) ||
+          (_pendingRemote[id]?.revision ?? 0) > revisionFor(id));
+
+  /// Used only after the user confirms discarding a conflicting draft.
+  void discardConflictingDraft(String id) {
+    if (_disposed || !canDiscardDraft(id)) {
+      throw StateError('An acknowledged cloud version is not available yet.');
+    }
+    final remote = _pendingRemote.remove(id);
+    _dirty.remove(id);
+    _saveErrors.remove(id);
+    if (_remoteDeletions.remove(id)) {
+      _removeProject(id, selectNext: false);
+    } else {
+      final existing = _projects[id];
+      if (existing != null) _observedContents[id] = _contents(existing);
+      _acceptRemote(remote!);
+    }
+    _notifyIfActive();
   }
 
   List<SavedProject> get projects => _sortedProjects ??= UnmodifiableListView(
@@ -84,6 +154,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _initialLoad = first;
     _loadFuture = first.future;
     _loadError = null;
+    _notifyIfActive();
     unawaited(_subscribe(generation, first));
     return first.future;
   }
@@ -148,6 +219,15 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (_selectedProjectId == projectId) return;
     _select(projectId);
     _notifyIfActive();
+  }
+
+  /// Records direct matrix/map edits without waiting for an explicit save call.
+  void markProjectChanged(String id) {
+    final project = _projects[id];
+    if (_disposed || project == null || !_captureChanges(project)) return;
+    project.touch();
+    _notifyIfActive();
+    _scheduleSave();
   }
 
   void _select(String? id) {
@@ -297,6 +377,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _captureChanges(project);
     if (!_dirty.contains(id)) return;
     final version = _editVersions[id];
+    final expectedRevision = revisionFor(id);
     final snapshot = SavedProject.fromJson(
       jsonDecode(jsonEncode(project.toJson())) as Map<String, dynamic>,
     );
@@ -306,7 +387,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     try {
       final revision = await repository.saveProject(
         snapshot,
-        expectedRevision: revisionFor(id),
+        expectedRevision: expectedRevision,
       );
       if (_disposed) return;
       _revisions[id] = revision;
@@ -324,6 +405,13 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         }
       } else if (remote != null && !_dirty.contains(id)) {
         _acceptRemote(remote);
+      } else if (remote != null && remote.revision > revisionFor(id)) {
+        _pendingRemote[id] = remote;
+      }
+      if (_dirty.contains(id) && !_saveErrors.containsKey(id)) {
+        // A successful older snapshot must never mark newer edits as saved.
+        // This also catches map mutations that have no form-model listener.
+        _scheduleSave();
       }
     } catch (error) {
       if (!_disposed) _saveErrors[id] = error;
@@ -350,10 +438,12 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return value;
   }
 
-  void _captureChanges(SavedProject project) {
+  bool _captureChanges(SavedProject project) {
     if (_observedContents[project.id] != _contents(project)) {
       _markChanged(project);
+      return true;
     }
+    return false;
   }
 
   void _markChanged(SavedProject project) {

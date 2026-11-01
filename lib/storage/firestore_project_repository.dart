@@ -91,13 +91,15 @@ class FirestoreProjectRepository implements ProjectRepository {
       jsonDecode(jsonEncode(project.toJson())) as Map,
     );
     final ref = _projects.doc(project.id);
-    return db.runTransaction<int>((transaction) async {
+    final revision = await db.runTransaction<int?>((transaction) async {
       final current = await transaction.get(ref);
       final actualRevision = current.exists
           ? current.data()!['revision'] as int
           : 0;
       if (actualRevision != expectedRevision) {
-        throw ProjectConflict(project.id);
+        // Return the conflict through the SDK boundary. On web, throwing a Dart
+        // domain exception inside a JS transaction wraps it as a NativeError.
+        return null;
       }
       final data = _encode(snapshot, actualRevision + 1);
       if (current.exists) {
@@ -106,19 +108,24 @@ class FirestoreProjectRepository implements ProjectRepository {
       transaction.set(ref, data);
       return actualRevision + 1;
     });
+    if (revision == null) throw ProjectConflict(project.id);
+    return revision;
   }
 
   @override
-  Future<void> deleteProject(String id, {required int expectedRevision}) =>
-      db.runTransaction<void>((tx) async {
-        final ref = _projects.doc(id);
-        final current = await tx.get(ref);
-        if (!current.exists) return;
-        if (current.data()!['revision'] != expectedRevision) {
-          throw ProjectConflict(id);
-        }
-        tx.delete(ref);
-      });
+  Future<void> deleteProject(String id, {required int expectedRevision}) async {
+    final deleted = await db.runTransaction<bool>((tx) async {
+      final ref = _projects.doc(id);
+      final current = await tx.get(ref);
+      if (!current.exists) return true;
+      if (current.data()!['revision'] != expectedRevision) {
+        return false;
+      }
+      tx.delete(ref);
+      return true;
+    });
+    if (!deleted) throw ProjectConflict(id);
+  }
 
   Future<bool> importLegacyProject(
     SavedProject project,

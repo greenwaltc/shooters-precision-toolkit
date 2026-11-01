@@ -84,7 +84,9 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
           ),
           body: AppResponsiveBody(
             maxWidth: (layout) => layout.homeMaxWidth,
-            builder: (context, layout) => !store.isLoaded
+            builder: (context, layout) =>
+                store.loadState == WorkspaceLoadState.loading ||
+                    store.loadState == WorkspaceLoadState.error
                 ? Center(
                     child: store.loadError == null
                         ? const CircularProgressIndicator()

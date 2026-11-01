@@ -13,7 +13,7 @@ import 'model/project_store.dart';
 import 'model/theme_controller.dart';
 import 'navigation/app_page_transitions.dart';
 import 'navigation/app_routes.dart';
-import 'storage/project_storage.dart';
+import 'storage/firestore_project_repository.dart';
 import 'styles/app_theme.dart';
 import 'widgets/anomr_matrix.dart';
 import 'widgets/anomr_results_page.dart';
@@ -24,7 +24,6 @@ import 'widgets/project_home_page.dart';
 import 'firebase/firebase_bootstrap.dart';
 import 'auth/auth_service.dart';
 import 'firebase/firebase_startup.dart';
-import 'storage/account_project_storage.dart';
 import 'auth/auth_gate.dart';
 import 'auth/auth_page.dart';
 import 'auth/workspace_sign_out.dart';
@@ -40,11 +39,16 @@ Future<void> main() async {
   );
 }
 
-/// Step-6 service scope. Account-scoped storage is introduced in steps 7–8.
+/// Firebase services and one repository per signed-in account.
 class FirebaseApplication extends StatelessWidget {
-  const FirebaseApplication({super.key, required this.services});
+  const FirebaseApplication({
+    super.key,
+    required this.services,
+    this.repositoryForUser,
+  });
 
   final FirebaseServices services;
+  final ProjectRepository Function(String uid)? repositoryForUser;
 
   @override
   Widget build(BuildContext context) => MultiProvider(
@@ -61,10 +65,9 @@ class FirebaseApplication extends StatelessWidget {
       ),
       signedInBuilder: (_, user) => MyApp(
         key: ValueKey('${services.app.options.projectId}/${user.uid}'),
-        projectStorage: AccountProjectStorage(
-          projectId: services.app.options.projectId,
-          uid: user.uid,
-        ),
+        projectRepository:
+            repositoryForUser?.call(user.uid) ??
+            FirestoreProjectRepository(db: services.db, uid: user.uid),
       ),
     ),
   );
@@ -84,12 +87,12 @@ class MyApp extends StatefulWidget {
     super.key,
     this.projectStore,
     this.themeController,
-    this.projectStorage,
-  });
+    this.projectRepository,
+  }) : assert(projectStore != null || projectRepository != null);
 
   final ProjectStore? projectStore;
   final ThemeController? themeController;
-  final ProjectStorage? projectStorage;
+  final ProjectRepository? projectRepository;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -108,9 +111,7 @@ class _MyAppState extends State<MyApp> {
     _ownsProjectStore = widget.projectStore == null;
     _projectStore =
         widget.projectStore ??
-        ProjectStore(
-          storage: widget.projectStorage ?? SharedPreferencesProjectStorage(),
-        );
+        ProjectStore(repository: widget.projectRepository!);
     unawaited(_projectStore.load());
 
     _ownsThemeController = widget.themeController == null;

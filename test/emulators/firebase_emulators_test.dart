@@ -8,6 +8,7 @@ import 'package:bramwells_precision_test_kit/auth/auth_page.dart';
 import 'package:bramwells_precision_test_kit/auth/auth_service.dart';
 import 'package:bramwells_precision_test_kit/firebase/firebase_bootstrap.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/model/project_store.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_home_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,6 +20,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:web/web.dart' as web;
 
 void main() {
@@ -42,40 +44,38 @@ void main() {
 
   setUp(rootBundle.clear);
 
-  testWidgets(
-    'Flutter boots with local Auth and Firestore services',
-    (tester) async {
-      const useEmulators = bool.fromEnvironment('USE_FIREBASE_EMULATORS');
-      expect(useEmulators, isTrue, reason: 'Run through task emulators:test.');
-      SharedPreferences.setMockInitialValues({});
+  testWidgets('Flutter boots with local Auth and Firestore services', (
+    tester,
+  ) async {
+    const useEmulators = bool.fromEnvironment('USE_FIREBASE_EMULATORS');
+    expect(useEmulators, isTrue, reason: 'Run through task emulators:test.');
+    SharedPreferences.setMockInitialValues({});
 
-      final services = await tester.runAsync(() async {
-        final services = emulatorServices;
-        // ignore: avoid_print
-        print('Firebase initialized for the local demo project.');
-        expect(services.app.options.projectId, localFirebaseProjectId);
-        final email =
-            'smoke-${DateTime.now().microsecondsSinceEpoch}@example.test';
-        final credential = await services.auth
-            .createUserWithEmailAndPassword(
-              email: email,
-              password: 'Local-test-password-123!',
-            )
-            .timeout(const Duration(seconds: 15));
-        // ignore: avoid_print
-        print('Auth emulator accepted the test account.');
-        try {
-          final token = await credential.user!.getIdToken();
-          final claims =
-              jsonDecode(
-                    utf8.decode(
-                      base64Url.decode(
-                        base64Url.normalize(token!.split('.')[1]),
-                      ),
-                    ),
-                  )
-                  as Map<String, dynamic>;
-          expect(claims['aud'], localFirebaseProjectId);
+    final services = await tester.runAsync(() async {
+      final services = emulatorServices;
+      // ignore: avoid_print
+      print('Firebase initialized for the local demo project.');
+      expect(services.app.options.projectId, localFirebaseProjectId);
+      final email =
+          'smoke-${DateTime.now().microsecondsSinceEpoch}@example.test';
+      final credential = await services.auth
+          .createUserWithEmailAndPassword(
+            email: email,
+            password: 'Local-test-password-123!',
+          )
+          .timeout(const Duration(seconds: 15));
+      // ignore: avoid_print
+      print('Auth emulator accepted the test account.');
+      try {
+        final token = await credential.user!.getIdToken();
+        final claims =
+            jsonDecode(
+                  utf8.decode(
+                    base64Url.decode(base64Url.normalize(token!.split('.')[1])),
+                  ),
+                )
+                as Map<String, dynamic>;
+        expect(claims['aud'], localFirebaseProjectId);
 
           // The checked-in bootstrap policy denies client access until migration
           // rules are implemented. A server rejection proves emulator connectivity.
@@ -102,34 +102,40 @@ void main() {
         return services;
       });
 
-      if (services == null) return; // runAsync already reports the failure.
-      await tester.pumpWidget(FirebaseApplication(services: services));
-      // Firebase's initial JS auth callback needs a real browser event turn;
-      // pumpAndSettle only advances the widget test's fake clock.
-      await tester.runAsync(() async {
-        final user = await services.auth.userChanges().first.timeout(
-          const Duration(seconds: 5),
-        );
-        expect(user, isNull);
-      });
-      await tester.pumpAndSettle();
-      expect(find.byType(AuthPage), findsOneWidget);
-      expect(find.byType(ProjectHomePage), findsNothing);
-      expect(find.textContaining('Unable to start the app'), findsNothing);
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-    timeout: const Timeout(Duration(minutes: 2)),
-  );
+    if (services == null) return; // runAsync already reports the failure.
+    await tester.pumpWidget(FirebaseApplication(services: services));
+    // Firebase's initial JS auth callback needs a real browser event turn;
+    // pumpAndSettle only advances the widget test's fake clock.
+    await tester.runAsync(() async {
+      final user = await services.auth.userChanges().first.timeout(
+        const Duration(seconds: 5),
+      );
+      expect(user, isNull);
+    });
+    await tester.pumpAndSettle();
+    expect(find.byType(AuthPage), findsOneWidget);
+    expect(find.byType(ProjectHomePage), findsNothing);
+    expect(find.textContaining('Unable to start the app'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, timeout: const Timeout(Duration(minutes: 2)));
 
   testWidgets(
     'emulator verification opens workspace; logout removes private routes',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
+      final previousErrorHandler = FlutterError.onError;
+      FlutterError.onError = (details) {
+        // ignore: avoid_print
+        print('Browser workspace error: ${details.exceptionAsString()}');
+        previousErrorHandler?.call(details);
+      };
+      addTearDown(() => FlutterError.onError = previousErrorHandler);
       final services = emulatorServices;
       final auth = AuthService(services.auth);
       final email =
           'gate-${DateTime.now().microsecondsSinceEpoch}@example.test';
       const password = 'Local-test-password-123!';
+      String? createdProjectId;
       try {
         await tester.runAsync(
           () => auth
@@ -172,7 +178,17 @@ void main() {
         // This browser widget runner does not bundle Material's InkSparkle
         // shader. Exercise real callbacks here; pointer/menu behavior is
         // covered by the regular workspace widget tests.
+        final store = tester.element(create).read<ProjectStore>();
         tester.widget<FilledButton>(create).onPressed!();
+        createdProjectId = store.selectedProject?.id;
+        await _pumpUntil(
+          tester,
+          () =>
+              store.selectedProject != null &&
+              store.saveStateFor(store.selectedProject!.id) ==
+                  ProjectSaveState.saved,
+          'project creation was not acknowledged by Firestore',
+        );
         await tester.pumpAndSettle();
         expect(find.byType(ProjectFormPage), findsOneWidget);
         final oldNavigator = Navigator.of(
@@ -205,6 +221,14 @@ void main() {
           // Never flush the emulator globally: interactive users may be testing too.
           try {
             await auth.signIn(email, password);
+            if (createdProjectId != null) {
+              await services.db
+                  .collection('users')
+                  .doc(services.auth.currentUser!.uid)
+                  .collection('projects')
+                  .doc(createdProjectId)
+                  .delete();
+            }
             await services.auth.currentUser!.delete();
           } on FirebaseException catch (error) {
             if (![
@@ -228,11 +252,44 @@ Future<void> _waitForAuth(
   FirebaseServices services, {
   required bool signedIn,
 }) async {
-  await tester.runAsync(
-    () => services.auth
-        .userChanges()
-        .firstWhere((user) => (user != null) == signedIn)
-        .timeout(const Duration(seconds: 10)),
-  );
+  await _pumpUntil(tester, () {
+    final user = services.auth.currentUser;
+    if ((user != null) != signedIn) return false;
+    if (signedIn && user!.emailVerified) {
+      return find.byType(ProjectHomePage).evaluate().isNotEmpty;
+    }
+    final pages = find.byType(AuthPage).evaluate();
+    return pages.isNotEmpty &&
+        (pages.single.widget as AuthPage).verification == signedIn;
+  }, 'authentication screen did not follow the session state');
+  await tester.pump();
+  if (signedIn && services.auth.currentUser!.emailVerified) {
+    final home = find.byType(ProjectHomePage);
+    if (home.evaluate().isNotEmpty) {
+      final store = tester.element(home).read<ProjectStore>();
+      await _pumpUntil(
+        tester,
+        () => store.isLoaded || store.loadError != null,
+        'workspace did not receive its initial Firestore snapshot',
+      );
+      expect(store.loadError, isNull);
+    }
+  }
   await tester.pumpAndSettle();
+}
+
+Future<void> _pumpUntil(
+  WidgetTester tester,
+  bool Function() ready,
+  String failure,
+) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 15));
+  while (!ready() && DateTime.now().isBefore(deadline)) {
+    // Deliver browser network callbacks, then advance the widget-test zone.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await tester.pump(const Duration(milliseconds: 20));
+  }
+  expect(ready(), isTrue, reason: failure);
 }

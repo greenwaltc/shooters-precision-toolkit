@@ -9,153 +9,420 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 
-import '../storage/project_storage.dart';
+import '../storage/project_repository.dart';
 import 'project_form_model.dart';
 import 'saved_project.dart';
 
-/// Coordinates project selection, persistence, and form-model listeners.
+enum ProjectSaveState { saved, dirty, saving, conflict, error }
+
+/// Owns editable projects for one account, independently of the persistence SDK.
 class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
-  ProjectStore({required this.storage}) {
+  ProjectStore({
+    required this.repository,
+    this.saveDebounce = const Duration(seconds: 2),
+  }) {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  final ProjectStorage storage;
-
-  final List<SavedProject> _projects = [];
-  final Map<String, VoidCallback> _projectListeners = {};
+  final ProjectRepository repository;
+  final Duration saveDebounce;
+  final _projects = <String, SavedProject>{};
+  final _projectListeners = <String, VoidCallback>{};
+  final _revisions = <String, int>{};
+  final _editVersions = <String, int>{};
+  final _observedContents = <String, String>{};
+  final _dirty = <String>{};
+  final _saving = <String>{};
+  final _deleting = <String>{};
+  final _saveErrors = <String, Object>{};
+  final _pendingRemote = <String, CloudProject>{};
+  final _remoteDeletions = <String>{};
   UnmodifiableListView<SavedProject>? _sortedProjects;
-  Future<void> _saveOperation = Future.value();
+  StreamSubscription<List<CloudProject>>? _projectsSubscription;
+  StreamSubscription<CloudProject?>? _selectedSubscription;
+  Future<void> _operationTail = Future.value();
+  Future<void>? _loadFuture;
+  Completer<void>? _initialLoad;
   Timer? _saveDebounceTimer;
-  bool _isLoaded = false;
   String? _selectedProjectId;
+  Object? _loadError;
+  int _loadGeneration = 0;
+  int _selectionGeneration = 0;
+  bool _isLoaded = false;
   bool _disposed = false;
 
-  /// Whether projects have been loaded from storage.
   bool get isLoaded => _isLoaded;
+  Object? get loadError => _loadError;
+  bool get hasUnsavedChanges => _dirty.isNotEmpty;
+  SavedProject? get selectedProject => _projects[_selectedProjectId];
+  int revisionFor(String id) => _revisions[id] ?? 0;
+  Object? saveErrorFor(String id) => _saveErrors[id];
 
-  /// Projects sorted by most recently updated first.
-  List<SavedProject> get projects {
-    return _sortedProjects ??= UnmodifiableListView(_projectsByRecentUpdate());
+  ProjectSaveState saveStateFor(String id) {
+    if (_saving.contains(id)) return ProjectSaveState.saving;
+    if (_saveErrors[id] is ProjectConflict) return ProjectSaveState.conflict;
+    if (_saveErrors.containsKey(id)) return ProjectSaveState.error;
+    return _dirty.contains(id)
+        ? ProjectSaveState.dirty
+        : ProjectSaveState.saved;
   }
 
-  /// Currently selected project, if one is available.
-  SavedProject? get selectedProject {
-    final selectedProjectId = _selectedProjectId;
-    if (selectedProjectId == null) return null;
+  List<SavedProject> get projects => _sortedProjects ??= UnmodifiableListView(
+    _projects.values.toList()..sort((a, b) {
+      final byDate = b.updatedAt.compareTo(a.updatedAt);
+      return byDate != 0 ? byDate : a.id.compareTo(b.id);
+    }),
+  );
 
-    for (final project in _projects) {
-      if (project.id == selectedProjectId) return project;
-    }
-
-    return null;
+  /// Attaches once and completes when the first result or loading error arrives.
+  /// A subsequent call after an error retries without discarding existing data.
+  Future<void> load() {
+    if (_disposed) return Future.error(StateError('Workspace is disposed.'));
+    if (_loadFuture != null && _loadError == null) return _loadFuture!;
+    final generation = ++_loadGeneration;
+    final first = Completer<void>();
+    _initialLoad = first;
+    _loadFuture = first.future;
+    _loadError = null;
+    unawaited(_subscribe(generation, first));
+    return first.future;
   }
 
-  /// Loads persisted projects once and selects the newest available project.
-  Future<void> load() async {
-    if (_isLoaded) return;
-
-    final projectsJson = await storage.readProjectsJson();
-    if (_disposed) return;
-    _projects
-      ..clear()
-      ..addAll(_decodeProjects(projectsJson));
-    _invalidateProjectOrder();
-
-    for (final project in _projects) {
-      _attachProjectListener(project);
-      _syncSetupComplete(project);
+  Future<void> _subscribe(int generation, Completer<void> first) async {
+    try {
+      await _projectsSubscription?.cancel();
+      if (_disposed || generation != _loadGeneration) return;
+      _projectsSubscription = repository.watchProjects().listen(
+        (page) {
+          if (_disposed || generation != _loadGeneration) return;
+          final firstPage = !_isLoaded;
+          for (final record in page) {
+            _acceptRemote(record);
+          }
+          // A bounded query losing a document does not establish its deletion.
+          _isLoaded = true;
+          _loadError = null;
+          if (firstPage && _selectedProjectId == null && _projects.isNotEmpty) {
+            _select(projects.first.id);
+          }
+          if (!first.isCompleted) first.complete();
+          _notifyIfActive();
+        },
+        onError: (Object error, StackTrace stack) {
+          if (_disposed || generation != _loadGeneration) return;
+          _loadError = error;
+          if (!first.isCompleted) first.complete();
+          _notifyIfActive();
+        },
+      );
+    } catch (error) {
+      if (!_disposed && generation == _loadGeneration) {
+        _loadError = error;
+        if (!first.isCompleted) first.complete();
+        _notifyIfActive();
+      }
     }
-
-    final selectedProjectExists = _projects.any(
-      (project) => project.id == _selectedProjectId,
-    );
-    if (!selectedProjectExists) {
-      _selectedProjectId = _projects.isEmpty ? null : projects.first.id;
-    }
-    _isLoaded = true;
-    _notifyIfActive();
   }
 
-  /// Creates, selects, persists, and returns a new project.
   Future<SavedProject> createProject() async {
+    _requireLoaded();
     final now = DateTime.now().toUtc();
     final project = SavedProject(
-      id: now.microsecondsSinceEpoch.toString(),
+      id: repository.newProjectId(),
       createdAt: now,
       updatedAt: now,
       formModel: ProjectFormModel(),
     );
-
-    _projects.add(project);
-    _invalidateProjectOrder();
-    _selectedProjectId = project.id;
+    _projects[project.id] = project;
+    _revisions[project.id] = 0;
     _attachProjectListener(project);
-    await _saveProjects();
+    _markChanged(project);
+    _select(project.id);
     _notifyIfActive();
-
+    await _queueSave(project.id);
     return project;
   }
 
-  /// Selects an existing project by id.
   Future<void> selectProject(String projectId) async {
-    final projectExists = _projects.any((project) => project.id == projectId);
-    if (!projectExists || _selectedProjectId == projectId) return;
-
-    _selectedProjectId = projectId;
+    if (_disposed || !_projects.containsKey(projectId)) return;
+    if (_selectedProjectId == projectId) return;
+    _select(projectId);
     _notifyIfActive();
   }
 
-  /// Deletes a project and returns whether the selected project was removed.
+  void _select(String? id) {
+    _selectedProjectId = id;
+    final generation = ++_selectionGeneration;
+    unawaited(_selectedSubscription?.cancel());
+    _selectedSubscription = null;
+    if (id == null || _disposed) return;
+    _selectedSubscription = repository
+        .watchProject(id)
+        .listen(
+          (record) {
+            if (_disposed || generation != _selectionGeneration) return;
+            if (_deleting.contains(id)) return;
+            if (record != null) {
+              _acceptRemote(record);
+            } else if (revisionFor(id) > 0) {
+              if (_dirty.contains(id) || _saving.contains(id)) {
+                _remoteDeletions.add(id);
+                if (!_saving.contains(id)) {
+                  _saveErrors[id] = ProjectConflict(id);
+                }
+              } else {
+                _removeProject(id, selectNext: false);
+              }
+            }
+            _notifyIfActive();
+          },
+          onError: (Object error, StackTrace stack) {
+            if (_disposed || generation != _selectionGeneration) return;
+            _loadError = error;
+            _notifyIfActive();
+          },
+        );
+  }
+
+  void _acceptRemote(CloudProject record) {
+    final id = record.project.id;
+    if (_deleting.contains(id) || record.hasPendingWrites) return;
+    final existing = _projects[id];
+    if (existing != null) _captureChanges(existing);
+    if (_dirty.contains(id) || _saving.contains(id)) {
+      final pending = _pendingRemote[id];
+      if (pending == null || record.revision >= pending.revision) {
+        _pendingRemote[id] = record;
+      }
+      return;
+    }
+    if (record.revision < revisionFor(id)) return;
+    if (existing != null && _contents(existing) == _contents(record.project)) {
+      existing.updatedAt = record.project.updatedAt;
+    } else {
+      _detachProjectListener(id);
+      _projects[id] = record.project;
+      _attachProjectListener(record.project);
+    }
+    _revisions[id] = record.revision;
+    _observedContents[id] = _contents(_projects[id]!);
+    _sortedProjects = null;
+  }
+
   Future<bool> deleteProject(String projectId) async {
-    final projectIndex = _projects.indexWhere(
-      (project) => project.id == projectId,
-    );
-    if (projectIndex == -1) return false;
-
-    final deletedProject = _projects.removeAt(projectIndex);
-    _invalidateProjectOrder();
-    final listener = _projectListeners.remove(deletedProject.id);
-    if (listener != null) {
-      deletedProject.formModel.removeListener(listener);
+    _requireLoaded();
+    if (!_projects.containsKey(projectId) || _deleting.contains(projectId)) {
+      return false;
     }
-
-    final deletedSelectedProject = _selectedProjectId == deletedProject.id;
-    if (deletedSelectedProject) {
-      _selectedProjectId = _projects.isEmpty ? null : projects.first.id;
+    _deleting.add(projectId);
+    var deletedSelection = false;
+    try {
+      await _enqueue(() async {
+        if (_disposed) throw StateError('Workspace is disposed.');
+        await repository.deleteProject(
+          projectId,
+          expectedRevision: revisionFor(projectId),
+        );
+        if (_disposed) return;
+        deletedSelection = _selectedProjectId == projectId;
+        _removeProject(projectId);
+      });
+      return deletedSelection;
+    } catch (error) {
+      _saveErrors[projectId] = error;
+      rethrow;
+    } finally {
+      _deleting.remove(projectId);
+      _notifyIfActive();
     }
-
-    await _saveProjects();
-    _notifyIfActive();
-
-    return deletedSelectedProject;
   }
 
-  /// Persists the selected project, optionally marking it modified first.
+  /// Keeps the existing widget contract, including direct matrix/map mutations.
   Future<void> persistSelectedProject({bool markModified = false}) async {
-    if (markModified) {
-      selectedProject?.touch();
-      _invalidateProjectOrder();
-    }
-    await _saveProjects();
-    if (markModified) _notifyIfActive();
+    if (_disposed) return;
+    final project = selectedProject;
+    if (project == null) return;
+    _syncSetupComplete(project);
+    if (markModified) project.touch();
+    _captureChanges(project);
+    _notifyIfActive();
+    await _queueSave(project.id);
   }
 
-  /// Marks the selected project's setup form as submitted, unlocking the
-  /// ANOMR matrix for that project. Returns whether the project may proceed
-  /// to the matrix (including when setup was already complete and still valid).
   Future<bool> completeProjectSetup() async {
     final project = selectedProject;
-    if (project == null) return false;
-    if (!project.formModel.isSetupValid) return false;
-
-    if (project.setupComplete) return true;
-
-    project.setupComplete = true;
-    project.touch();
-    _invalidateProjectOrder();
-    await _saveProjects();
+    if (project == null || !project.formModel.isSetupValid) return false;
+    if (!project.setupComplete) {
+      project.setupComplete = true;
+      project.touch();
+      _captureChanges(project);
+    }
+    await _queueSave(project.id);
     _notifyIfActive();
     return true;
+  }
+
+  /// A successful flush means every currently dirty project was acknowledged.
+  Future<void> flush() async {
+    _requireLoaded();
+    _saveDebounceTimer?.cancel();
+    for (final project in _projects.values) {
+      _captureChanges(project);
+    }
+    // Include changes made while a previous save was in flight.
+    do {
+      await _operationTail;
+      for (final id in _dirty.toList()) {
+        await _queueSave(id);
+      }
+    } while (_dirty.isNotEmpty && !_disposed);
+  }
+
+  Future<void> _enqueue(Future<void> Function() operation) {
+    final next = _operationTail.then((_) => operation());
+    // Keep the queue usable after failures; the caller still receives the error.
+    _operationTail = next.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return next;
+  }
+
+  Future<void> _queueSave(String id) => _enqueue(() => _saveProject(id));
+
+  Future<void> _saveProject(String id) async {
+    if (_disposed || _deleting.contains(id)) return;
+    final project = _projects[id];
+    if (project == null) return;
+    _captureChanges(project);
+    if (!_dirty.contains(id)) return;
+    final version = _editVersions[id];
+    final snapshot = SavedProject.fromJson(
+      jsonDecode(jsonEncode(project.toJson())) as Map<String, dynamic>,
+    );
+    _saving.add(id);
+    _saveErrors.remove(id);
+    _notifyIfActive();
+    try {
+      final revision = await repository.saveProject(
+        snapshot,
+        expectedRevision: revisionFor(id),
+      );
+      if (_disposed) return;
+      _revisions[id] = revision;
+      _captureChanges(project);
+      if (_editVersions[id] == version) {
+        _dirty.remove(id);
+      }
+      _saving.remove(id);
+      final remote = _pendingRemote.remove(id);
+      if (_remoteDeletions.remove(id)) {
+        if (_dirty.contains(id)) {
+          _saveErrors[id] = ProjectConflict(id);
+        } else {
+          _removeProject(id, selectNext: false);
+        }
+      } else if (remote != null && !_dirty.contains(id)) {
+        _acceptRemote(remote);
+      }
+    } catch (error) {
+      if (!_disposed) _saveErrors[id] = error;
+      rethrow;
+    } finally {
+      _saving.remove(id);
+      _notifyIfActive();
+    }
+  }
+
+  // Only domain content is compared: server updatedAt acknowledgement is not an edit.
+  String _contents(SavedProject project) => jsonEncode(
+    _canonical(
+      Map<String, dynamic>.from(project.toJson())..remove('updatedAt'),
+    ),
+  );
+
+  Object? _canonical(Object? value) {
+    if (value is Map<String, dynamic>) {
+      final keys = value.keys.toList()..sort();
+      return {for (final key in keys) key: _canonical(value[key])};
+    }
+    if (value is List) return value.map(_canonical).toList();
+    return value;
+  }
+
+  void _captureChanges(SavedProject project) {
+    if (_observedContents[project.id] != _contents(project)) {
+      _markChanged(project);
+    }
+  }
+
+  void _markChanged(SavedProject project) {
+    _observedContents[project.id] = _contents(project);
+    _editVersions[project.id] = (_editVersions[project.id] ?? 0) + 1;
+    _dirty.add(project.id);
+    _sortedProjects = null;
+  }
+
+  void _attachProjectListener(SavedProject project) {
+    _detachProjectListener(project.id);
+    void listener() {
+      if (_disposed) return;
+      project.touch();
+      _syncSetupComplete(project);
+      _captureChanges(project);
+      _notifyIfActive();
+      _scheduleSave();
+    }
+
+    _projectListeners[project.id] = listener;
+    project.formModel.addListener(listener);
+  }
+
+  void _detachProjectListener(String id) {
+    final listener = _projectListeners.remove(id);
+    if (listener != null) _projects[id]?.formModel.removeListener(listener);
+  }
+
+  void _removeProject(String id, {bool selectNext = true}) {
+    _detachProjectListener(id);
+    _projects.remove(id);
+    _revisions.remove(id);
+    _editVersions.remove(id);
+    _observedContents.remove(id);
+    _dirty.remove(id);
+    _saveErrors.remove(id);
+    _pendingRemote.remove(id);
+    _remoteDeletions.remove(id);
+    _sortedProjects = null;
+    if (_selectedProjectId == id) {
+      _select(selectNext && _projects.isNotEmpty ? projects.first.id : null);
+    }
+  }
+
+  void _syncSetupComplete(SavedProject project) {
+    if (project.setupComplete && !project.formModel.isSetupValid) {
+      project.setupComplete = false;
+    }
+  }
+
+  void _scheduleSave() {
+    if (_disposed) return;
+    _saveDebounceTimer?.cancel();
+    _saveDebounceTimer = Timer(saveDebounce, _saveInBackground);
+  }
+
+  void _saveInBackground() {
+    if (_disposed || !_isLoaded) return;
+    unawaited(
+      flush().catchError((Object _, StackTrace _) {
+        // Per-project failures remain observable via saveErrorFor/saveStateFor.
+      }),
+    );
+  }
+
+  void _requireLoaded() {
+    if (_disposed) throw StateError('Workspace is disposed.');
+    if (!_isLoaded) throw StateError('The workspace is still loading.');
   }
 
   @override
@@ -163,110 +430,26 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
-      unawaited(persistSelectedProject());
+      _saveInBackground();
     }
   }
 
   @override
   void dispose() {
     _disposed = true;
+    _loadGeneration++;
+    _selectionGeneration++;
     _saveDebounceTimer?.cancel();
-    for (final project in _projects) {
-      final listener = _projectListeners[project.id];
-      if (listener != null) project.formModel.removeListener(listener);
+    unawaited(_projectsSubscription?.cancel());
+    unawaited(_selectedSubscription?.cancel());
+    if (_initialLoad != null && !_initialLoad!.isCompleted) {
+      _initialLoad!.complete();
+    }
+    for (final id in _projectListeners.keys.toList()) {
+      _detachProjectListener(id);
     }
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  Future<void> flush() async {
-    if (!_isLoaded) {
-      throw StateError('The workspace is still loading.');
-    }
-
-    _saveDebounceTimer?.cancel();
-    await _saveProjects();
-  }
-
-  void _syncSetupComplete(SavedProject project) {
-    if (!project.setupComplete || project.formModel.isSetupValid) return;
-
-    project.setupComplete = false;
-  }
-
-  List<SavedProject> _projectsByRecentUpdate() {
-    return [..._projects]..sort((first, second) {
-      return second.updatedAt.compareTo(first.updatedAt);
-    });
-  }
-
-  void _invalidateProjectOrder() {
-    _sortedProjects = null;
-  }
-
-  List<SavedProject> _decodeProjects(String? projectsJson) {
-    if (projectsJson == null || projectsJson.isEmpty) return [];
-
-    final Object? decoded;
-    try {
-      decoded = jsonDecode(projectsJson);
-    } on FormatException {
-      return [];
-    }
-    final projectItems = decoded is Map<String, dynamic>
-        ? decoded['projects']
-        : decoded;
-
-    if (decoded is Map<String, dynamic>) {
-      _selectedProjectId = decoded['selectedProjectId'] as String?;
-    }
-
-    if (projectItems is! List) return [];
-
-    return projectItems.whereType<Map>().map((projectJson) {
-      return SavedProject.fromJson(Map<String, dynamic>.from(projectJson));
-    }).toList();
-  }
-
-  void _attachProjectListener(SavedProject project) {
-    final oldListener = _projectListeners.remove(project.id);
-    if (oldListener != null) {
-      project.formModel.removeListener(oldListener);
-    }
-
-    void listener() {
-      project.touch();
-      _invalidateProjectOrder();
-      _syncSetupComplete(project);
-      _notifyIfActive();
-      _scheduleSave();
-    }
-
-    project.formModel.addListener(listener);
-    _projectListeners[project.id] = listener;
-  }
-
-  void _scheduleSave() {
-    if (_disposed) return;
-    _saveDebounceTimer?.cancel();
-    _saveDebounceTimer = Timer(const Duration(milliseconds: 400), () {
-      unawaited(_saveProjects());
-    });
-  }
-
-  Future<void> _saveProjects() {
-    final payload = jsonEncode({
-      'version': 1,
-      'selectedProjectId': _selectedProjectId,
-      'projects': _projects.map((project) => project.toJson()).toList(),
-    });
-
-    _saveOperation = _saveOperation
-        .catchError((Object error, StackTrace stackTrace) {
-          debugPrint('ProjectStore: failed to save projects: $error');
-        })
-        .then((_) => storage.writeProjectsJson(payload));
-    return _saveOperation;
   }
 
   void _notifyIfActive() {

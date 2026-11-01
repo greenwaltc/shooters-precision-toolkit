@@ -1,7 +1,7 @@
 import 'package:bramwells_precision_test_kit/auth/workspace_sign_out.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
-import 'package:bramwells_precision_test_kit/storage/project_storage.dart';
+import 'support/fake_project_repository.dart';
 import 'package:bramwells_precision_test_kit/widgets/anomr_matrix.dart';
 import 'package:bramwells_precision_test_kit/widgets/anomr_results/widgets/results_view.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_form_page.dart';
@@ -20,7 +20,10 @@ void main() {
       tester.view.physicalSize = size;
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
-      final store = ProjectStore(storage: InMemoryProjectStorage());
+      final store = ProjectStore(
+        repository: FakeProjectRepository(),
+        saveDebounce: Duration.zero,
+      );
       await store.load();
       final project = await store.createProject();
       project.formModel.setProjectTitle('Sign-out test');

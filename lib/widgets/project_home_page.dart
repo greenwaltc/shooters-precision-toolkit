@@ -85,7 +85,20 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
           body: AppResponsiveBody(
             maxWidth: (layout) => layout.homeMaxWidth,
             builder: (context, layout) => !store.isLoaded
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(
+                    child: store.loadError == null
+                        ? const CircularProgressIndicator()
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text('Unable to load your projects.'),
+                              TextButton(
+                                onPressed: store.load,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                  )
                 : _buildBody(
                     context,
                     store,

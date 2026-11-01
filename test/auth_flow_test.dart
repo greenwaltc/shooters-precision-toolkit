@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/fake_auth.dart';
+import 'support/fake_project_repository.dart';
 
 void main() {
   testWidgets(
@@ -171,7 +172,19 @@ Future<void> _pumpApp(WidgetTester tester, FakeAuth auth) async {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
-  await tester.pumpWidget(FirebaseApplication(services: auth.services));
+  final repositories = <String, FakeProjectRepository>{};
+  addTearDown(() async {
+    for (final repository in repositories.values) {
+      await repository.dispose();
+    }
+  });
+  await tester.pumpWidget(
+    FirebaseApplication(
+      services: auth.services,
+      repositoryForUser: (uid) =>
+          repositories.putIfAbsent(uid, FakeProjectRepository.new),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 

@@ -920,7 +920,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final shuffled = [...rows]..shuffle(_random);
     widget.project.randomizeSequence = shuffled.map(_storageIndexOf).toList();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<ProjectStore>().persistSelectedProject();
+      if (mounted) {
+        context.read<ProjectStore>().markProjectChanged(widget.project.id);
+      }
     });
     return shuffled;
   }
@@ -1180,10 +1182,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     widget.project.matrixState[storageKey] = normalizedValue;
     context.read<ProjectStore>().markProjectChanged(widget.project.id);
 
-    if (persist) {
-      context.read<ProjectStore>().persistSelectedProject(markModified: true);
-    }
-
     if (!cellMatches) {
       manager.notifyListeners();
       setState(() {});
@@ -1204,7 +1202,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
 
     if (changed && persist && mounted) {
-      context.read<ProjectStore>().persistSelectedProject(markModified: true);
+      context.read<ProjectStore>().markProjectChanged(widget.project.id);
     }
   }
 
@@ -1358,7 +1356,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     widget.project.randomizeSequence = value
         ? ordered.map(_storageIndexOf).toList()
         : null;
-    context.read<ProjectStore>().persistSelectedProject();
+    context.read<ProjectStore>().markProjectChanged(widget.project.id);
   }
 
   void _applyOrderedRows(

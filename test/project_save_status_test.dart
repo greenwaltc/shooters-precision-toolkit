@@ -30,7 +30,8 @@ void main() {
       expect(find.text('Unsaved changes'), findsOneWidget);
       final barrier = Completer<void>();
       backend.saveBarrier = barrier.future;
-      final saving = store.persistSelectedProject();
+      final saving = store.saveSelectedProject();
+      await tester.pump();
       await tester.pump();
       expect(find.text('Saving…'), findsOneWidget);
       barrier.complete();
@@ -39,7 +40,7 @@ void main() {
       expect(find.text('Saved'), findsOneWidget);
       project.formModel.setProjectTitle('Needs retry');
       backend.saveFailure = StateError('offline');
-      await expectLater(store.persistSelectedProject(), throwsStateError);
+      await expectLater(store.saveSelectedProject(), throwsStateError);
       await tester.pump();
       expect(
         find.text('Unable to save. Your changes are kept.'),
@@ -50,6 +51,38 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Saved'), findsOneWidget);
       expect(store.selectedProject!.displayName, 'Needs retry');
+      await tester.pumpWidget(const SizedBox.shrink());
+      store.dispose();
+    },
+  );
+
+  testWidgets(
+    'Save uploads only the selection without waiting for the debounce',
+    (tester) async {
+      late FakeProjectRepository backend;
+      late ProjectStore store;
+      await tester.runAsync(() async {
+        backend = FakeProjectRepository();
+        store = ProjectStore(
+          repository: backend,
+          saveDebounce: const Duration(days: 1),
+        );
+        await store.load();
+        final first = await store.createProject();
+        final second = await store.createProject();
+        await store.selectProject(first.id);
+        first.formModel.setProjectTitle('Save this project');
+        second.formModel.setProjectTitle('Keep the other draft');
+        backend.savedIds.clear();
+      });
+      addTearDown(backend.dispose);
+      await _pumpStatus(tester, store);
+      await tester.tap(find.text('Save'));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(backend.savedIds, [store.selectedProject!.id]);
+      expect(find.text('Saved'), findsOneWidget);
+      expect(store.hasUnsavedChanges, isTrue);
       await tester.pumpWidget(const SizedBox.shrink());
       store.dispose();
     },
@@ -73,7 +106,7 @@ void main() {
         remote.project.formModel.setProjectTitle('Cloud');
         await backend.saveProject(remote.project, expectedRevision: 1);
         await expectLater(
-          store.persistSelectedProject(),
+          store.saveSelectedProject(),
           throwsA(isA<ProjectConflict>()),
         );
       });

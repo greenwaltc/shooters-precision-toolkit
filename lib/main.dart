@@ -14,6 +14,7 @@ import 'model/theme_controller.dart';
 import 'navigation/app_page_transitions.dart';
 import 'navigation/app_routes.dart';
 import 'storage/firestore_project_repository.dart';
+import 'storage/project_draft_storage.dart';
 import 'styles/app_theme.dart';
 import 'widgets/anomr_matrix.dart';
 import 'widgets/anomr_results_page.dart';
@@ -69,6 +70,10 @@ class FirebaseApplication extends StatelessWidget {
         projectRepository:
             repositoryForUser?.call(user.uid) ??
             FirestoreProjectRepository(db: services.db, uid: user.uid),
+        projectDraftStorage: SharedPreferencesProjectDraftStorage(
+          projectId: services.app.options.projectId,
+          uid: user.uid,
+        ),
       ),
     ),
   );
@@ -89,11 +94,13 @@ class MyApp extends StatefulWidget {
     this.projectStore,
     this.themeController,
     this.projectRepository,
+    this.projectDraftStorage,
   }) : assert(projectStore != null || projectRepository != null);
 
   final ProjectStore? projectStore;
   final ThemeController? themeController;
   final ProjectRepository? projectRepository;
+  final ProjectDraftStorage? projectDraftStorage;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -113,7 +120,10 @@ class _MyAppState extends State<MyApp> {
     _ownsProjectStore = widget.projectStore == null;
     _projectStore =
         widget.projectStore ??
-        ProjectStore(repository: widget.projectRepository!);
+        ProjectStore(
+          repository: widget.projectRepository!,
+          draftStorage: widget.projectDraftStorage,
+        );
     unawaited(_projectStore.load());
 
     _ownsThemeController = widget.themeController == null;

@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 
 import '../storage/project_repository.dart';
+import '../storage/project_draft_storage.dart';
 import 'project_form_model.dart';
 import 'saved_project.dart';
 
@@ -50,12 +51,14 @@ class ProjectEditState {
 class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   ProjectStore({
     required this.repository,
+    ProjectDraftStorage? draftStorage,
     this.saveDebounce = const Duration(seconds: 2),
-  }) {
+  }) : draftStorage = draftStorage ?? InMemoryProjectDraftStorage() {
     WidgetsBinding.instance.addObserver(this);
   }
 
   final ProjectRepository repository;
+  final ProjectDraftStorage draftStorage;
   final Duration saveDebounce;
   final _projects = <String, SavedProject>{};
   final _projectListeners = <String, VoidCallback>{};
@@ -66,20 +69,24 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   final _saving = <String>{};
   final _deleting = <String>{};
   final _saveErrors = <String, Object>{};
+  final _draftErrors = <String, Object>{};
+  final _restoredDrafts = <String>{};
   final _pendingRemote = <String, CloudProject>{};
   final _remoteDeletions = <String>{};
   UnmodifiableListView<SavedProject>? _sortedProjects;
   StreamSubscription<List<CloudProject>>? _projectsSubscription;
   StreamSubscription<CloudProject?>? _selectedSubscription;
   Future<void> _operationTail = Future.value();
+  Future<void> _draftOperationTail = Future.value();
   Future<void>? _loadFuture;
   Completer<void>? _initialLoad;
-  Timer? _saveDebounceTimer;
+  final _saveDebounceTimers = <String, Timer>{};
   String? _selectedProjectId;
   Object? _loadError;
   int _loadGeneration = 0;
   int _selectionGeneration = 0;
   bool _isLoaded = false;
+  bool _draftsLoaded = false;
   bool _disposed = false;
 
   bool get isLoaded => _isLoaded;
@@ -95,7 +102,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   bool get hasUnsavedChanges => _dirty.isNotEmpty;
   SavedProject? get selectedProject => _projects[_selectedProjectId];
   int revisionFor(String id) => _revisions[id] ?? 0;
-  Object? saveErrorFor(String id) => _saveErrors[id];
+  Object? saveErrorFor(String id) => _draftErrors[id] ?? _saveErrors[id];
 
   ProjectEditState? editStateFor(String id) {
     final project = _projects[id];
@@ -106,7 +113,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       editCounter: _editVersions[id] ?? 0,
       isDirty: _dirty.contains(id),
       isSaving: _saving.contains(id),
-      error: _saveErrors[id],
+      error: saveErrorFor(id),
     );
   }
 
@@ -125,6 +132,8 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       throw StateError('An acknowledged cloud version is not available yet.');
     }
     final remote = _pendingRemote.remove(id);
+    _saveDebounceTimers.remove(id)?.cancel();
+    unawaited(_queueDraftChange(id, () => draftStorage.remove(id)));
     _dirty.remove(id);
     _saveErrors.remove(id);
     if (_remoteDeletions.remove(id)) {
@@ -171,6 +180,22 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     try {
       await _projectsSubscription?.cancel();
       if (!_isCurrentLoad(generation)) return;
+      if (!_draftsLoaded) {
+        final drafts = await draftStorage.readAll();
+        if (!_isCurrentLoad(generation)) return;
+        for (final entry in drafts.entries) {
+          final project = entry.value.project;
+          _projects[entry.key] = project;
+          _revisions[entry.key] = entry.value.expectedRevision;
+          _editVersions[entry.key] = entry.value.editCounter;
+          _observedContents[entry.key] = _contents(project);
+          _dirty.add(entry.key);
+          _restoredDrafts.add(entry.key);
+          _attachProjectListener(project);
+        }
+        _sortedProjects = null;
+        _draftsLoaded = true;
+      }
       _projectsSubscription = repository.watchProjects().listen(
         (page) => _applyRecentPage(page, generation),
         onError: (Object error, StackTrace _) {
@@ -206,6 +231,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _loadError = null;
       if (firstPage && _selectedProjectId == null && _projects.isNotEmpty) {
         _select(projects.first.id);
+      }
+      for (final id in _restoredDrafts.toList()) {
+        _scheduleSave(id);
+        _restoredDrafts.remove(id);
       }
       _completeInitialLoad();
       _notifyIfActive();
@@ -254,7 +283,6 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (_disposed || project == null || !_captureChanges(project)) return;
     project.touch();
     _notifyIfActive();
-    _scheduleSave();
   }
 
   void _select(String? id) {
@@ -301,6 +329,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       if (pending == null || record.revision >= pending.revision) {
         _pendingRemote[id] = record;
       }
+      if (!_saving.contains(id) && record.revision > revisionFor(id)) {
+        _saveErrors[id] = ProjectConflict(id);
+        _saveDebounceTimers.remove(id)?.cancel();
+      }
       return;
     }
     if (record.revision < revisionFor(id)) return;
@@ -330,6 +362,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
           projectId,
           expectedRevision: revisionFor(projectId),
         );
+        await _queueDraftChange(
+          projectId,
+          () => draftStorage.remove(projectId),
+        );
         if (_disposed) return;
         deletedSelection = _selectedProjectId == projectId;
         _removeProject(projectId);
@@ -344,7 +380,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  /// Keeps the existing widget contract, including direct matrix/map mutations.
+  /// Records edits locally and debounces cloud upload, including matrix changes.
   Future<void> persistSelectedProject({bool markModified = false}) async {
     if (_disposed) return;
     final project = selectedProject;
@@ -353,7 +389,21 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (markModified) project.touch();
     _captureChanges(project);
     _notifyIfActive();
-    await _queueSave(project.id);
+    await _draftOperationTail;
+    if (_draftErrors[project.id] case final error?) throw error;
+  }
+
+  /// An explicit Save/Retry action bypasses debounce for the selected project.
+  Future<void> saveSelectedProject() async {
+    final id = selectedProject?.id;
+    if (_disposed || id == null) return;
+    if (!_dirty.contains(id) && _draftErrors.containsKey(id)) {
+      await _queueDraftChange(id, () => draftStorage.remove(id));
+      _saveErrors.remove(id);
+      _notifyIfActive();
+      return;
+    }
+    await _queueSave(id);
   }
 
   Future<bool> completeProjectSetup() async {
@@ -364,7 +414,8 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       project.touch();
       _captureChanges(project);
     }
-    await _queueSave(project.id);
+    await _draftOperationTail;
+    if (_draftErrors[project.id] case final error?) throw error;
     _notifyIfActive();
     return true;
   }
@@ -372,7 +423,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   /// A successful flush means every currently dirty project was acknowledged.
   Future<void> flush() async {
     _requireLoaded();
-    _saveDebounceTimer?.cancel();
+    for (final timer in _saveDebounceTimers.values) {
+      timer.cancel();
+    }
+    _saveDebounceTimers.clear();
     for (final project in _projects.values) {
       _captureChanges(project);
     }
@@ -383,6 +437,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         await _queueSave(id);
       }
     } while (_dirty.isNotEmpty && !_disposed);
+    await _draftOperationTail;
   }
 
   Future<void> _enqueue(Future<void> Function() operation) {
@@ -395,14 +450,17 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return next;
   }
 
-  Future<void> _queueSave(String id) => _enqueue(() => _saveProject(id));
+  Future<void> _queueSave(String id, {bool automatic = false}) =>
+      _enqueue(() => _saveProject(id, automatic: automatic));
 
-  Future<void> _saveProject(String id) async {
+  Future<void> _saveProject(String id, {bool automatic = false}) async {
     if (_disposed || _deleting.contains(id)) return;
+    if (automatic && saveErrorFor(id) != null) return;
     final project = _projects[id];
     if (project == null) return;
     _captureChanges(project);
     if (!_dirty.contains(id)) return;
+    _saveDebounceTimers.remove(id)?.cancel();
     final version = _editVersions[id];
     final expectedRevision = revisionFor(id);
     final snapshot = SavedProject.fromJson(
@@ -412,6 +470,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _saveErrors.remove(id);
     _notifyIfActive();
     try {
+      // Local writes and cleanup share an ordered queue. An old acknowledgement
+      // cannot remove a newer draft, and failed local writes stop cloud upload.
+      await _writeDraft(id);
+      if (_disposed) return;
       final revision = await repository.saveProject(
         snapshot,
         expectedRevision: expectedRevision,
@@ -421,6 +483,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _captureChanges(project);
       if (_editVersions[id] == version) {
         _dirty.remove(id);
+        await _queueDraftChange(id, () => draftStorage.remove(id));
+      } else {
+        // Rebase only on our own acknowledged write; retain all later edits.
+        await _writeDraft(id);
       }
       _saving.remove(id);
       final remote = _pendingRemote.remove(id);
@@ -438,7 +504,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       if (_dirty.contains(id) && !_saveErrors.containsKey(id)) {
         // A successful older snapshot must never mark newer edits as saved.
         // This also catches map mutations that have no form-model listener.
-        _scheduleSave();
+        _scheduleSave(id);
       }
     } catch (error) {
       if (!_disposed) _saveErrors[id] = error;
@@ -478,6 +544,8 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _editVersions[project.id] = (_editVersions[project.id] ?? 0) + 1;
     _dirty.add(project.id);
     _sortedProjects = null;
+    unawaited(_writeDraft(project.id));
+    _scheduleSave(project.id);
   }
 
   void _attachProjectListener(SavedProject project) {
@@ -488,7 +556,6 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _syncSetupComplete(project);
       _captureChanges(project);
       _notifyIfActive();
-      _scheduleSave();
     }
 
     _projectListeners[project.id] = listener;
@@ -508,6 +575,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _observedContents.remove(id);
     _dirty.remove(id);
     _saveErrors.remove(id);
+    _draftErrors.remove(id);
+    _restoredDrafts.remove(id);
+    _saveDebounceTimers.remove(id)?.cancel();
     _pendingRemote.remove(id);
     _remoteDeletions.remove(id);
     _sortedProjects = null;
@@ -522,19 +592,51 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  void _scheduleSave() {
-    if (_disposed) return;
-    _saveDebounceTimer?.cancel();
-    _saveDebounceTimer = Timer(saveDebounce, _saveInBackground);
+  Future<void> _queueDraftChange(String id, Future<void> Function() change) {
+    final next = _draftOperationTail.then((_) => change());
+    _draftOperationTail = next.then<void>(
+      (_) {
+        if (_draftErrors.remove(id) != null) _notifyIfActive();
+      },
+      onError: (Object error, StackTrace _) {
+        _draftErrors[id] = error;
+        _saveDebounceTimers.remove(id)?.cancel();
+        _notifyIfActive();
+      },
+    );
+    return next;
+  }
+
+  Future<void> _writeDraft(String id) {
+    final project = _projects[id];
+    if (project == null) return Future.value();
+    final draft = ProjectDraft.capture(
+      project,
+      revisionFor(id),
+      _editVersions[id]!,
+    );
+    return _queueDraftChange(id, () => draftStorage.write(id, draft));
+  }
+
+  void _scheduleSave(String id) {
+    if (_disposed || saveErrorFor(id) != null) return;
+    _saveDebounceTimers.remove(id)?.cancel();
+    _saveDebounceTimers[id] = Timer(saveDebounce, () {
+      _saveDebounceTimers.remove(id);
+      unawaited(
+        _queueSave(id, automatic: true).catchError((Object _, StackTrace _) {
+          // Failed projects remain paused until an explicit Save/Retry.
+        }),
+      );
+    });
   }
 
   void _saveInBackground() {
     if (_disposed || !_isLoaded) return;
-    unawaited(
-      flush().catchError((Object _, StackTrace _) {
-        // Per-project failures remain observable via saveErrorFor/saveStateFor.
-      }),
-    );
+    for (final project in _projects.values) {
+      _captureChanges(project);
+      if (_dirty.contains(project.id)) _scheduleSave(project.id);
+    }
   }
 
   void _requireLoaded() {
@@ -556,7 +658,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _disposed = true;
     _loadGeneration++;
     _selectionGeneration++;
-    _saveDebounceTimer?.cancel();
+    for (final timer in _saveDebounceTimers.values) {
+      timer.cancel();
+    }
+    _saveDebounceTimers.clear();
     unawaited(_projectsSubscription?.cancel());
     unawaited(_selectedSubscription?.cancel());
     if (_initialLoad != null && !_initialLoad!.isCompleted) {

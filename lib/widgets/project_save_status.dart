@@ -34,16 +34,19 @@ class ProjectSaveStatus extends StatelessWidget {
             spacing: 12,
             children: [
               Semantics(liveRegion: true, child: Text(label)),
-              if (state.saveState == ProjectSaveState.error)
+              if (!state.hasConflict && (state.isDirty || state.error != null))
                 TextButton(
-                  onPressed: () async {
-                    try {
-                      await store.persistSelectedProject();
-                    } catch (_) {
-                      // The store retains the error and the draft for retry.
-                    }
-                  },
-                  child: const Text('Retry save'),
+                  onPressed: state.isSaving
+                      ? null
+                      : () async {
+                          try {
+                            FocusManager.instance.primaryFocus?.unfocus();
+                            await store.saveSelectedProject();
+                          } catch (_) {
+                            // The store retains the error and the draft for retry.
+                          }
+                        },
+                  child: Text(state.error == null ? 'Save' : 'Retry save'),
                 ),
               if (state.hasConflict)
                 TextButton(

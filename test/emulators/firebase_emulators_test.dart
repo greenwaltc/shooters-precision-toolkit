@@ -296,7 +296,7 @@ void main() {
         final committed = Completer<int>();
         delayed.holdNextAcknowledgement = release.future;
         delayed.nextCommitted = committed;
-        final saving = workspace.persistSelectedProject();
+        final saving = workspace.saveSelectedProject();
         expect(await committed.future, 2);
         // The server has committed revision 2, but the store has not received its
         // acknowledgement yet. A second edit must survive that acknowledgement.
@@ -340,7 +340,7 @@ void main() {
           throwsA(isA<ProjectConflict>()),
         );
         await expectLater(
-          workspace.persistSelectedProject(),
+          workspace.saveSelectedProject(),
           throwsA(isA<ProjectConflict>()),
         );
         expect(workspace.editStateFor(project.id)!.hasConflict, isTrue);
@@ -351,6 +351,32 @@ void main() {
         expect(workspace.selectedProject!.displayName, 'Competing cloud edit');
         expect(workspace.saveStateFor(project.id), ProjectSaveState.saved);
         expect(workspace.revisionFor(project.id), 4);
+
+        // Ordinary edits are durable locally before the two-second upload.
+        workspace.selectedProject!.formModel.setProjectTitle(
+          'Debounced cloud edit',
+        );
+        await workspace.persistSelectedProject();
+        final draft = (await workspace.draftStorage.readAll())[project.id]!;
+        expect(draft.project.displayName, 'Debounced cloud edit');
+        expect(draft.expectedRevision, 4);
+        final beforeUpload = (await ref.get(
+          const GetOptions(source: Source.server),
+        )).data()!;
+        expect(beforeUpload['revision'], 4);
+        await _waitForStore(
+          () =>
+              workspace.revisionFor(project.id) == 5 &&
+              workspace.saveStateFor(project.id) == ProjectSaveState.saved,
+        );
+        final afterUpload = (await ref.get(
+          const GetOptions(source: Source.server),
+        )).data()!;
+        expect(
+          (afterUpload['formModel'] as Map)['projectTitle'],
+          'Debounced cloud edit',
+        );
+        expect(await workspace.draftStorage.readAll(), isEmpty);
       } finally {
         store?.dispose();
         final user = services.auth.currentUser;

@@ -110,7 +110,7 @@ void main() {
       project.formModel.setProjectTitle('Submitted');
       final barrier = Completer<void>();
       backend.saveBarrier = barrier.future;
-      final saving = workspace.persistSelectedProject();
+      final saving = workspace.saveSelectedProject();
       await _events();
       final submitted = workspace.editStateFor(project.id)!;
       expect(submitted.isSaving, isTrue);
@@ -160,7 +160,7 @@ void main() {
       await repository.saveProject(remote.project, expectedRevision: 1);
       await _events();
       await expectLater(
-        store.persistSelectedProject(),
+        store.saveSelectedProject(),
         throwsA(isA<ProjectConflict>()),
       );
       final conflict = store.editStateFor(project.id)!;
@@ -222,7 +222,7 @@ void main() {
       expect(store.revisionFor(first.id), 2);
       expect(store.revisionFor(second.id), 1);
       await store.flush();
-      await store.persistSelectedProject();
+      await store.saveSelectedProject();
       expect(repository.savedIds, [first.id]);
     },
   );
@@ -232,10 +232,10 @@ void main() {
     () async {
       final project = await store.createProject();
       project.matrixState['range_0'] = '1.25';
-      await store.persistSelectedProject();
+      await store.saveSelectedProject();
       project.randomizeOrder = true;
       project.randomizeSequence = [1, 0];
-      await store.persistSelectedProject();
+      await store.saveSelectedProject();
       final saved = await repository.watchProject(project.id).first;
       expect(saved!.project.matrixState, {'range_0': '1.25'});
       expect(saved.project.randomizeSequence, [1, 0]);
@@ -289,7 +289,7 @@ void main() {
       project.formModel.setProjectTitle('Submitted');
       final barrier = Completer<void>();
       repository.saveBarrier = barrier.future;
-      final saving = store.persistSelectedProject();
+      final saving = store.saveSelectedProject();
       await _events();
       expect(store.saveStateFor(project.id), ProjectSaveState.saving);
       project.formModel.setProjectTitle('Newer draft');

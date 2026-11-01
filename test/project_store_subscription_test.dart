@@ -168,7 +168,7 @@ void main() {
       project.formModel.setProjectTitle('Submitted');
       final barrier = Completer<void>();
       repository.saveBarrier = barrier.future;
-      final saving = store.persistSelectedProject();
+      final saving = store.saveSelectedProject();
       await _events();
       final submitted = _copy(project);
       project.formModel.setProjectTitle('Typed while saving');

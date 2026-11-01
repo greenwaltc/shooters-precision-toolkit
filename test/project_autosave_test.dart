@@ -189,6 +189,92 @@ void main() {
   );
 
   test(
+    'restart keeps an old base revision and conflicts with newer cloud data',
+    () => _withClock((time, f) {
+      f.project.formModel.setProjectTitle('Recover this local draft');
+      _finish(time, f.store.persistSelectedProject());
+      final remote = ProjectDraft.capture(f.project, 1, 1).project;
+      remote.formModel.setProjectTitle('Newer cloud version');
+      _finish(time, f.repository.saveProject(remote, expectedRevision: 1));
+      final restored = ProjectStore(
+        repository: f.repository,
+        draftStorage: f.drafts,
+      );
+      try {
+        _finish(time, restored.load());
+        expect(
+          restored.selectedProject!.displayName,
+          'Recover this local draft',
+        );
+        expect(restored.revisionFor(f.project.id), 1);
+        expect(restored.saveStateFor(f.project.id), ProjectSaveState.conflict);
+        final writes = f.repository.attempts.length;
+        time.elapse(const Duration(seconds: 30));
+        expect(f.repository.attempts.length, writes);
+        expect(
+          _finish(time, f.drafts.readAll())[f.project.id]!.expectedRevision,
+          1,
+        );
+      } finally {
+        restored.dispose();
+      }
+    }),
+  );
+
+  test(
+    'an edit during delayed acknowledgement cleanup survives in local storage',
+    () => _withClock((time, f) {
+      final cache = _DelayedCleanupStorage();
+      final workspace = ProjectStore(
+        repository: f.repository,
+        draftStorage: cache,
+      );
+      try {
+        _finish(time, workspace.load());
+        final selected = workspace.selectedProject!;
+        selected.formModel.setProjectTitle('Submitted');
+        final saving = workspace.saveSelectedProject();
+        time.flushMicrotasks();
+        expect(workspace.revisionFor(selected.id), 2);
+        selected.formModel.setProjectTitle('Typed during cleanup');
+        cache.release.complete();
+        _finish(time, saving);
+        final draft = _finish(time, cache.readAll())[selected.id]!;
+        expect(draft.project.displayName, 'Typed during cleanup');
+        expect(draft.expectedRevision, 2);
+        expect(workspace.hasUnsavedChanges, isTrue);
+        _finish(time, workspace.saveSelectedProject());
+        expect(_finish(time, cache.readAll()), isEmpty);
+      } finally {
+        workspace.dispose();
+      }
+    }),
+  );
+
+  test(
+    'an older acknowledgement does not delete a separately stored newer draft',
+    () => _withClock((time, f) {
+      f.project.formModel.setProjectTitle('Submitted');
+      final barrier = Completer<void>();
+      f.repository.saveBarrier = barrier.future;
+      final saving = f.store.saveSelectedProject();
+      time.flushMicrotasks();
+      final newer = ProjectDraft.capture(f.project, 2, 99).project;
+      newer.formModel.setProjectTitle('Newer stored draft');
+      _finish(
+        time,
+        f.drafts.write(f.project.id, ProjectDraft.capture(newer, 2, 99)),
+      );
+      barrier.complete();
+      _finish(time, saving);
+      expect(
+        _finish(time, f.drafts.readAll())[f.project.id]!.project.displayName,
+        'Newer stored draft',
+      );
+    }),
+  );
+
+  test(
     'newer in-flight drafts retain the acknowledged base revision',
     () => _withClock((time, f) {
       f.project.formModel.setProjectTitle('Submitted');
@@ -294,5 +380,14 @@ class _FailingDraftStorage extends InMemoryProjectDraftStorage {
       return Future.error(StateError('Local storage unavailable'));
     }
     return super.write(id, draft);
+  }
+}
+
+class _DelayedCleanupStorage extends InMemoryProjectDraftStorage {
+  final release = Completer<void>();
+  @override
+  Future<bool> removeIfMatches(String id, ProjectDraft acknowledged) async {
+    await release.future;
+    return super.removeIfMatches(id, acknowledged);
   }
 }

@@ -314,6 +314,8 @@ void main() {
           () =>
               workspace.revisionFor(project.id) == 3 &&
               workspace.saveStateFor(project.id) == ProjectSaveState.saved,
+          describe: () =>
+              'follow-up: revision=${workspace.revisionFor(project.id)}, state=${workspace.saveStateFor(project.id)}, error=${workspace.saveErrorFor(project.id)}',
         );
         final ref = services.db
             .collection('users')
@@ -368,6 +370,8 @@ void main() {
           () =>
               workspace.revisionFor(project.id) == 5 &&
               workspace.saveStateFor(project.id) == ProjectSaveState.saved,
+          describe: () =>
+              'autosave: revision=${workspace.revisionFor(project.id)}, state=${workspace.saveStateFor(project.id)}, error=${workspace.saveErrorFor(project.id)}',
         );
         final afterUpload = (await ref.get(
           const GetOptions(source: Source.server),
@@ -398,7 +402,10 @@ void main() {
   );
 }
 
-Future<void> _waitForStore(bool Function() ready) async {
+Future<void> _waitForStore(
+  bool Function() ready, {
+  String Function()? describe,
+}) async {
   final deadline = DateTime.now().add(const Duration(seconds: 15));
   while (!ready() && DateTime.now().isBefore(deadline)) {
     await Future<void>.delayed(const Duration(milliseconds: 20));
@@ -406,7 +413,7 @@ Future<void> _waitForStore(bool Function() ready) async {
   expect(
     ready(),
     isTrue,
-    reason: 'store did not reach the expected save state',
+    reason: describe?.call() ?? 'store did not reach the expected save state',
   );
 }
 

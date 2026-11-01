@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
 import 'package:bramwells_precision_test_kit/storage/project_repository.dart';
+import 'package:bramwells_precision_test_kit/storage/project_draft_storage.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_home_page.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_save_status.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,37 @@ import 'package:provider/provider.dart';
 import 'support/fake_project_repository.dart';
 
 void main() {
+  testWidgets('local draft write failures are visible and never show Saved', (
+    tester,
+  ) async {
+    late FakeProjectRepository backend;
+    late ProjectStore store;
+    final drafts = _FailingLocalDrafts();
+    await tester.runAsync(() async {
+      backend = FakeProjectRepository();
+      store = ProjectStore(repository: backend, draftStorage: drafts);
+      await store.load();
+      final project = await store.createProject();
+      drafts.fail = true;
+      project.formModel.setProjectTitle('Unsaved local edit');
+      await expectLater(store.persistSelectedProject(), throwsStateError);
+    });
+    addTearDown(backend.dispose);
+    await _pumpStatus(tester, store);
+    expect(
+      find.text('Unable to save the local draft. Keep this window open.'),
+      findsOneWidget,
+    );
+    expect(find.text('Saved'), findsNothing);
+    drafts.fail = false;
+    await tester.tap(find.text('Retry save'));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pumpAndSettle();
+    expect(find.text('Saved'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    store.dispose();
+  });
+
   testWidgets(
     'save feedback follows dirty, saving, error, retry and saved states',
     (tester) async {
@@ -164,3 +196,12 @@ Future<void> _pumpStatus(WidgetTester tester, ProjectStore store) =>
         ),
       ),
     );
+
+class _FailingLocalDrafts extends InMemoryProjectDraftStorage {
+  bool fail = false;
+  @override
+  Future<void> write(String id, ProjectDraft draft) {
+    if (fail) return Future.error(StateError('Local storage is full'));
+    return super.write(id, draft);
+  }
+}

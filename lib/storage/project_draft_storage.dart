@@ -27,8 +27,17 @@ class ProjectDraft {
     'editCounter': editCounter,
   });
 
+  bool matches(ProjectDraft other) =>
+      expectedRevision == other.expectedRevision &&
+      editCounter == other.editCounter &&
+      projectJson == other.projectJson;
+
   factory ProjectDraft.decode(String value) {
-    final data = jsonDecode(value) as Map<String, dynamic>;
+    final decoded = jsonDecode(value);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('A project draft must be a JSON object.');
+    }
+    final data = decoded;
     if (data['schemaVersion'] != 1 ||
         data['project'] is! Map<String, dynamic> ||
         data['project']['id'] is! String ||
@@ -51,6 +60,9 @@ abstract interface class ProjectDraftStorage {
   Future<Map<String, ProjectDraft>> readAll();
   Future<void> write(String id, ProjectDraft draft);
   Future<void> remove(String id);
+
+  /// Conditional acknowledgement cleanup; explicit deletion/discard uses remove.
+  Future<bool> removeIfMatches(String id, ProjectDraft acknowledged);
 }
 
 class InMemoryProjectDraftStorage implements ProjectDraftStorage {
@@ -63,6 +75,14 @@ class InMemoryProjectDraftStorage implements ProjectDraftStorage {
       _drafts[id] = draft;
   @override
   Future<void> remove(String id) async => _drafts.remove(id);
+
+  @override
+  Future<bool> removeIfMatches(String id, ProjectDraft acknowledged) async {
+    final current = _drafts[id];
+    if (current == null || !current.matches(acknowledged)) return false;
+    _drafts.remove(id);
+    return true;
+  }
 }
 
 /// Isolated from both legacy workspace JSON and other accounts/environments.
@@ -107,5 +127,20 @@ class SharedPreferencesProjectDraftStorage implements ProjectDraftStorage {
     if (!await preferences.remove(_key(id))) {
       throw StateError('Unable to clear the acknowledged project draft.');
     }
+  }
+
+  @override
+  Future<bool> removeIfMatches(String id, ProjectDraft acknowledged) async {
+    final preferences = await SharedPreferences.getInstance();
+    // Refresh the legacy preferences cache before comparing persisted contents.
+    await preferences.reload();
+    final value = preferences.getString(_key(id));
+    if (value == null || !ProjectDraft.decode(value).matches(acknowledged)) {
+      return false;
+    }
+    if (!await preferences.remove(_key(id))) {
+      throw StateError('Unable to clear the acknowledged project draft.');
+    }
+    return true;
   }
 }

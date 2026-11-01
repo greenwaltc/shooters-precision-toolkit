@@ -15,13 +15,15 @@ class ProjectSaveStatus extends StatelessWidget {
     final project = store.selectedProject;
     final state = project == null ? null : store.editStateFor(project.id);
     if (state == null) return const SizedBox.shrink();
-    final label = switch (state.saveState) {
-      ProjectSaveState.saved => 'Saved',
-      ProjectSaveState.dirty => 'Unsaved changes',
-      ProjectSaveState.saving => 'Saving…',
-      ProjectSaveState.conflict => 'Save conflict. Your draft is kept.',
-      ProjectSaveState.error => 'Unable to save. Your changes are kept.',
-    };
+    final label = state.draftError != null
+        ? 'Unable to save the local draft. Keep this window open.'
+        : switch (state.saveState) {
+            ProjectSaveState.saved => 'Saved',
+            ProjectSaveState.dirty => 'Unsaved changes',
+            ProjectSaveState.saving => 'Saving…',
+            ProjectSaveState.conflict => 'Save conflict. Your draft is kept.',
+            ProjectSaveState.error => 'Unable to save. Your changes are kept.',
+          };
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: SafeArea(

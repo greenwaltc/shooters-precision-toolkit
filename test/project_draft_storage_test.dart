@@ -65,12 +65,56 @@ void main() {
   );
 
   test(
+    'acknowledgement removes only the exact persisted draft version',
+    () async {
+      for (final storage in <ProjectDraftStorage>[
+        InMemoryProjectDraftStorage(),
+        SharedPreferencesProjectDraftStorage(projectId: 'dev', uid: 'alice'),
+      ]) {
+        final project = _project();
+        final acknowledged = ProjectDraft.capture(project, 3, 8);
+        await storage.write(project.id, acknowledged);
+        expect(
+          await storage.removeIfMatches(
+            project.id,
+            ProjectDraft.capture(project, 3, 7),
+          ),
+          isFalse,
+        );
+        expect(
+          await storage.removeIfMatches(
+            project.id,
+            ProjectDraft.capture(project, 2, 8),
+          ),
+          isFalse,
+        );
+        project.formModel.setProjectTitle('Different content');
+        expect(
+          await storage.removeIfMatches(
+            project.id,
+            ProjectDraft.capture(project, 3, 8),
+          ),
+          isFalse,
+        );
+        expect(
+          (await storage.readAll())[project.id]!.project.displayName,
+          'Draft',
+        );
+        expect(await storage.removeIfMatches(project.id, acknowledged), isTrue);
+        expect(await storage.readAll(), isEmpty);
+      }
+    },
+  );
+
+  test(
     'unsupported drafts fail visibly instead of silently discarding data',
     () async {
       expect(
         () => ProjectDraft.decode('{"schemaVersion":99}'),
         throwsFormatException,
       );
+      expect(() => ProjectDraft.decode('null'), throwsFormatException);
+      expect(() => ProjectDraft.decode('[]'), throwsFormatException);
       final preferences = await SharedPreferences.getInstance();
       const key = 'project_drafts_v1/dev/alice/broken';
       await preferences.setString(key, 'not JSON');

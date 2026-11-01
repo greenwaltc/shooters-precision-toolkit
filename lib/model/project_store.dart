@@ -29,6 +29,7 @@ class ProjectEditState {
     required this.isDirty,
     required this.isSaving,
     required this.error,
+    this.draftError,
   });
 
   final SavedProject project;
@@ -37,6 +38,7 @@ class ProjectEditState {
   final bool isDirty;
   final bool isSaving;
   final Object? error;
+  final Object? draftError;
   bool get hasConflict => error is ProjectConflict;
 
   ProjectSaveState get saveState {
@@ -114,6 +116,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       isDirty: _dirty.contains(id),
       isSaving: _saving.contains(id),
       error: saveErrorFor(id),
+      draftError: _draftErrors[id],
     );
   }
 
@@ -466,6 +469,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     final snapshot = SavedProject.fromJson(
       jsonDecode(jsonEncode(project.toJson())) as Map<String, dynamic>,
     );
+    final acknowledgedDraft = ProjectDraft.capture(
+      snapshot,
+      expectedRevision,
+      version!,
+    );
     _saving.add(id);
     _saveErrors.remove(id);
     _notifyIfActive();
@@ -483,7 +491,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _captureChanges(project);
       if (_editVersions[id] == version) {
         _dirty.remove(id);
-        await _queueDraftChange(id, () => draftStorage.remove(id));
+        await _queueDraftChange(id, () async {
+          await draftStorage.removeIfMatches(id, acknowledgedDraft);
+        });
       } else {
         // Rebase only on our own acknowledged write; retain all later edits.
         await _writeDraft(id);

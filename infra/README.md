@@ -1,5 +1,13 @@
 # Firebase infrastructure
 
+With Google provider 8.9.0, changing a ruleset also replaces its rules release
+(`ruleset_name` is ForceNew). The release intentionally has no `prevent_destroy`
+guard; that guard would block policy updates. The immutable ruleset uses
+`create_before_destroy`, while the fixed-name release is destroyed and recreated.
+Allow for a possible brief interruption to Firestore client access during that
+replacement. This does not delete the database or its documents. Database,
+project, and app destruction protections remain in place.
+
 Terraform configuration for the existing dev and production Firebase projects, following the Spark migration guide. `hashicorp/google` and `hashicorp/google-beta` are both pinned to **8.9.0**. The stable provider manages APIs, Firestore, and rules; the beta provider handles Firebase project/app/Hosting resources.
 
 ```text

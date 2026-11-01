@@ -1,6 +1,115 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Assumed model: private user project documents; schema/revision ints;
+    // timestamps; setup/randomize booleans; nullable randomized index list;
+    // a form map and matrix map. createdAt is immutable after creation.
+    // Imports: immutable receipts with schemaVersion, projectId, completedAt.
+    function owns(uid) {
+      return request.auth != null && request.auth.uid == uid &&
+          request.auth.token.email_verified == true;
+    }
+    function activeOwner(uid) {
+      return owns(uid) &&
+          !exists(/databases/$(database)/documents/accountDeletionRequests/$(uid));
+    }
+    function recentSignIn() {
+      return request.auth.token.auth_time is int &&
+          request.time.toMillis() - request.auth.token.auth_time * 1000 <= 300000;
+    }
+    function shortText(value, maximum) {
+      return value is string && value.size() <= maximum;
+    }
+    function validFactor(f) {
+      return f is map &&
+          f.keys().hasAll(['name', 'firstState', 'secondState']) &&
+          f.keys().hasOnly(['name', 'firstState', 'secondState']) &&
+          shortText(f.name, 120) && shortText(f.firstState, 120) &&
+          shortText(f.secondState, 120);
+    }
+    function validSample(s) {
+      return s is map &&
+          s.keys().hasAll(['numFactors', 'numSets', 'setSize', 'family']) &&
+          s.keys().hasOnly(['numFactors', 'numSets', 'setSize', 'family']) &&
+          s.numFactors is int && s.numFactors >= 1 && s.numFactors <= 4 &&
+          s.numSets is number && s.numSets > 0 && s.numSets <= 4096 &&
+          s.setSize is int && s.setSize >= 1 && s.setSize <= 16 &&
+          s.family in ['simpleComparison', 'factorial'];
+    }
+    function validForm(f) {
+      return f is map && f.keys().hasAll([
+          'projectTitle', 'experimentStructure', 'riskLevel',
+          'sampleSizeOption', 'factorDefinitions', 'imputeMissingData']) &&
+          f.keys().hasOnly([
+          'projectTitle', 'experimentStructure', 'riskLevel',
+          'sampleSizeOption', 'factorDefinitions', 'imputeMissingData']) &&
+          shortText(f.projectTitle, 200) &&
+          f.experimentStructure in ['simpleABComparison', 'twoFactors',
+              'threeFactors', 'fourFactors'] &&
+          f.riskLevel in ['tenPercent', 'fivePercent', 'onePercent'] &&
+          validSample(f.sampleSizeOption) && f.imputeMissingData is bool &&
+          f.factorDefinitions is list && f.factorDefinitions.size() == 4 &&
+          validFactor(f.factorDefinitions[0]) &&
+          validFactor(f.factorDefinitions[1]) &&
+          validFactor(f.factorDefinitions[2]) &&
+          validFactor(f.factorDefinitions[3]);
+    }
+    function validProject(d) {
+      return d.keys().hasAll(['schemaVersion', 'revision', 'createdAt',
+          'updatedAt', 'setupComplete', 'randomizeOrder',
+          'randomizeSequence', 'formModel', 'matrixState']) &&
+          d.keys().hasOnly(['schemaVersion', 'revision', 'createdAt',
+          'updatedAt', 'setupComplete', 'randomizeOrder',
+          'randomizeSequence', 'formModel', 'matrixState']) &&
+          d.schemaVersion == 1 && d.revision is int && d.revision >= 1 &&
+          d.createdAt is timestamp && d.updatedAt == request.time &&
+          d.setupComplete is bool && d.randomizeOrder is bool &&
+          (d.randomizeSequence == null ||
+              (d.randomizeSequence is list && d.randomizeSequence.size() <= 4096)) &&
+          validForm(d.formModel) && d.matrixState is map &&
+          d.matrixState.size() <= 4096;
+    }
+    function validImport(d, migrationKey) {
+      return d.keys().hasAll(['schemaVersion', 'projectId', 'completedAt']) &&
+          d.keys().hasOnly(['schemaVersion', 'projectId', 'completedAt']) &&
+          d.schemaVersion == 1 && migrationKey.matches('^[a-f0-9]{64}$') &&
+          d.projectId == 'legacy_' + migrationKey &&
+          d.completedAt == request.time;
+    }
+    function validDeletionRequest(d) {
+      return d.keys().hasAll(['schemaVersion', 'status', 'requestedAt']) &&
+          d.keys().hasOnly(['schemaVersion', 'status', 'requestedAt']) &&
+          d.schemaVersion == 1 && d.status == 'pending' &&
+          d.requestedAt == request.time;
+    }
+
+    match /users/{uid}/projects/{projectId} {
+      allow get: if owns(uid);
+      allow list: if owns(uid) && request.query.limit != null &&
+          request.query.limit <= 25;
+      allow create: if activeOwner(uid) && validProject(request.resource.data) &&
+          request.resource.data.revision == 1;
+      allow update: if activeOwner(uid) && validProject(request.resource.data) &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if owns(uid);
+    }
+    match /users/{uid}/imports/{migrationKey} {
+      allow get: if owns(uid);
+      allow list: if owns(uid) && request.query.limit != null &&
+          request.query.limit <= 25;
+      allow create: if activeOwner(uid) && validImport(request.resource.data, migrationKey) &&
+          getAfter(/databases/$(database)/documents/users/$(uid)/projects/$(request.resource.data.projectId)).data.revision == 1;
+      // Receipts cannot be updated/deleted by the client. This prevents retries
+      // from recreating a project that was later deleted by the user.
+    }
+    match /accountDeletionRequests/{uid} {
+      // Private operational request: schemaVersion, status, requestedAt.
+      // Only an administrator changes status/completedAt or removes a tombstone.
+      allow get: if owns(uid);
+      allow create: if owns(uid) && recentSignIn() &&
+          validDeletionRequest(request.resource.data);
+    }
     match /{document=**} {
       allow read, write: if false;
     }

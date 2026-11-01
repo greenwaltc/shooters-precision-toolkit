@@ -1,6 +1,6 @@
 {
   "firestore": {
-    "rules": "firestore.emulator.rules",
+    "rules": "firestore.rules",
     "edition": "standard"
   },
   "emulators": {

@@ -445,13 +445,11 @@ resource "google_firebaserules_ruleset" "firestore" {
 }
 
 resource "google_firebaserules_release" "firestore" {
+  # Google 8.9.0 marks ruleset_name ForceNew. Replacing this release publishes
+  # new rules; prevent_destroy here would block every policy update.
   project      = var.project_id
   name         = "cloud.firestore"
   ruleset_name = google_firebaserules_ruleset.firestore.id
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 ```
 

@@ -171,3 +171,9 @@ tasks:
     requires: *environment
     cmds:
       - npx -y firebase-tools@latest deploy --only auth --config firebase.auth.{{.ENV}}.json --project {{.PROJECT_ID}}
+
+  rules:test:
+    desc: Test Firestore permissions using a local demo project
+    requires: *local_environment
+    cmds:
+      - sh scripts/firebase_emulators.sh emulators:exec --config firebase.emulators.json --only firestore --project demo-precision-rules 'npm --prefix security-tests test'

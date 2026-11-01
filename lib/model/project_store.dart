@@ -129,6 +129,40 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       (_remoteDeletions.contains(id) ||
           (_pendingRemote[id]?.revision ?? 0) > revisionFor(id));
 
+  /// Preserve a conflicted draft under a fresh ID, never recreating its old ID.
+  Future<SavedProject> saveConflictAsNewProject(String id) async {
+    _requireLoaded();
+    final original = _projects[id];
+    if (original == null ||
+        _saveErrors[id] is! ProjectConflict ||
+        _saving.contains(id)) {
+      throw StateError('This project has no conflict to resolve.');
+    }
+    _captureChanges(original);
+    final originalCounter = _editVersions[id];
+    final now = DateTime.now().toUtc().toIso8601String();
+    final json =
+        jsonDecode(jsonEncode(original.toJson())) as Map<String, dynamic>;
+    json['id'] = repository.newProjectId();
+    json['createdAt'] = now;
+    json['updatedAt'] = now;
+    final copy = SavedProject.fromJson(json);
+    _projects[copy.id] = copy;
+    _revisions[copy.id] = 0;
+    _attachProjectListener(copy);
+    _markChanged(copy);
+    _select(copy.id);
+    _notifyIfActive();
+    // On failure the copy remains a recoverable draft with an explicit Retry.
+    await _queueSave(copy.id);
+    if (!_disposed &&
+        _editVersions[id] == originalCounter &&
+        canDiscardDraft(id)) {
+      discardConflictingDraft(id);
+    }
+    return copy;
+  }
+
   /// Used only after the user confirms discarding a conflicting draft.
   void discardConflictingDraft(String id) {
     if (_disposed || !canDiscardDraft(id)) {

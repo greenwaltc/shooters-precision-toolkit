@@ -58,10 +58,8 @@ class AuthService {
   ActionCodeSettings get _emailActionSettings {
     final returnUrl = switch (auth.app.options.projectId) {
       localFirebaseProjectId => 'http://127.0.0.1:7357',
-      'bramwellsprecisiontestkitdev' =>
-        'https://bramwellsprecisiontestkitdev.web.app',
-      'bramwells-precision-test-kit' =>
-        'https://bramwells-precision-test-kit.web.app',
+      'bramwellsprecisiontestkitdev' => 'https://dev.bramwelltest.com',
+      'bramwells-precision-test-kit' => 'https://bramwelltest.com',
       _ => throw StateError('Unknown Firebase project.'),
     };
 

@@ -176,6 +176,75 @@ void main() {
   );
 
   test(
+    'saving a conflict as a copy preserves remote data and uses a fresh revision',
+    () async {
+      final original = await store.createProject();
+      final remote = (await repository.watchProject(original.id).first)!;
+      original.formModel.setProjectTitle('Local draft');
+      original.matrixState['range_0'] = '1.25';
+      remote.project.formModel.setProjectTitle('Other tab');
+      await repository.saveProject(remote.project, expectedRevision: 1);
+      await _events();
+      final copy = await store.saveConflictAsNewProject(original.id);
+      expect(copy.id, isNot(original.id));
+      expect(copy.displayName, 'Local draft');
+      expect(copy.matrixState['range_0'], '1.25');
+      expect(copy.formModel, isNot(same(original.formModel)));
+      expect(store.revisionFor(copy.id), 1);
+      expect(store.selectedProject, same(copy));
+      expect(
+        (await repository.watchProject(original.id).first)!.project.displayName,
+        'Other tab',
+      );
+      expect(
+        store.projects.firstWhere((p) => p.id == original.id).displayName,
+        'Other tab',
+      );
+    },
+  );
+
+  test(
+    'a remotely deleted draft is recovered as a new document only',
+    () async {
+      final original = await store.createProject();
+      original.formModel.setProjectTitle('Recover deleted draft');
+      await repository.deleteProject(original.id, expectedRevision: 1);
+      await _events();
+      final copy = await store.saveConflictAsNewProject(original.id);
+      expect(await repository.watchProject(original.id).first, isNull);
+      expect(copy.id, isNot(original.id));
+      expect(copy.displayName, 'Recover deleted draft');
+      expect(store.projects.map((p) => p.id), [copy.id]);
+      expect(store.revisionFor(copy.id), 1);
+    },
+  );
+
+  test(
+    'failed copy saves retain both drafts and can retry the same new ID',
+    () async {
+      final original = await store.createProject();
+      original.formModel.setProjectTitle('Do not lose this');
+      await repository.deleteProject(original.id, expectedRevision: 1);
+      await _events();
+      repository.saveFailure = StateError('offline');
+      await expectLater(
+        store.saveConflictAsNewProject(original.id),
+        throwsStateError,
+      );
+      final failedCopy = store.selectedProject!;
+      expect(failedCopy.id, isNot(original.id));
+      expect(store.projects.length, 2);
+      expect(store.saveStateFor(original.id), ProjectSaveState.conflict);
+      expect(store.saveStateFor(failedCopy.id), ProjectSaveState.error);
+      repository.saveFailure = null;
+      await store.saveSelectedProject();
+      expect(store.selectedProject!.id, failedCopy.id);
+      expect(store.revisionFor(failedCopy.id), 1);
+      expect(await repository.watchProject(original.id).first, isNull);
+    },
+  );
+
+  test(
     'initial subscription failure is observable and can be retried',
     () async {
       final failing = _InitiallyFailingRepository();

@@ -121,6 +121,39 @@ void main() {
   );
 
   testWidgets(
+    'the conflict dialog saves a deleted project draft under a fresh ID',
+    (tester) async {
+      late FakeProjectRepository backend;
+      late ProjectStore store;
+      late String originalId;
+      await tester.runAsync(() async {
+        backend = FakeProjectRepository();
+        store = ProjectStore(repository: backend);
+        await store.load();
+        final original = await store.createProject();
+        originalId = original.id;
+        original.formModel.setProjectTitle('Recovered draft');
+        await backend.deleteProject(original.id, expectedRevision: 1);
+        await Future<void>.delayed(Duration.zero);
+      });
+      addTearDown(backend.dispose);
+      await tester.pumpWidget(MyApp(projectStore: store));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Review conflict'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save as a new project'));
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(store.selectedProject!.id, isNot(originalId));
+      expect(store.selectedProject!.displayName, 'Recovered draft');
+      expect(store.projects.length, 1);
+      expect(find.text('Saved'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      store.dispose();
+    },
+  );
+
+  testWidgets(
     'conflict choices preserve the draft until discard is confirmed',
     (tester) async {
       late FakeProjectRepository backend;

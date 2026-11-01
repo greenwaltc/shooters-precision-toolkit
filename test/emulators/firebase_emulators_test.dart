@@ -257,6 +257,7 @@ void main() {
           'save-state-${DateTime.now().microsecondsSinceEpoch}@example.test';
       ProjectStore? store;
       String? id;
+      String? copyId;
       try {
         await auth.register(email, 'Local-test-password-123!');
         final response = await web.window
@@ -381,10 +382,41 @@ void main() {
           'Debounced cloud edit',
         );
         expect(await workspace.draftStorage.readAll(), isEmpty);
+        final local = workspace.selectedProject!;
+        local.formModel.setProjectTitle('Recover as separate project');
+        final competing = SavedProject.fromJson(
+          jsonDecode(jsonEncode(local.toJson())) as Map<String, dynamic>,
+        );
+        competing.formModel.setProjectTitle('Other tab owns revision six');
+        await repository.saveProject(competing, expectedRevision: 5);
+        await _waitForStore(
+          () => workspace.saveStateFor(project.id) == ProjectSaveState.conflict,
+        );
+        final copy = await workspace.saveConflictAsNewProject(project.id);
+        copyId = copy.id;
+        expect(copy.id, isNot(project.id));
+        expect(workspace.revisionFor(copy.id), 1);
+        expect(copy.displayName, 'Recover as separate project');
+        final originalAfterCopy = (await ref.get(
+          const GetOptions(source: Source.server),
+        )).data()!;
+        expect(originalAfterCopy['revision'], 6);
+        expect(
+          (originalAfterCopy['formModel'] as Map)['projectTitle'],
+          'Other tab owns revision six',
+        );
       } finally {
         store?.dispose();
         final user = services.auth.currentUser;
         if (user != null) {
+          if (copyId != null) {
+            await services.db
+                .collection('users')
+                .doc(user.uid)
+                .collection('projects')
+                .doc(copyId)
+                .delete();
+          }
           if (id != null) {
             await services.db
                 .collection('users')

@@ -98,6 +98,7 @@ class FakeAuthUser extends Fake implements User {
   int verificationFailures = 0;
   int verificationRequests = 0;
   int forcedTokenRefreshes = 0;
+  Completer<IdTokenResult>? tokenRefresh;
   void Function()? onReload;
 
   @override
@@ -116,6 +117,13 @@ class FakeAuthUser extends Fake implements User {
   }
 
   @override
+  Future<IdTokenResult> getIdTokenResult([bool forceRefresh = false]) async {
+    if (forceRefresh) forcedTokenRefreshes++;
+    if (tokenRefresh != null) return tokenRefresh!.future;
+    return FakeTokenResult(serverVerified);
+  }
+
+  @override
   Future<void> sendEmailVerification([ActionCodeSettings? settings]) async {
     verificationRequests++;
     if (verificationFailures > 0) {
@@ -129,6 +137,13 @@ class _Credential extends Fake implements UserCredential {
   _Credential(this.user);
   @override
   final User user;
+}
+
+class FakeTokenResult extends Fake implements IdTokenResult {
+  FakeTokenResult(this.verified);
+  final bool verified;
+  @override
+  Map<String, dynamic> get claims => {'email_verified': verified};
 }
 
 class _App extends Fake implements FirebaseApp {

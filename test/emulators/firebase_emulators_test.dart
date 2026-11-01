@@ -168,11 +168,16 @@ void main() {
           );
           expect(codes, isNotEmpty);
           await services.auth.applyActionCode(codes.last['oobCode'] as String);
-          expect(await auth.refreshVerification(), isTrue);
+          // Simulate returning from the external verification page: refresh the
+          // profile without calling the verification screen's refresh helper.
+          // AuthGate must refresh token claims before mounting the workspace.
+          await services.auth.currentUser!.reload();
+        });
+        await _waitForAuth(tester, services, signedIn: true);
+        await tester.runAsync(() async {
           final token = await services.auth.currentUser!.getIdTokenResult();
           expect(token.claims?['email_verified'], isTrue);
         });
-        await _waitForAuth(tester, services, signedIn: true);
         expect(find.byType(ProjectHomePage), findsOneWidget);
         expect(find.byType(AuthPage), findsNothing);
 

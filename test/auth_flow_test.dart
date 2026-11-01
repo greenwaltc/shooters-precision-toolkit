@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bramwells_precision_test_kit/auth/auth_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_form_page.dart';
@@ -12,6 +14,37 @@ import 'support/fake_auth.dart';
 import 'support/fake_project_repository.dart';
 
 void main() {
+  testWidgets('restored verified profile waits for verified token claims', (
+    tester,
+  ) async {
+    final user = FakeAuthUser(
+      uid: 'alice',
+      email: 'alice@example.test',
+      verified: true,
+    )..tokenRefresh = Completer();
+    final auth = FakeAuth(initialUser: user);
+    final repository = FakeProjectRepository();
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await repository.dispose();
+      await auth.dispose();
+    });
+    // Start the app without settling its pending session refresh.
+    SharedPreferences.setMockInitialValues({});
+    await tester.pumpWidget(
+      FirebaseApplication(
+        services: auth.services,
+        repositoryForUser: (_) => repository,
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(ProjectHomePage), findsNothing);
+    expect(user.forcedTokenRefreshes, 1);
+    user.tokenRefresh!.complete(FakeTokenResult(true));
+    await tester.pumpAndSettle();
+    expect(find.byType(ProjectHomePage), findsOneWidget);
+  });
+
   testWidgets(
     'unverified user stays gated until verification and token refresh',
     (tester) async {
@@ -25,7 +58,7 @@ void main() {
       expect(find.byType(ProjectHomePage), findsNothing);
       user.serverVerified = true;
       await _tap(tester, find.text('I have verified my email'));
-      expect(user.forcedTokenRefreshes, 1);
+      expect(user.forcedTokenRefreshes, greaterThanOrEqualTo(1));
       expect(find.byType(ProjectHomePage), findsOneWidget);
       expect(find.byType(AuthPage), findsNothing);
     },

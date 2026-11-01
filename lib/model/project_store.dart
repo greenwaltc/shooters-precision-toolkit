@@ -155,44 +155,71 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _loadFuture = first.future;
     _loadError = null;
     _notifyIfActive();
-    unawaited(_subscribe(generation, first));
+    unawaited(_subscribe(generation));
     return first.future;
   }
 
-  Future<void> _subscribe(int generation, Completer<void> first) async {
+  bool _isCurrentLoad(int generation) =>
+      !_disposed && generation == _loadGeneration;
+
+  void _completeInitialLoad() {
+    final first = _initialLoad;
+    if (first != null && !first.isCompleted) first.complete();
+  }
+
+  Future<void> _subscribe(int generation) async {
     try {
       await _projectsSubscription?.cancel();
-      if (_disposed || generation != _loadGeneration) return;
+      if (!_isCurrentLoad(generation)) return;
       _projectsSubscription = repository.watchProjects().listen(
-        (page) {
-          if (_disposed || generation != _loadGeneration) return;
-          final firstPage = !_isLoaded;
-          for (final record in page) {
-            _acceptRemote(record);
-          }
-          // A bounded query losing a document does not establish its deletion.
-          _isLoaded = true;
-          _loadError = null;
-          if (firstPage && _selectedProjectId == null && _projects.isNotEmpty) {
-            _select(projects.first.id);
-          }
-          if (!first.isCompleted) first.complete();
-          _notifyIfActive();
+        (page) => _applyRecentPage(page, generation),
+        onError: (Object error, StackTrace _) {
+          _handleProjectLoadError(error, generation);
         },
-        onError: (Object error, StackTrace stack) {
-          if (_disposed || generation != _loadGeneration) return;
-          _loadError = error;
-          if (!first.isCompleted) first.complete();
-          _notifyIfActive();
+        onDone: () {
+          // A dead subscription must not leave load() permanently returning its
+          // old completed future. Keep the original error if one preceded done.
+          if (_isCurrentLoad(generation) && _loadError == null) {
+            _handleProjectLoadError(
+              StateError('The project subscription ended. Please retry.'),
+              generation,
+            );
+          }
         },
       );
     } catch (error) {
-      if (!_disposed && generation == _loadGeneration) {
-        _loadError = error;
-        if (!first.isCompleted) first.complete();
-        _notifyIfActive();
-      }
+      _handleProjectLoadError(error, generation);
     }
+  }
+
+  void _applyRecentPage(List<CloudProject> page, int generation) {
+    if (!_isCurrentLoad(generation)) return;
+    try {
+      final firstPage = !_isLoaded;
+      for (final record in page) {
+        // _acceptRemote buffers updates while dirty/saving, and only replaces a
+        // clean model after detaching its previous form listener.
+        _acceptRemote(record);
+      }
+      // A bounded query losing a document does not establish its deletion.
+      _isLoaded = true;
+      _loadError = null;
+      if (firstPage && _selectedProjectId == null && _projects.isNotEmpty) {
+        _select(projects.first.id);
+      }
+      _completeInitialLoad();
+      _notifyIfActive();
+    } catch (error) {
+      _handleProjectLoadError(error, generation);
+    }
+  }
+
+  void _handleProjectLoadError(Object error, int generation) {
+    if (!_isCurrentLoad(generation)) return;
+    // Retain projects, selection, dirty drafts and revisions for retry.
+    _loadError = error;
+    _completeInitialLoad();
+    _notifyIfActive();
   }
 
   Future<SavedProject> createProject() async {

@@ -38,9 +38,34 @@ class FakeProjectRepository implements ProjectRepository {
   @override
   Stream<List<CloudProject>> watchProjects() => _watch(() {
     final records = _records.values.toList()
-      ..sort((a, b) => b.project.updatedAt.compareTo(a.project.updatedAt));
+      ..sort((a, b) {
+        final date = b.project.updatedAt.compareTo(a.project.updatedAt);
+        return date != 0 ? date : b.project.id.compareTo(a.project.id);
+      });
     return records.take(25).map(_copyRecord).toList();
   });
+
+  @override
+  Future<List<CloudProject>> fetchOlderProjects({
+    required CloudProject after,
+  }) async {
+    final records = _records.values.toList()
+      ..sort((a, b) {
+        final date = b.project.updatedAt.compareTo(a.project.updatedAt);
+        return date != 0 ? date : b.project.id.compareTo(a.project.id);
+      });
+    return records
+        .where((record) {
+          final date = record.project.updatedAt.compareTo(
+            after.project.updatedAt,
+          );
+          return date < 0 ||
+              (date == 0 && record.project.id.compareTo(after.project.id) < 0);
+        })
+        .take(ProjectRepository.pageSize)
+        .map(_copyRecord)
+        .toList();
+  }
 
   @override
   Stream<CloudProject?> watchProject(String id) => _watch(() {

@@ -462,6 +462,10 @@ class _DelayedAcknowledgementRepository implements ProjectRepository {
   @override
   Stream<List<CloudProject>> watchProjects() => delegate.watchProjects();
   @override
+  Future<List<CloudProject>> fetchOlderProjects({
+    required CloudProject after,
+  }) => delegate.fetchOlderProjects(after: after);
+  @override
   Stream<CloudProject?> watchProject(String id) => delegate.watchProject(id);
   @override
   Future<void> deleteProject(String id, {required int expectedRevision}) =>

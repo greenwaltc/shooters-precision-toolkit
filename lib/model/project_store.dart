@@ -75,6 +75,16 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   final _restoredDrafts = <String>{};
   final _pendingRemote = <String, CloudProject>{};
   final _remoteDeletions = <String>{};
+  // Page records are separate from the editable models/drafts in _projects.
+  // The latter also retains viewed records that leave the bounded live query.
+  List<CloudProject> _recentPage = [];
+  final _olderPages = <List<CloudProject>>[];
+  CloudProject? _olderCursor;
+  String? _pageOrdering;
+  int _paginationGeneration = 0;
+  bool _isLoadingOlder = false;
+  bool _hasMoreProjects = false;
+  Object? _olderProjectsError;
   UnmodifiableListView<SavedProject>? _sortedProjects;
   StreamSubscription<List<CloudProject>>? _projectsSubscription;
   StreamSubscription<CloudProject?>? _selectedSubscription;
@@ -92,6 +102,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   bool _disposed = false;
 
   bool get isLoaded => _isLoaded;
+  bool get isLoadingOlder => _isLoadingOlder;
+  bool get hasMoreProjects => _hasMoreProjects;
+  Object? get olderProjectsError => _olderProjectsError;
   Object? get loadError => _loadError;
   WorkspaceLoadState get loadState {
     if (_loadError != null) return WorkspaceLoadState.error;
@@ -258,6 +271,19 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (!_isCurrentLoad(generation)) return;
     try {
       final firstPage = !_isLoaded;
+      final ordering = jsonEncode([
+        for (final record in page)
+          [
+            record.project.id,
+            record.project.updatedAt.toIso8601String(),
+            record.hasPendingWrites,
+          ],
+      ]);
+      _recentPage = List.unmodifiable(page);
+      if (ordering != _pageOrdering) {
+        _pageOrdering = ordering;
+        _resetPagination();
+      }
       for (final record in page) {
         // _acceptRemote buffers updates while dirty/saving, and only replaces a
         // clean model after detaching its previous form listener.
@@ -277,6 +303,51 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _notifyIfActive();
     } catch (error) {
       _handleProjectLoadError(error, generation);
+    }
+  }
+
+  void _resetPagination() {
+    _paginationGeneration++;
+    // Old models remain visible, but their old cursors are no longer current.
+    _olderPages.clear();
+    final acknowledged = _recentPage.where(
+      (record) => !record.hasPendingWrites,
+    );
+    _olderCursor = acknowledged.isEmpty ? null : acknowledged.last;
+    _hasMoreProjects = _recentPage.length == ProjectRepository.pageSize;
+    _olderProjectsError = null;
+  }
+
+  Future<void> loadOlderProjects() async {
+    final cursor = _olderCursor;
+    if (_disposed ||
+        !_isLoaded ||
+        _loadError != null ||
+        _isLoadingOlder ||
+        !_hasMoreProjects ||
+        cursor == null) {
+      return;
+    }
+    final generation = _paginationGeneration;
+    _isLoadingOlder = true;
+    _olderProjectsError = null;
+    _notifyIfActive();
+    try {
+      final page = await repository.fetchOlderProjects(after: cursor);
+      if (_disposed || generation != _paginationGeneration) return;
+      for (final record in page) {
+        _acceptRemote(record);
+      }
+      _olderPages.add(List.unmodifiable(page));
+      if (page.isNotEmpty) _olderCursor = page.last;
+      _hasMoreProjects = page.length == ProjectRepository.pageSize;
+    } catch (error) {
+      if (!_disposed && generation == _paginationGeneration) {
+        _olderProjectsError = error;
+      }
+    } finally {
+      _isLoadingOlder = false;
+      _notifyIfActive();
     }
   }
 
@@ -335,6 +406,17 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
             if (_disposed || generation != _selectionGeneration) return;
             if (_deleting.contains(id)) return;
             if (record != null) {
+              final previous = _projects[id];
+              if (!record.hasPendingWrites &&
+                  previous != null &&
+                  previous.updatedAt != record.project.updatedAt &&
+                  !_recentPage.any(
+                    (item) =>
+                        item.project.id == id &&
+                        item.project.updatedAt == record.project.updatedAt,
+                  )) {
+                _resetPagination();
+              }
               _acceptRemote(record);
             } else if (revisionFor(id) > 0) {
               if (_dirty.contains(id) || _saving.contains(id)) {
@@ -612,6 +694,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _removeProject(String id, {bool selectNext = true}) {
+    _recentPage = _recentPage
+        .where((record) => record.project.id != id)
+        .toList();
+    _pageOrdering = null;
+    _resetPagination(); // Reject any fetch started before confirmed deletion.
     _detachProjectListener(id);
     _projects.remove(id);
     _revisions.remove(id);

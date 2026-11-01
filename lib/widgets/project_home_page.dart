@@ -241,6 +241,27 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                     return _ProjectListTile(project: projects[index]);
                   },
                 ),
+                if (store.olderProjectsError != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  const Text(
+                    'Unable to load older projects. Please try again.',
+                  ),
+                ],
+                if (store.hasMoreProjects || store.isLoadingOlder) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton(
+                    onPressed: store.isLoadingOlder
+                        ? null
+                        : store.loadOlderProjects,
+                    child: Text(
+                      store.isLoadingOlder
+                          ? 'Loading older projects…'
+                          : store.olderProjectsError != null
+                          ? 'Retry loading older projects'
+                          : 'Load older projects',
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

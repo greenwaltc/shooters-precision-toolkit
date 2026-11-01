@@ -16,7 +16,7 @@ class FirestoreProjectRepository implements ProjectRepository {
   @override
   String newProjectId() => _projects.doc().id;
 
-  static const pageSize = 25;
+  static const pageSize = ProjectRepository.pageSize;
 
   Query<Map<String, dynamic>> get _recentQuery =>
       _projects.orderBy('updatedAt', descending: true);
@@ -27,13 +27,16 @@ class FirestoreProjectRepository implements ProjectRepository {
       .snapshots(includeMetadataChanges: true)
       .map((query) => query.docs.map(_decode).toList());
 
+  @override
   Future<List<CloudProject>> fetchOlderProjects({
-    required DocumentSnapshot<Map<String, dynamic>> after,
+    required CloudProject after,
   }) async {
+    final cursor = after.snapshot;
+    if (cursor == null) throw StateError('A Firestore cursor is required.');
     final page = await _recentQuery
-        .startAfterDocument(after)
+        .startAfterDocument(cursor)
         .limit(pageSize)
-        .get();
+        .get(const GetOptions(source: Source.server));
     return page.docs.map(_decode).toList();
   }
 

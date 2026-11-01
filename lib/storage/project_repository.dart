@@ -26,8 +26,10 @@ class CloudProject {
 
 /// The workspace's persistence contract. Each instance belongs to one account.
 abstract interface class ProjectRepository {
+  static const pageSize = 25;
   String newProjectId();
   Stream<List<CloudProject>> watchProjects();
+  Future<List<CloudProject>> fetchOlderProjects({required CloudProject after});
   Stream<CloudProject?> watchProject(String id);
   Future<int> saveProject(
     SavedProject project, {

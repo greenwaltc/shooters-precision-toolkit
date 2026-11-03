@@ -56,7 +56,7 @@ task local:test           # Same tests when emulators are already running
 
 Stop an existing emulator session before `emulators:test` because both use the same ports. `task emulators:check` checks the running services. Emulator Auth accounts and database data reset when the services stop. Browser Auth and Firestore persistence are disabled in local mode to avoid stale sessions/cache after a reset.
 
-At this migration checkpoint the workspace still uses SharedPreferences, and Firestore rules deny client reads/writes. You can test UI changes locally now; the smoke test checks local Auth connectivity, Firestore's expected permission rejections, and workspace startup. Sign-in screens and cloud project storage come in later migration steps. Use `task web:run` when you deliberately want local Flutter connected to **cloud dev** instead. Production emulator builds are rejected.
+The local app supports registration, email verification, sign-in, and cloud project storage against demo Auth/Firestore services. The smoke tests check account flows and database access rules. Use `task web:run` when you deliberately want local Flutter connected to **cloud dev** instead. Production emulator builds are rejected.
 
 See [Firebase's emulator connection guide](https://firebase.google.com/docs/emulator-suite/connect_firestore) for demo-project isolation and [Emulator Suite setup](https://firebase.google.com/docs/emulator-suite/install_and_configure) for emulator options.
 
@@ -71,11 +71,17 @@ Build and publish web releases:
 ```bash
 task web:build            # build/web-dev
 task web:build ENV=prod   # build/web-prod
+task web:check            # Verify the built bundle and destination
+task web:measure          # Fresh Chrome load and Spark traffic planning check
+task web:hosting:test     # Test built routes/headers with the Hosting emulator
+task web:preview CHANNEL=my-change # Publish a two-day dev preview
 task web:deploy           # Check, rebuild, and publish to dev Hosting
 task web:deploy ENV=prod  # Check, rebuild, and publish to production Hosting
 ```
 
-Environment commands default to `dev` and accept only `dev` or `prod`. Each deployment uses the matching Firebase project and Hosting configuration; it rebuilds before uploading. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates.
+Environment commands default to `dev` and accept only `dev` or `prod`. Deploy/preview commands run checks, rebuild, measure transfer, and verify file hashes and the Hosting destination before uploading. Dev builds have indexing disabled. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates. Node 22+ and Google Chrome are required for web release checks; set `CHROME_EXECUTABLE` if Chrome is installed elsewhere.
+
+PRs now deploy dev previews; production uses a manual workflow from `main` and the GitHub `production` environment. Configure its reviewer/branch protections before the first production run. See [web release instructions](docs/web_releases.md) for setup, retention, and Spark traffic limits.
 
 ### Native dev and production apps
 

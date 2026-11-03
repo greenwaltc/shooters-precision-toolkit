@@ -1176,13 +1176,24 @@ No durable offline replay, interrupted legacy import, or new conflict-resolution
 
 **14. Deploy the matching bundle to the matching project**
 
+The step 14 implementation is checked in. Use the Task hooks below so each release receives environment metadata, a file-hash/destination check, and a cold-load traffic check. See [web release setup](web_releases.md) for the GitHub protection settings, Terraform retention imports, and Spark budget assumptions. Repository code alone cannot configure the GitHub reviewer/branch protections.
+
 Keep the existing SPA Hosting rewrite. Add dev/prod Hosting config files using `build/web-dev` and `build/web-prod` respectively. Example `firebase.dev.json`:
 
 ```json
 {
   "hosting": {
+    "site": "bramwellsprecisiontestkitdev",
     "public": "build/web-dev",
     "ignore": ["firebase.dev.json", "**/.*", "**/node_modules/**"],
+    "headers": [{
+      "source": "**",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]
   }
 }
@@ -1191,17 +1202,21 @@ Keep the existing SPA Hosting rewrite. Add dev/prod Hosting config files using `
 Prod uses `build/web-prod` and the equivalent `firebase.prod.json` file name. These content-deployment configs do not own rules; Terraform owns the rules release in this design.
 
 ```bash
-flutter build web --release --dart-define=APP_ENV=dev --output=build/web-dev
-npx -y firebase-tools@latest deploy --only hosting --config firebase.dev.json --project bramwellsprecisiontestkitdev
-flutter build web --release --dart-define=APP_ENV=prod --output=build/web-prod
-npx -y firebase-tools@latest deploy --only hosting --config firebase.prod.json --project bramwells-precision-test-kit
+task web:build                       # Verified dev artifact
+task web:measure                     # Check local cold-load transfer budget
+task web:hosting:test                # Check SPA routes/headers without deploying
+task web:preview CHANNEL=my-change   # Dev preview, expires in 2 days
+task web:deploy                      # Checks, rebuilds, measures, publishes dev live
+task web:build ENV=prod               # Verified production artifact (no publish)
+# Normal production releases use Actions > Release Firebase production from main.
+# An explicit local operator release is: task web:deploy ENV=prod
 ```
 
-Dev artifacts go to dev; production releases go to prod. Retain the production web origin so existing local data is accessible for the migration. The static sitemap/robots files and `BrandConfiguration.publicSiteUrl` currently use the production origin. For dev builds add a `noindex` policy and dev robots file; make any runtime absolute/auth-action URLs environment-aware without changing the canonical production identity.
+Dev artifacts go to dev; production releases go to prod. The confirmed production canonical URL is `https://bramwelltest.com`; the static sitemap/robots files, HTML search/social metadata, and `BrandConfiguration.publicSiteUrl` use it together. Dev builds add `noindex` metadata/headers and a dev robots file; runtime auth-action URLs follow the initialized Firebase project. Legacy local import remains outside scope.
 
 Measure transferred bytes for a cold web load and set a Hosting traffic budget. For example, 40 new sessions/day at 6 MB/session is about 240 MB/day before repeat traffic and previews. Optimize oversized images and unnecessary assets; use caching compatible with release updates, with long immutable caching only for content-addressed filenames. Limit retained live releases and expire dev previews after about two days. Check Hosting storage and transfer before large releases. Export PDFs/JSON locally and distribute native installers through appropriate release channels; keep them out of this Spark Hosting quota. Spark Hosting also restricts certain executable file types. [Hosting file restrictions](https://firebase.google.com/docs/hosting/faq-and-troubleshooting)
 
-Change the two current GitHub workflows. PR previews should compile `APP_ENV=dev` and deploy to the dev Firebase project. Preview channels only isolate Hosting content; their database/Auth connections still follow the compiled app configuration. For production, use a protected release workflow or a protected `main` deployment with required checks and a GitHub production environment. [Hosting preview behavior](https://firebase.google.com/docs/hosting/test-preview-deploy)
+The two GitHub workflows now validate dev PR builds and publish same-repository PRs to dev preview channels with a two-day expiry. Preview channels only isolate Hosting content; their database/Auth connections still follow the compiled app configuration. Production uses a manual release from `main`, validation before deployment, and the GitHub `production` environment; configure its protection rules as described in the release setup. Terraform adopts live channels with 2 previous dev releases and 5 production releases retained after apply. [Hosting preview behavior](https://firebase.google.com/docs/hosting/test-preview-deploy)
 
 **15. Use short-lived CI credentials and environment-specific permissions**
 

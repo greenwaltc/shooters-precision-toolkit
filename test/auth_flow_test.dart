@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:bramwells_precision_test_kit/auth/auth_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
+import 'package:bramwells_precision_test_kit/model/saved_project.dart';
+import 'package:bramwells_precision_test_kit/storage/project_draft_storage.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/widgets/project_home_page.dart';
 import 'package:clock/clock.dart';
@@ -14,6 +17,47 @@ import 'support/fake_auth.dart';
 import 'support/fake_project_repository.dart';
 
 void main() {
+  testWidgets('cloud-only sessions do not restore persisted offline drafts', (
+    tester,
+  ) async {
+    final auth = FakeAuth(
+      initialUser: FakeAuthUser(
+        uid: 'alice',
+        email: 'alice@example.test',
+        verified: true,
+      ),
+    );
+    final repository = FakeProjectRepository();
+    SharedPreferences.setMockInitialValues({});
+    final disk = SharedPreferencesProjectDraftStorage(
+      projectId: auth.services.app.options.projectId,
+      uid: 'alice',
+    );
+    final now = DateTime.now().toUtc();
+    final draft = SavedProject(
+      id: 'old-local',
+      createdAt: now,
+      updatedAt: now,
+      formModel: ProjectFormModel()
+        ..setProjectTitle('Persisted offline project'),
+    );
+    await disk.write(draft.id, ProjectDraft.capture(draft, 0, 1));
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await repository.dispose();
+      await auth.dispose();
+    });
+    await tester.pumpWidget(
+      FirebaseApplication(
+        services: auth.services,
+        repositoryForUser: (_) => repository,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Persisted offline project'), findsNothing);
+    expect(find.text('No projects yet'), findsOneWidget);
+  });
+
   testWidgets('restored verified profile waits for verified token claims', (
     tester,
   ) async {

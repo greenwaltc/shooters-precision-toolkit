@@ -56,7 +56,7 @@ class BrandConfiguration {
     tagline: 'The modern tool for comparing projectile consistency',
     copyrightNotice: '\u00A9 2026 Denton M. Bramwell. All rights reserved.',
     bannerLogoAsset: 'assets/projects_banner_logo.png',
-    compactLogoAsset: 'assets/icon/app_icon.png',
+    compactLogoAsset: 'assets/icon/app_icon_compact.png',
     bannerLogoAspectRatio: 1801 / 504,
     atmosphereAsset: 'assets/img/target_bg.png',
   );
@@ -86,11 +86,12 @@ class BrandConfiguration {
 
   /// Canonical public origin for the Firebase Hosting web build (no trailing
   /// slash). Used by `web/sitemap.xml` / `web/robots.txt` and any absolute
-  /// links that must match the live site.
+  /// links identifying the public product. Runtime Auth return URLs use
+  /// `siteUrlForFirebaseProject` so dev and local sessions return to dev/local.
   ///
-  /// Keep the static files under `web/` in sync when this value changes.
-  static const String publicSiteUrl =
-      'https://bramwells-precision-test-kit.web.app';
+  /// Keep `config/web_environments.json` and the static files under `web/` in
+  /// sync when this value changes.
+  static const String publicSiteUrl = 'https://bramwelltest.com';
 }
 
 /// User-facing chrome copy that is not part of the product brand itself.

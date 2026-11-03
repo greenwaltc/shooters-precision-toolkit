@@ -125,6 +125,20 @@ resource "google_firebase_hosting_site" "web" {
   }
 }
 
+# The default live channel already exists with the site: adopt it using the
+# root import block. Retain rollback history without accumulating every build.
+resource "google_firebase_hosting_channel" "live" {
+  provider               = google-beta
+  site_id                = google_firebase_hosting_site.web.site_id
+  channel_id             = "live"
+  retained_release_count = var.environment == "prod" ? 5 : 2
+  deletion_policy        = "PREVENT"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 resource "google_firebaserules_ruleset" "firestore" {
   project = var.project_id
 

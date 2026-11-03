@@ -1,5 +1,7 @@
 # Firebase infrastructure
 
+Step 14 adds management of the existing Hosting `live` channel, with imports in each root's `hosting_imports.tf`. A reviewed apply sets retention to 2 previous releases in dev and 5 in production. Reducing retention schedules older versions for deletion. Hosting content and two-day preview expiration remain outside Terraform. See [web releases](../docs/web_releases.md) for commands and GitHub setup.
+
 Native flavors: the dev root now manages additional `.dev` Android and Apple registrations. The original imported dev registrations are preserved. `android_app_id` returns the installable flavor's app ID; `apple_app_ids` is keyed by bundle ID. Use `task native:config` after apply to retrieve the corresponding SDK files and update Dart options. Production uses its existing registrations. Native generation never creates registrations outside Terraform.
 
 With Google provider 8.9.0, changing a ruleset also replaces its rules release

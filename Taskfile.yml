@@ -25,6 +25,11 @@ tasks:
       - flutter analyze
       - flutter test
 
+  web:test:
+    desc: Test web environment isolation and release validation
+    cmds:
+      - node --test scripts/tests/web_release_test.mjs
+
   local:
     desc: Start local emulators and Flutter in Chrome; Ctrl+C stops both
     requires: &local_environment
@@ -118,26 +123,70 @@ tasks:
       - xcodebuild -workspace macos/Runner.xcworkspace -scheme {{.ENV}} -configuration Debug-{{.ENV}} -derivedDataPath build/macos-unsigned-{{.ENV}} CODE_SIGNING_ALLOWED=NO build
 
   verify:
-    desc: Run Flutter, native config, Firestore rules, and browser emulator checks sequentially
+    desc: Run Flutter, native/web config, rules, and browser emulator checks sequentially
     cmds:
       - task: check
       - task: native:check
+      - task: web:test
       - task: rules:test
       - task: emulators:test
 
   web:build:
-    desc: Build release web files into build/web-ENV
+    desc: Build and verify a release with environment-specific search metadata
     requires: *environment
     cmds:
-      - flutter build web --release --dart-define=APP_ENV={{.ENV}} --output=build/web-{{.ENV}}
+      - node scripts/build_web.mjs {{.ENV}}
+
+  web:check:
+    desc: Verify the selected build matches its Hosting site and has not changed
+    requires: *environment
+    cmds:
+      - node scripts/check_web_release.mjs {{.ENV}}
+
+  web:measure:
+    desc: Measure a cold Chrome load and check the Spark traffic planning budget
+    requires: *environment
+    cmds:
+      - node scripts/measure_web.mjs {{.ENV}}
+
+  web:preview:
+    desc: Check, build, measure, and publish a two-day dev preview (CHANNEL=my-change)
+    requires:
+      vars:
+        - name: ENV
+          enum: [dev]
+        - CHANNEL
+    env:
+      PREVIEW_CHANNEL: '{{.CHANNEL}}'
+    cmds:
+      - task: check
+      - task: web:test
+      - task: web:build
+      - task: web:measure
+      - node scripts/deploy_web.mjs dev
+
+  web:hosting:test:
+    desc: Check built SPA routes and headers using the Hosting emulator
+    requires: *environment
+    cmds:
+      - task: web:check
+      - npx -y firebase-tools@latest emulators:exec --only hosting --config firebase.{{.ENV}}.json --project demo-bramwellsprecisiontestkit 'node scripts/tests/hosting_smoke.mjs {{.ENV}}'
 
   web:deploy:
     desc: Check, rebuild, and publish the selected environment's live Hosting site
     requires: *environment
     cmds:
       - task: check
+      - task: web:test
       - task: web:build
-      - npx -y firebase-tools@latest deploy --only hosting --config firebase.{{.ENV}}.json --project {{.PROJECT_ID}}
+      - task: web:measure
+      - node scripts/deploy_web.mjs {{.ENV}}
+
+  web:channels:
+    desc: List Hosting channels and expiration dates for the selected project
+    requires: *environment
+    cmds:
+      - npx -y firebase-tools@latest hosting:channel:list --project {{.PROJECT_ID}}
 
   login:firebase:
     desc: Sign in to Firebase CLI for Hosting and Auth deployments

@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../firebase/firebase_bootstrap.dart';
+import '../config/site_configuration.dart';
 
 class AuthService {
   AuthService(this.auth);
@@ -56,12 +56,7 @@ class AuthService {
   Future<void> signOut() => auth.signOut();
 
   ActionCodeSettings get _emailActionSettings {
-    final returnUrl = switch (auth.app.options.projectId) {
-      localFirebaseProjectId => 'http://127.0.0.1:7357',
-      'bramwellsprecisiontestkitdev' => 'https://dev.bramwelltest.com',
-      'bramwells-precision-test-kit' => 'https://bramwelltest.com',
-      _ => throw StateError('Unknown Firebase project.'),
-    };
+    final returnUrl = siteUrlForFirebaseProject(auth.app.options.projectId);
 
     return ActionCodeSettings(url: returnUrl, handleCodeInApp: false);
   }

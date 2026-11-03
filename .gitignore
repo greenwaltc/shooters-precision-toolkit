@@ -73,3 +73,10 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+
+# Swift project-configuration helper caches (commit Package.resolved).
+tools/**/.build/
+tools/**/.swiftpm/
+android/key.properties
+*.jks
+*.keystore

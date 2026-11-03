@@ -75,7 +75,31 @@ task web:deploy           # Check, rebuild, and publish to dev Hosting
 task web:deploy ENV=prod  # Check, rebuild, and publish to production Hosting
 ```
 
-Environment commands default to `dev` and accept only `dev` or `prod`. Each deployment uses the matching Firebase project and Hosting configuration; it rebuilds before uploading. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates. Firebase options currently support web; native environment configuration is deferred to step 12 of the [migration guide](docs/firebase_migration_guide.md).
+Environment commands default to `dev` and accept only `dev` or `prod`. Each deployment uses the matching Firebase project and Hosting configuration; it rebuilds before uploading. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates.
+
+### Native dev and production apps
+
+Android, iOS, and macOS support `dev` and `prod` flavors. Dev app IDs end in `.dev` and the app is named Precision Test Kit Dev. Production retains its original IDs. Firebase service files and Dart options select the same environment; Apple builds validate the selected plist before bundling it.
+
+```bash
+task native:check
+task native:run DEVICE=macos                 # requires Apple development signing
+task native:run DEVICE=macos ENV=prod
+task android:build                          # dev debug APK
+task android:build ENV=prod                  # production backend, debug APK
+task ios:build                              # unsigned dev simulator app
+task ios:build ENV=prod
+task macos:build                            # unsigned dev macOS app
+task macos:build ENV=prod
+```
+
+For a native dev app with local Firebase, start `task emulators:start` in one terminal and run `task native:local DEVICE=macos` in another. Use `flutter devices` for other device IDs. Android emulators use `task native:local DEVICE=YOUR_DEVICE_ID EMULATOR_HOST=10.0.2.2`. Apple signed runs require a development certificate/team configured in Xcode; unsigned builds do not need one. Android production release signing uses the private `android/key.properties` file; see its checked-in example. Production releases fail if that file is absent.
+
+If Xcode reports “Found no destinations” or “iOS 26.5 is not installed,” install the matching iOS platform in Xcode > Settings > Components, then rerun `task ios:build`. A simulator runtime is also needed to run the app in a simulator.
+
+`task native:config` retrieves SDK config using Terraform output app IDs and regenerates native Dart options while preserving web options. It never creates Firebase apps. `task native:check` checks both environments and every Apple build configuration. `task verify` runs regular Flutter, native config, rules, and browser emulator checks sequentially on macOS; stop interactive emulators first.
+
+The application is cloud-native. Its signed-in workspace retains only session drafts, and persistent Firestore caching is disabled. Legacy import and durable offline replay are outside scope; unsaved changes do not survive a refresh/restart. Existing cloud revision guards remain in place. Steps 10–11 are marked skipped in the [migration guide](docs/firebase_migration_guide.md).
 
 For first-time authentication, run `task login:firebase` for Firebase CLI deployments, `task login:terraform` for Terraform, and `task login:gcloud` for billing inspection. These maintain separate credentials.
 

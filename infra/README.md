@@ -1,5 +1,7 @@
 # Firebase infrastructure
 
+Native flavors: the dev root now manages additional `.dev` Android and Apple registrations. The original imported dev registrations are preserved. `android_app_id` returns the installable flavor's app ID; `apple_app_ids` is keyed by bundle ID. Use `task native:config` after apply to retrieve the corresponding SDK files and update Dart options. Production uses its existing registrations. Native generation never creates registrations outside Terraform.
+
 With Google provider 8.9.0, changing a ruleset also replaces its rules release
 (`ruleset_name` is ForceNew). The release intentionally has no `prevent_destroy`
 guard; that guard would block policy updates. The immutable ruleset uses

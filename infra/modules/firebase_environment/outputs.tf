@@ -10,7 +10,7 @@ output "web_app_id" {
 
 output "android_app_id" {
   description = "Android registration ID."
-  value       = google_firebase_android_app.android.app_id
+  value       = var.environment == "dev" ? google_firebase_android_app.dev[0].app_id : google_firebase_android_app.android.app_id
 }
 
 output "apple_app_ids" {

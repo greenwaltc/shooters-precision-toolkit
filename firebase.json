@@ -16,35 +16,100 @@
   "flutter": {
     "platforms": {
       "android": {
-        "default": {
+        "dev": {
           "projectId": "bramwellsprecisiontestkitdev",
-          "appId": "1:723783645502:android:46f1aaa714fe25fc6c146f",
-          "fileOutput": "android/app/google-services.json"
+          "appId": "1:723783645502:android:cd195adeff518d046c146f",
+          "fileOutput": "android/app/src/dev/google-services.json"
+        },
+        "prod": {
+          "projectId": "bramwells-precision-test-kit",
+          "appId": "1:653363090089:android:231c811e0f166474de0fb8",
+          "fileOutput": "android/app/src/prod/google-services.json"
         }
       },
       "ios": {
-        "default": {
+        "Debug-dev": {
           "projectId": "bramwellsprecisiontestkitdev",
-          "appId": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
-          "uploadDebugSymbols": false,
-          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+          "appId": "1:723783645502:ios:3be1097bbdd9289b6c146f",
+          "fileOutput": "ios/Firebase/dev/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Profile-dev": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "appId": "1:723783645502:ios:3be1097bbdd9289b6c146f",
+          "fileOutput": "ios/Firebase/dev/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Release-dev": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "appId": "1:723783645502:ios:3be1097bbdd9289b6c146f",
+          "fileOutput": "ios/Firebase/dev/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Debug-prod": {
+          "projectId": "bramwells-precision-test-kit",
+          "appId": "1:653363090089:ios:eab2a50b414ebca9de0fb8",
+          "fileOutput": "ios/Firebase/prod/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Profile-prod": {
+          "projectId": "bramwells-precision-test-kit",
+          "appId": "1:653363090089:ios:eab2a50b414ebca9de0fb8",
+          "fileOutput": "ios/Firebase/prod/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Release-prod": {
+          "projectId": "bramwells-precision-test-kit",
+          "appId": "1:653363090089:ios:eab2a50b414ebca9de0fb8",
+          "fileOutput": "ios/Firebase/prod/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
         }
       },
       "macos": {
-        "default": {
+        "Debug-dev": {
           "projectId": "bramwellsprecisiontestkitdev",
-          "appId": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
-          "uploadDebugSymbols": false,
-          "fileOutput": "macos/Runner/GoogleService-Info.plist"
+          "appId": "1:723783645502:ios:3be1097bbdd9289b6c146f",
+          "fileOutput": "macos/Firebase/dev/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Profile-dev": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "appId": "1:723783645502:ios:3be1097bbdd9289b6c146f",
+          "fileOutput": "macos/Firebase/dev/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Release-dev": {
+          "projectId": "bramwellsprecisiontestkitdev",
+          "appId": "1:723783645502:ios:3be1097bbdd9289b6c146f",
+          "fileOutput": "macos/Firebase/dev/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Debug-prod": {
+          "projectId": "bramwells-precision-test-kit",
+          "appId": "1:653363090089:ios:eab2a50b414ebca9de0fb8",
+          "fileOutput": "macos/Firebase/prod/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Profile-prod": {
+          "projectId": "bramwells-precision-test-kit",
+          "appId": "1:653363090089:ios:eab2a50b414ebca9de0fb8",
+          "fileOutput": "macos/Firebase/prod/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
+        },
+        "Release-prod": {
+          "projectId": "bramwells-precision-test-kit",
+          "appId": "1:653363090089:ios:eab2a50b414ebca9de0fb8",
+          "fileOutput": "macos/Firebase/prod/GoogleService-Info.plist",
+          "uploadDebugSymbols": false
         }
       },
       "dart": {
         "lib/firebase/firebase_options_dev.dart": {
           "projectId": "bramwellsprecisiontestkitdev",
           "configurations": {
-            "android": "1:723783645502:android:46f1aaa714fe25fc6c146f",
-            "ios": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
-            "macos": "1:723783645502:ios:d1e41e502b0a1d4c6c146f",
+            "android": "1:723783645502:android:cd195adeff518d046c146f",
+            "ios": "1:723783645502:ios:3be1097bbdd9289b6c146f",
+            "macos": "1:723783645502:ios:3be1097bbdd9289b6c146f",
             "web": "1:723783645502:web:0afce571413c389a6c146f",
             "windows": "1:723783645502:web:553254ed6b94e9686c146f"
           }
@@ -52,7 +117,10 @@
         "lib/firebase/firebase_options_prod.dart": {
           "projectId": "bramwells-precision-test-kit",
           "configurations": {
-            "web": "1:653363090089:web:060e48e9dc6b13acde0fb8"
+            "web": "1:653363090089:web:060e48e9dc6b13acde0fb8",
+            "android": "1:653363090089:android:231c811e0f166474de0fb8",
+            "ios": "1:653363090089:ios:eab2a50b414ebca9de0fb8",
+            "macos": "1:653363090089:ios:eab2a50b414ebca9de0fb8"
           }
         }
       }

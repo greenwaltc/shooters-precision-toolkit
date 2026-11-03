@@ -4,6 +4,8 @@ version: '3'
 # Task runs these commands from the repository root, even from a subdirectory.
 vars:
   ENV: dev
+  DEVICE: macos
+  EMULATOR_HOST: 127.0.0.1
   PROJECT_ID: '{{if eq .ENV "prod"}}bramwells-precision-test-kit{{else}}bramwellsprecisiontestkitdev{{end}}'
 
 tasks:
@@ -71,6 +73,57 @@ tasks:
           enum: [dev, prod]
     cmds:
       - flutter run -d chrome --dart-define=APP_ENV={{.ENV}}
+
+  native:config:
+    desc: Fetch native Firebase configs from Terraform outputs and refresh Dart options
+    cmds:
+      - node scripts/sync_firebase_native.mjs
+      - dart format lib/firebase/firebase_options_dev.dart lib/firebase/firebase_options_prod.dart
+
+  native:check:
+    desc: Check native environment files, schemes, and Firebase plist selection
+    cmds:
+      - node scripts/check_native_config.mjs
+
+  native:run:
+    desc: Run a native flavor (ENV=dev/prod, DEVICE=macos or a device ID)
+    requires: *environment
+    cmds:
+      - flutter run -d '{{.DEVICE}}' --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
+
+  native:local:
+    desc: Run a dev native flavor against running emulators (DEVICE=macos or device ID)
+    requires: *local_environment
+    cmds:
+      - node scripts/check_emulators.mjs
+      - flutter run -d '{{.DEVICE}}' --flavor dev --dart-define=APP_ENV=dev --dart-define=USE_FIREBASE_EMULATORS=true --dart-define=FIREBASE_EMULATOR_HOST={{.EMULATOR_HOST}}
+
+  android:build:
+    desc: Build an Android debug APK for the selected Firebase environment
+    requires: *environment
+    cmds:
+      - flutter build apk --debug --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
+
+  ios:build:
+    desc: Build an unsigned iOS simulator app for the selected Firebase environment
+    requires: *environment
+    cmds:
+      - flutter build ios --simulator --debug --no-codesign --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
+
+  macos:build:
+    desc: Build an unsigned macOS debug app for the selected Firebase environment
+    requires: *environment
+    cmds:
+      - flutter build macos --debug --config-only --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
+      - xcodebuild -workspace macos/Runner.xcworkspace -scheme {{.ENV}} -configuration Debug-{{.ENV}} -derivedDataPath build/macos-unsigned-{{.ENV}} CODE_SIGNING_ALLOWED=NO build
+
+  verify:
+    desc: Run Flutter, native config, Firestore rules, and browser emulator checks sequentially
+    cmds:
+      - task: check
+      - task: native:check
+      - task: rules:test
+      - task: emulators:test
 
   web:build:
     desc: Build release web files into build/web-ENV

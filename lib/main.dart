@@ -70,10 +70,8 @@ class FirebaseApplication extends StatelessWidget {
         projectRepository:
             repositoryForUser?.call(user.uid) ??
             FirestoreProjectRepository(db: services.db, uid: user.uid),
-        projectDraftStorage: SharedPreferencesProjectDraftStorage(
-          projectId: services.app.options.projectId,
-          uid: user.uid,
-        ),
+        // Cloud-only scope: edits exist only for this account session until saved.
+        projectDraftStorage: InMemoryProjectDraftStorage(),
       ),
     ),
   );

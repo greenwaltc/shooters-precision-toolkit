@@ -1103,257 +1103,76 @@ This limitation allows malformed data within the owner's own project, not access
 
 The updated rules were reviewed against owner isolation, update bypasses, bounded queries, and deletion-request tampering. The prototype assessment remains 4/5 because dynamic matrix/list element validation is still limited. The `activeOwner()` lookup and import `getAfter()` checks can consume additional document reads; include rule-dependent reads in quota estimates. A page limit controls one query's result size, not how often an authenticated client can repeat it.
 
-**10. Import existing local projects without loss or duplication**
+**10. Legacy project import — skipped**
 
-Only the device/browser that holds the legacy preferences can upload them. The production web migration must remain on the same origin as the existing app. A new hostname or the dev Hosting domain will not see the old production browser storage.
+This project has no legacy customer projects to migrate. Legacy import is outside the current application scope. The historical importer/receipt examples are not a rollout requirement and no import UI is introduced.
 
-First offer an explicit import choice after verified sign-in. Make a recoverable local backup/export, validate the complete payload, then bind that local dataset to the account. Preserve it until all uploads succeed. Test with sample fixtures in dev; customer data belongs in prod.
+**11. Preserved offline drafts and outbox — skipped**
 
-Add a direct dependency for migration hashing:
+This is a cloud-native application. The signed-in workspace uses session-only in-memory drafts and Firestore persistence is disabled. Unsaved edits are not promised to survive a refresh or restart. There is no durable offline outbox or automatic replay requirement. Existing revision checks protect cloud writes; no additional conflict-resolution workflow is required by this step. Cloud saves and sign-out still report failures rather than falsely claiming a server acknowledgement.
 
-```bash
-flutter pub add crypto
-```
+**12. Configure native app flavors — implemented**
 
-Create `lib/storage/legacy_project_importer.dart`:
+Android, iOS, and macOS have explicit `dev` and `prod` flavors. Production retains its original application/bundle identity. Dev adds `.dev`, has a distinct display name, and can be installed beside production.
 
-```dart
-import 'dart:convert';
-import 'dart:math';
-import 'package:crypto/crypto.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../model/saved_project.dart';
-import 'firestore_project_repository.dart';
+| Platform | Dev ID | Production ID |
+| --- | --- | --- |
+| Android | `com.bramwell.bramwells_precision_test_kit.dev` | `com.bramwell.bramwells_precision_test_kit` |
+| iOS/macOS | `com.bramwell.bramwellsPrecisionTestKit.dev` | `com.bramwell.bramwellsPrecisionTestKit` |
 
-Future<int> importLocalProjects({
-  required SharedPreferences preferences,
-  required String firebaseProjectId,
-  required FirestoreProjectRepository repository,
-}) async {
-  // The caller has already obtained the user's import choice and backed up
-  // the payload. Run once at a time in the account-scoped migration service.
-  final raw = preferences.getString('anomr_projects_v1');
-  if (raw == null || raw.isEmpty) return 0;
-  final decoded = jsonDecode(raw);
-  if (decoded is Map && decoded['version'] != 1) {
-    throw FormatException('Unsupported local project schema.');
-  }
-  final Object? items = decoded is Map ? decoded['projects'] : decoded;
-  if (items is! List || items.any((item) => item is! Map)) {
-    throw FormatException('Invalid local projects; keep the original backup.');
-  }
-  final projects = items.map((item) {
-    final data = Map<String, dynamic>.from(item as Map);
-    // Avoid fromJson's generated-ID fallback, which would break stable retries.
-    if (data['id'] is! String || (data['id'] as String).isEmpty ||
-        data['createdAt'] is! String ||
-        DateTime.tryParse(data['createdAt'] as String) == null ||
-        data['updatedAt'] is! String ||
-        DateTime.tryParse(data['updatedAt'] as String) == null ||
-        data['formModel'] is! Map || data['matrixState'] is! Map) {
-      throw FormatException('Invalid legacy project; keep the original backup.');
-    }
-    return SavedProject.fromJson(data);
-  }).toList();
-  if (projects.map((p) => p.id).toSet().length != projects.length) {
-    throw FormatException('Duplicate legacy project IDs require repair.');
-  }
+The dev Terraform root adds Android and Apple flavor registrations without replacing the original imported registrations. The original unsuffixed dev registrations remain protected in state. Production registrations are reused. Run `task native:config` after provisioning to retrieve native SDK files from Firebase CLI using the Terraform output app IDs; this command does not create apps. It preserves each environment's web options while generating Android/iOS/macOS Dart options.
 
-  final ownerKey = 'anomr_import_owner_v1_$firebaseProjectId';
-  final existingOwner = preferences.getString(ownerKey);
-  if (existingOwner != null && existingOwner != repository.uid) {
-    throw StateError('This local dataset was assigned to another account.');
-  }
-  if (!await preferences.setString(ownerKey, repository.uid)) {
-    throw StateError('Could not persist migration ownership.');
-  }
-  const sourceKey = 'anomr_import_source_v1';
-  var source = preferences.getString(sourceKey);
-  if (source == null) {
-    final random = Random.secure();
-    source = base64UrlEncode(List.generate(16, (_) => random.nextInt(256)))
-        .replaceAll('=', '');
-    if (!await preferences.setString(sourceKey, source)) {
-      throw StateError('Could not persist a stable migration source.');
-    }
-  }
+Native service files are in `android/app/src/{dev,prod}/google-services.json` and `{ios,macos}/Firebase/{dev,prod}/GoogleService-Info.plist`. Ambiguous default copies were removed. Apple shared schemes use `Debug-dev`, `Profile-dev`, `Release-dev`, and the equivalent prod configurations. Each configuration has the correct bundle ID and Podfile mapping. A build phase validates and copies exactly one environment plist into the app. macOS Keychain Sharing is configured separately per bundle ID. Dev-only network exceptions permit local HTTP emulators; production retains its transport policy.
 
-  var importedCount = 0;
-  for (final project in projects) {
-    final key = sha256.convert(utf8.encode('$source:${project.id}')).toString();
-    if (await repository.importLegacyProject(project, key)) importedCount++;
-  }
-  final completeKey = 'anomr_import_complete_v1_$firebaseProjectId';
-  if (!await preferences.setBool(completeKey, true)) {
-    throw StateError('Cloud import succeeded; local completion needs retry.');
-  }
-  return importedCount;
-}
-```
+The Swift helper in `tools/apple_flavors` uses XcodeProj's structured object model to configure the Apple projects. Regenerate with `swift run --package-path tools/apple_flavors apple_flavors .` if intentionally rebuilding flavor configuration, then rerun native checks/builds. Flutter manages its own generated Swift Package Manager integration during native builds; keep its resolved dependency files in Git.
 
-The project and immutable import receipt are created in one transaction. An interrupted import can rerun safely. A receipt remains after a project is deleted, so the old local payload cannot recreate it on a later retry. Distinct installation source IDs keep unrelated projects with the same timestamp-based legacy ID from overwriting each other. A dataset copied between devices should preserve its source ID to avoid duplicate imports.
-
-This sample validates top-level identity/schema fields. Add strict nested validation before accepting a payload; the existing model parsers deliberately apply fallback defaults, which are useful for compatibility but could conceal corrupt data. Report the failing project and leave the original/export available. Track progress per project and offer retry. Use a durable migration journal and a single-flight/locking mechanism before production, especially for multiple web tabs: shared preferences is not a transactional lock. Persist account/source ownership reliably so a crash cannot reassign a dataset.
-
-Never clear `anomr_projects_v1` merely because a local write was queued. Here transaction completion provides server confirmation; only after the entire import and user-visible verification should you retire the backup. Do not keep writing cloud-account projects into the unscoped legacy key. Any ongoing local draft/cache key must include the environment and UID.
-
-Each newly imported project writes two documents: the project and its receipt. Transaction retries and security checks also consume reads. Throttle concurrent imports, show progress, and stage larger onboarding waves across quota windows. On quota exhaustion preserve the journal/backup and offer a delayed resume; do not spin in a rapid retry loop or reset the migration source ID.
-
-**11. Preserve offline drafts and define conflict behavior**
-
-Your app is used for field data entry, so retain local editing even without a connection. Firestore caches active data and can queue ordinary writes, but cached data may be incomplete and transactions cannot commit offline. Android/Apple persistence is normally enabled; web disk persistence needs configuration and a trusted-device policy. [Offline persistence](https://firebase.google.com/docs/firestore/manage-data/enable-offline)
-
-With the revision-checked repository, use a durable local draft/outbox layer. A transactional SQLite-backed library such as Drift is one cross-platform option; assess its web deployment setup for your targets. [Drift platforms](https://drift.simonbinder.eu/platforms/)
-
-Store an outbox operation with `firebaseProjectId`, `uid`, `projectId`, its frozen payload, `expectedRevision`, a local sequence number, and status. Persist the local draft before displaying "Saved on this device." On reconnect, replay operations through the repository and remove only the exact sequence acknowledged by the server. If the user edited again while a save was running, leave the newer sequence pending. Keep operation state for create/delete as well as edits. A transaction can succeed while its response is lost, so reconciled replay must detect an already-applied operation; for robust retries, attach a stable operation ID and record its receipt atomically, as with imports.
-
-On `ProjectConflict`, preserve both the incoming cloud version and the draft. Let the user choose to reload or save a separate project; add cell-level merge only if you define and test the semantics. A second device deleting a project must not cause an unsynced draft to recreate it silently. Do not block navigation on server acknowledgement; local persistence and cloud synchronization are separate operations.
-
-A simpler initial implementation can use ordinary `.set()` writes and Firestore's cache with last-write-wins semantics, but that policy can lose simultaneous edits and is incompatible with the strict revision transaction flow/rules without redesign. Pick one coherent model before release. The examples favor explicit conflicts to preserve experiment data.
-
-**Daily operation budgeting for Spark**
-
-Use conservative planning targets of approximately 60–70% of the published limits to leave room for reconnects, imports, and retries. The following figures are application targets, not extra Firebase quotas:
-
-- Keep one bounded project-list listener and at most one additional selected-project listener per active account. Do not poll the full collection or recreate listeners on every widget rebuild. Detach listeners when no longer needed.
-- Coalesce pending updates for the same project and cloud-save after 1–2 seconds of idle time or an explicit save. Keep local draft persistence immediate. A batch does not turn multiple document writes into one quota operation.
-- Model ordinary project saves as one document write, or at least two if using an operation-receipt outbox. Include transaction reads, retries, changed listener documents, and rule-dependent reads separately.
-- For example, 100 daily users × 60 coalesced saves × 2 documents is 12,000 writes/day. Another 100 users importing 10 projects each adds 2,000 writes, reaching 14,000 before other writes. This is a workload estimate, not a supported-user guarantee.
-- Use the Firebase Console Usage tab to verify measured consumption. Include index storage and receipts/tombstones in the 1 GiB budget, and enforce an application payload budget below Firestore's 1 MiB document maximum.
-- Handle `resource-exhausted` and network errors by retaining drafts and backing off. Daily Firestore capacity resets around midnight Pacific time; avoid assuming the device's local midnight. Monthly network quotas need a different recovery window.
-
-For read planning, an initial live page can read 25 documents; later server changes and listener reconnects add reads. With persistent caching enabled, reconnecting after more than 30 minutes disconnected is billed like a new query; without persistence, reconnects are billed as new queries. Do not assume a cached listener or transaction is free. [Firestore read/write accounting](https://firebase.google.com/docs/firestore/pricing)
-
-**12. Configure native app flavors**
-
-Add Android flavor configuration inside the `android { ... }` block in `android/app/build.gradle.kts`:
-
-```kotlin
-flavorDimensions += "environment"
-productFlavors {
-    create("dev") {
-        dimension = "environment"
-        applicationIdSuffix = ".dev"
-        versionNameSuffix = "-dev"
-        resValue("string", "app_name", "Precision Test Kit Dev")
-    }
-    create("prod") {
-        dimension = "environment"
-        resValue("string", "app_name", "Precision Test Kit")
-    }
-}
-```
-
-Use `@string/app_name` in AndroidManifest's application label if applying those resources. Keep the existing production application ID and release identity. Dev gets the `.dev` suffix so it can be installed alongside prod. Add actual release signing before distributing Android production builds; the current Gradle configuration signs release with debug keys. [Android flavors](https://docs.flutter.dev/deployment/flavors)
-
-Generate separate Android service files:
+Commands from the repository root:
 
 ```bash
-npx -y --package=firebase-tools@latest -c 'flutterfire configure --yes --project=bramwellsprecisiontestkitdev --platforms=android --android-package-name=com.bramwell.bramwells_precision_test_kit.dev --android-out=android/app/src/dev/google-services.json --out=lib/firebase/firebase_options_dev.dart'
-npx -y --package=firebase-tools@latest -c 'flutterfire configure --yes --project=bramwells-precision-test-kit --platforms=android --android-package-name=com.bramwell.bramwells_precision_test_kit --android-out=android/app/src/prod/google-services.json --out=lib/firebase/firebase_options_prod.dart'
+task native:check
+task native:run DEVICE=macos                 # dev against cloud dev
+task native:run DEVICE=macos ENV=prod         # production Firebase
+task android:build                          # dev debug APK
+task android:build ENV=prod                  # prod debug APK
+task ios:build                              # unsigned dev simulator build
+task ios:build ENV=prod                      # unsigned prod simulator build
+task macos:build                            # unsigned dev macOS build
+task macos:build ENV=prod                    # unsigned prod macOS build
 ```
 
-Keep service configuration in its flavor directory; remove conflicting root copies once both flavors are configured. Re-running FlutterFire with the same output file updates selected platform options; verify the file still contains the web options for that environment.
-
-For iOS/macOS, create shared `dev` and `prod` schemes and `Debug-dev`, `Profile-dev`, `Release-dev`, `Debug-prod`, `Profile-prod`, `Release-prod` configurations. Set the dev bundle ID suffix, app display name, and Podfile build-configuration mappings. Include only the selected environment's plist in each app bundle. Configure every build configuration with FlutterFire, not just Debug. [Apple flavors](https://docs.flutter.dev/deployment/flavors-ios)
-
-Example for one iOS dev configuration; repeat for Profile/Release and the prod equivalents:
+Use `flutter devices` to find a device ID and pass it as `DEVICE`. For a native dev app against already-running local services:
 
 ```bash
-npx -y --package=firebase-tools@latest -c 'flutterfire configure --yes --project=bramwellsprecisiontestkitdev --platforms=ios --ios-bundle-id=com.bramwell.bramwellsPrecisionTestKit.dev --ios-build-config=Debug-dev --ios-out=ios/Firebase/dev/GoogleService-Info.plist --out=lib/firebase/firebase_options_dev.dart'
+task emulators:start                        # terminal 1
+task native:local DEVICE=macos               # terminal 2
+# Android emulator:
+task native:local DEVICE=ANDROID_DEVICE_ID EMULATOR_HOST=10.0.2.2
 ```
 
-For macOS use the corresponding `--macos-bundle-id`, `--macos-build-config`, and `--macos-out` flags. Enable required Keychain Sharing for Firebase Authentication on macOS according to the current setup guide. Both Dart options and native service files must select the same project. For Google sign-in later, register the correct signing certificates/OAuth clients for each environment rather than sharing production credentials with dev.
+The native build flavor and `APP_ENV` must agree. Startup rejects missing or mismatched flavors on Android/iOS/macOS, and production cannot select emulators. Windows remains outside the production Firebase native release scope.
+
+Unsigned Apple builds verify compilation and configuration; signed macOS runs and physical-device/distribution builds require a valid Apple development team/certificate in Xcode. Set Signing & Capabilities for the Runner target and both bundle IDs before those runs. Android production release builds require private `android/key.properties`, based on `android/key.properties.example`; a guard prevents release builds from silently using the debug signing key. Debug APKs remain available for configuration testing. [Android flavors](https://docs.flutter.dev/deployment/flavors), [Apple flavors](https://docs.flutter.dev/deployment/flavors-ios).
+
+**13. Emulator and ownership tests — implemented**
+
+`firebase.emulators.json` selects Standard Firestore, the checked-in `firestore.rules`, local Auth, and the Emulator UI. Listeners bind to `127.0.0.1`. Interactive application commands use `demo-bramwellsprecisiontestkit` with dummy SDK configuration. The isolated rules suite uses `demo-precision-rules`.
 
 ```bash
-flutter run --flavor dev --dart-define=APP_ENV=dev
-flutter build appbundle --flavor prod --release --dart-define=APP_ENV=prod
-flutter build ios --flavor prod --release --dart-define=APP_ENV=prod
+task local                    # services + Flutter Chrome
+task emulators:test           # fresh Auth/Firestore + browser SDK tests
+task rules:test               # fresh Firestore + rule tests
+task check                    # analysis + regular Flutter tests
+task native:check             # native IDs, schemes, all configurations, plist selection
+task verify                   # all the above checks, sequentially
 ```
 
-**13. Add emulator and ownership tests**
+Stop interactive emulators before isolated suites because the suites reuse local ports. `task local:test` can use already-running services. Tests fail closed if they are not pointed at the local emulators. Existing bootstrap prerequisites and Java 21 selection are documented in the root README.
 
-Keep a separate `firebase.emulators.json` so local tests use the default emulator database and isolate local service configuration from live provisioning:
+The rules suite covers owner CRUD, signed-out and unverified clients, cross-account document and query access, bounded queries, create/update validation, required-field deletion, nested form types, oversized matrix maps, and deletion-request authentication. Existing immutable-receipt coverage remains a defensive check of the checked-in policy; legacy import is not an application feature requirement.
 
-```json
-{
-  "firestore": { "rules": "firestore.rules" },
-  "emulators": {
-    "auth": { "port": 9099 },
-    "firestore": { "port": 8080 },
-    "ui": { "enabled": true, "port": 4000 },
-    "singleProjectMode": true
-  }
-}
-```
+Browser integration tests exercise the real FlutterFire Auth/Firestore SDKs: registration, verification and token refresh, workspace startup, sign-out with route disposal, actual account switching, and denied cross-account reads/deletes. Existing step-8 save/revision regression coverage is retained. Native tests validate project/bundle identity and reject a flavor mismatch; native config checks verify that every Apple configuration selects the correct environment and that a mismatched plist is rejected.
 
-Interactive app development:
-
-```bash
-task local              # Starts services and Flutter together
-# Or use separate terminals:
-task emulators:start    # Terminal 1
-task local:run          # Terminal 2
-task emulators:test     # Automated smoke test; start with other emulators stopped
-```
-
-The local bootstrap uses `demo-bramwellsprecisiontestkit` with dummy SDK configuration rather than the live dev project. These commands were implemented before step 7; see the root README for prerequisites and local ports. The checked-in emulator config explicitly selects Standard edition and binds to `127.0.0.1`. It loads the current rules, which remain deny-all at the step-6 checkpoint. For Android's emulator set `FIREBASE_EMULATOR_HOST=10.0.2.2`. For physical devices use the reachable development-machine address and configure the emulator listener/network access deliberately. The bootstrap attaches to both emulators before auth listeners or database queries begin. [Firestore emulator connection](https://firebase.google.com/docs/emulator-suite/connect_firestore)
-
-Create a separate `security-tests` Node package using `@firebase/rules-unit-testing` and the Firebase JS SDK. A minimal `rules.test.mjs`, run from that directory:
-
-```javascript
-import { after, before, test } from 'node:test';
-import { readFile } from 'node:fs/promises';
-import {
-  initializeTestEnvironment, assertFails, assertSucceeds,
-} from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, limit, query } from 'firebase/firestore';
-
-let environment;
-before(async () => {
-  environment = await initializeTestEnvironment({
-    projectId: 'demo-bramwellsprecisiontestkit',
-    firestore: { rules: await readFile('../firestore.rules', 'utf8') },
-  });
-});
-after(async () => { await environment?.cleanup(); });
-
-test('verified user can read their own project path', async () => {
-  const db = environment.authenticatedContext('alice', {
-    email_verified: true,
-  }).firestore();
-  await assertSucceeds(getDoc(doc(db, 'users/alice/projects/example')));
-});
-test('user cannot read another account', async () => {
-  const db = environment.authenticatedContext('bob', {
-    email_verified: true,
-  }).firestore();
-  await assertFails(getDoc(doc(db, 'users/alice/projects/example')));
-});
-test('signed-out client cannot read project data', async () => {
-  const db = environment.unauthenticatedContext().firestore();
-  await assertFails(getDoc(doc(db, 'users/alice/projects/example')));
-});
-test('project lists require a maximum of 25 results', async () => {
-  const db = environment.authenticatedContext('alice', {
-    email_verified: true,
-  }).firestore();
-  const projects = collection(db, 'users/alice/projects');
-  await assertSucceeds(getDocs(query(projects, limit(25))));
-  await assertFails(getDocs(projects));
-  await assertFails(getDocs(query(projects, limit(26))));
-});
-```
-
-Set that package's `test` script to `node --test rules.test.mjs`. [Rules testing setup](https://firebase.google.com/docs/rules/unit-tests). With the interactive emulator stopped, run isolated tests:
-
-```bash
-npx -y firebase-tools@latest emulators:exec --config firebase.emulators.json --only firestore --project demo-bramwellsprecisiontestkit 'npm --prefix security-tests test'
-flutter analyze
-flutter test
-```
-
-Expand the rules tests to include valid creation and updates, unverified users, unauthorized queries, missing/oversized query limits, deleted required fields, unknown fields, wrong types, creation-time changes, stale revision updates, oversized labels, immutable receipts, and the atomic import flow. Test that deletion requests require the same UID and recent authentication, cannot be edited by a client, and prevent further project/import writes. Integration-test register/verify/login/logout, user A to user B switching, pagination, offline outbox replay, simultaneous edits, permission/quota/network failures, interrupted import retries, multiple local installations, and deletion after migration. The emulator does not enforce live Spark usage limits; smoke-test the actual dev database and measure usage without intentionally exhausting production quotas.
+No durable offline replay, interrupted legacy import, or new conflict-resolution workflow is required. The emulators do not enforce live Spark usage limits. Measure normal dev usage rather than intentionally exhausting quotas. [Emulator setup](https://firebase.google.com/docs/emulator-suite/install_and_configure), [rules unit testing](https://firebase.google.com/docs/rules/unit-tests).
 
 **14. Deploy the matching bundle to the matching project**
 

@@ -64,6 +64,20 @@ resource "google_firebase_android_app" "android" {
   }
 }
 
+# Keep the imported unsuffixed dev registration; package IDs are immutable.
+# The installable dev flavor gets a separate registration alongside it.
+resource "google_firebase_android_app" "dev" {
+  provider     = google-beta
+  count        = var.environment == "dev" ? 1 : 0
+  project      = google_firebase_project.this.project
+  display_name = "Precision Test Kit Dev Flavor Android"
+  package_name = "${var.android_package_name}.dev"
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 resource "google_firebase_apple_app" "apple" {
   provider     = google-beta
   for_each     = var.apple_bundle_ids

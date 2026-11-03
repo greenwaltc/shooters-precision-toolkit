@@ -27,6 +27,26 @@ void main() {
     );
   });
 
+  test('native startup requires an explicit matching flavor', () {
+    expect(
+      () => firebaseProjectFor(
+        environment: 'dev',
+        useEmulators: false,
+        requireNativeFlavor: true,
+      ),
+      throwsStateError,
+    );
+    expect(
+      firebaseProjectFor(
+        environment: 'prod',
+        useEmulators: false,
+        nativeFlavor: 'prod',
+        requireNativeFlavor: true,
+      ),
+      'bramwells-precision-test-kit',
+    );
+  });
+
   test('missing environments and mismatched native flavors fail closed', () {
     expect(
       () => firebaseProjectFor(environment: '', useEmulators: true),

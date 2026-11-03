@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart' show appFlavor;
 
 import 'firebase_options_dev.dart' as dev;
@@ -21,13 +22,15 @@ String firebaseProjectFor({
   required String environment,
   required bool useEmulators,
   String? nativeFlavor,
+  bool requireNativeFlavor = false,
 }) {
   final cloudProject = switch (environment) {
     'dev' => 'bramwellsprecisiontestkitdev',
     'prod' => 'bramwells-precision-test-kit',
     _ => throw StateError('Build with APP_ENV=dev or APP_ENV=prod.'),
   };
-  if (nativeFlavor != null && nativeFlavor != environment) {
+  if ((requireNativeFlavor && nativeFlavor == null) ||
+      (nativeFlavor != null && nativeFlavor != environment)) {
     throw StateError('Native flavor and APP_ENV disagree.');
   }
   if (useEmulators && environment == 'prod') {
@@ -48,6 +51,13 @@ Future<FirebaseServices> bootstrapFirebase() async {
     environment: environment,
     useEmulators: useEmulators,
     nativeFlavor: appFlavor,
+    requireNativeFlavor:
+        !kIsWeb &&
+        const {
+          TargetPlatform.android,
+          TargetPlatform.iOS,
+          TargetPlatform.macOS,
+        }.contains(defaultTargetPlatform),
   );
 
   late final FirebaseApp app;
@@ -69,10 +79,11 @@ Future<FirebaseServices> bootstrapFirebase() async {
   final auth = FirebaseAuth.instanceFor(app: app);
   // Spark examples use the same Standard default database ID everywhere.
   final db = FirebaseFirestore.instanceFor(app: app);
+  // Cloud-only application: do not retain Firestore documents across sessions.
+  db.settings = const Settings(persistenceEnabled: false);
   if (useEmulators) {
     await auth.useAuthEmulator(emulatorHost, 9099);
     if (kIsWeb) await auth.setPersistence(Persistence.NONE);
-    db.settings = const Settings(persistenceEnabled: false);
     db.useFirestoreEmulator(emulatorHost, 8080);
   }
   return FirebaseServices(app: app, auth: auth, db: db);

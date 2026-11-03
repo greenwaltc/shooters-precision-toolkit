@@ -9,6 +9,7 @@ import 'package:bramwells_precision_test_kit/auth/auth_page.dart';
 import 'package:bramwells_precision_test_kit/auth/auth_service.dart';
 import 'package:bramwells_precision_test_kit/firebase/firebase_bootstrap.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
 import 'package:bramwells_precision_test_kit/model/saved_project.dart';
 import 'package:bramwells_precision_test_kit/storage/firestore_project_repository.dart';
@@ -254,6 +255,81 @@ void main() {
     timeout: const Timeout(Duration(minutes: 2)),
   );
   test(
+    'real Auth account switching preserves Firestore ownership boundaries',
+    () async {
+      final services = emulatorServices;
+      final suffix = DateTime.now().microsecondsSinceEpoch;
+      final aliceEmail = 'owner-a-$suffix@example.test';
+      final bobEmail = 'owner-b-$suffix@example.test';
+      const password = 'Local-test-password-123!';
+      try {
+        await _registerVerified(services, aliceEmail, password);
+        final aliceUid = services.auth.currentUser!.uid;
+        final alice = FirestoreProjectRepository(
+          db: services.db,
+          uid: aliceUid,
+        );
+        final now = DateTime.now().toUtc();
+        final experiment = SavedProject(
+          id: alice.newProjectId(),
+          createdAt: now,
+          updatedAt: now,
+          formModel: ProjectFormModel()..setProjectTitle('Alice cloud project'),
+        );
+        expect(await alice.saveProject(experiment, expectedRevision: 0), 1);
+        await services.auth.signOut();
+
+        await _registerVerified(services, bobEmail, password);
+        final bobUid = services.auth.currentUser!.uid;
+        expect(bobUid, isNot(aliceUid));
+        final bobProjects = services.db
+            .collection('users')
+            .doc(bobUid)
+            .collection('projects');
+        expect(
+          (await bobProjects
+                  .limit(25)
+                  .get(const GetOptions(source: Source.server)))
+              .docs,
+          isEmpty,
+        );
+        final alicePath = services.db.doc(
+          'users/$aliceUid/projects/${experiment.id}',
+        );
+        final denied = isA<FirebaseException>().having(
+          (error) => error.code,
+          'code',
+          'permission-denied',
+        );
+        await expectLater(
+          alicePath.get(const GetOptions(source: Source.server)),
+          throwsA(denied),
+        );
+        await expectLater(alicePath.delete(), throwsA(denied));
+        await services.auth.currentUser!.delete();
+        await services.auth.signOut();
+
+        await services.auth.signInWithEmailAndPassword(
+          email: aliceEmail,
+          password: password,
+        );
+        final restored = await alicePath.get(
+          const GetOptions(source: Source.server),
+        );
+        expect(
+          (restored.data()!['formModel'] as Map)['projectTitle'],
+          'Alice cloud project',
+        );
+        await alice.deleteProject(experiment.id, expectedRevision: 1);
+        await services.auth.currentUser!.delete();
+      } finally {
+        await services.auth.signOut();
+      }
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+
+  test(
     'store preserves newer edits across real Firestore acknowledgements and conflicts',
     () async {
       final services = emulatorServices;
@@ -437,6 +513,29 @@ void main() {
     },
     timeout: const Timeout(Duration(minutes: 2)),
   );
+}
+
+Future<void> _registerVerified(
+  FirebaseServices services,
+  String email,
+  String password,
+) async {
+  final auth = AuthService(services.auth);
+  await auth.register(email, password);
+  final response = await web.window
+      .fetch(
+        'http://127.0.0.1:9099/emulator/v1/projects/$localFirebaseProjectId/oobCodes'
+            .toJS,
+      )
+      .toDart;
+  expect(response.ok, isTrue);
+  final data = (await response.json().toDart).dartify() as Map;
+  final code = (data['oobCodes'] as List).cast<Map>().lastWhere(
+    (entry) =>
+        entry['email'] == email && entry['requestType'] == 'VERIFY_EMAIL',
+  );
+  await services.auth.applyActionCode(code['oobCode'] as String);
+  expect(await auth.refreshVerification(), isTrue);
 }
 
 Future<void> _waitForStore(

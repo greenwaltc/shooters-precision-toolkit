@@ -304,3 +304,43 @@ test('unrelated paths remain inaccessible', async () => {
     value: 'not allowed',
   }));
 });
+
+test('ownership is enforced on list queries, not only individual documents', async () => {
+  await setDoc(projectRef(userDb('alice')), validProject());
+  for (const db of [userDb('bob'), userDb('alice', false), environment.unauthenticatedContext().firestore()]) {
+    await assertFails(getDocs(query(collection(db, 'users', 'alice', 'projects'), limit(25))));
+  }
+});
+
+test('unverified owners cannot update or delete existing projects', async () => {
+  await setDoc(projectRef(userDb('alice')), validProject());
+  const ref = projectRef(userDb('alice', false));
+  await assertFails(updateDoc(ref, { revision: 2, updatedAt: serverTimestamp() }));
+  await assertFails(deleteDoc(ref));
+});
+
+test('updates cannot remove required fields or corrupt nested form data', async () => {
+  const db = userDb('alice');
+  const ref = projectRef(db);
+  await setDoc(ref, validProject());
+  const missing = validProject();
+  missing.revision = 2;
+  delete missing.formModel;
+  await assertFails(setDoc(ref, missing));
+  await assertFails(updateDoc(ref, {
+    'formModel.factorDefinitions': ['not a factor'], revision: 2, updatedAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(ref, {
+    matrixState: Object.fromEntries(Array.from({ length: 4097 }, (_, i) => [`cell-${i}`, '1'])),
+    revision: 2, updatedAt: serverTimestamp(),
+  }));
+});
+
+test('deletion requests require the owner and recent authentication', async () => {
+  const oldSession = environment.authenticatedContext('alice', {
+    email_verified: true, auth_time: Math.floor(Date.now() / 1000) - 600,
+  }).firestore();
+  const request = { schemaVersion: 1, status: 'pending', requestedAt: serverTimestamp() };
+  await assertFails(setDoc(doc(oldSession, 'accountDeletionRequests', 'alice'), request));
+  await assertFails(setDoc(doc(userDb('bob'), 'accountDeletionRequests', 'alice'), request));
+});

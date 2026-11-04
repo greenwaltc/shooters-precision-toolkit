@@ -11,12 +11,6 @@ export function environmentConfig(environment) {
     throw new Error('Choose dev or prod.');
   }
   const config = { environment, ...settings.environments[environment] };
-  if (config.contactVerificationUrl) {
-    const url = new URL(config.contactVerificationUrl);
-    if (url.origin !== config.publicOrigin || url.pathname !== '/contact-verification/' || url.search || url.hash) {
-      throw new Error('Contact verification must use this environment’s public origin and /contact-verification/.');
-    }
-  }
   return config;
 }
 
@@ -69,9 +63,6 @@ export async function verifyRelease(environment, directory = path.join(root, `bu
   const manifest = JSON.parse(await readFile(path.join(directory, 'release.json')));
   for (const key of ['environment', 'projectId', 'siteId', 'publicOrigin']) {
     if (manifest[key] !== config[key]) throw new Error(`Release ${key} does not match ${environment}. Rebuild it.`);
-  }
-  if ((manifest.contactVerificationUrl ?? '') !== (config.contactVerificationUrl ?? '')) {
-    throw new Error('Rebuild after changing contactVerificationUrl.');
   }
   if (manifest.canonicalOrigin !== settings.canonicalOrigin) throw new Error('Rebuild after changing canonicalOrigin.');
   const hashes = await artifactHashes(directory);

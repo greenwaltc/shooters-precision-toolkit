@@ -201,6 +201,6 @@ Copyright © 2026 Denton M. Bramwell. All rights reserved.
 This is **proprietary software** — see [LICENSE](LICENSE). No part of the software may be reproduced, modified, or distributed without the prior express written consent of the owner.
 
 
-### Contact spam protection
+### Contact page
 
-Contact works without additional configuration using a direct email reveal. For server-verified Cloudflare Turnstile protection, follow [Contact verification setup](docs/contact_verification.md). Test the Worker with `task contact:test`; deploy it with `task contact:deploy ENV=dev` after configuring the widget. Firebase hosting releases do not deploy the Worker.
+The Contact page is a placeholder until a private contact form is implemented. It does not reveal an email address or send messages.

@@ -27,7 +27,7 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
-      - run: node --test scripts/tests/web_release_test.mjs infra/contact-worker/test/worker_test.mjs
+      - run: node --test scripts/tests/web_release_test.mjs
       - run: node scripts/build_web.mjs dev
       - run: node scripts/measure_web.mjs dev
       - uses: actions/upload-artifact@v4

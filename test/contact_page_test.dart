@@ -3,14 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Contact works without Turnstile configuration', (tester) async {
+  testWidgets('Contact shows a placeholder without exposing an email address', (
+    tester,
+  ) async {
     await tester.pumpWidget(const MaterialApp(home: ContactPage()));
     expect(find.text('Contact Denton Bramwell'), findsOneWidget);
-    expect(find.text('denton@tutanota.com'), findsNothing);
-    await tester.tap(find.text('Reveal email address'));
-    await tester.pumpAndSettle();
-    expect(find.text('denton@tutanota.com'), findsOneWidget);
-    expect(find.text('Email Denton Bramwell'), findsOneWidget);
+    expect(find.textContaining('@'), findsNothing);
+    expect(find.textContaining('contact form'), findsOneWidget);
+    expect(find.text('Reveal email address'), findsNothing);
+    expect(find.text('Email Denton Bramwell'), findsNothing);
     expect(
       find.textContaining('Engineered by Cameron Greenwalt'),
       findsOneWidget,

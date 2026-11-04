@@ -3,6 +3,8 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../model/project_form_model.dart';
@@ -52,16 +54,30 @@ class ResultsChartCard extends StatelessWidget {
         children: [
           _Title(scale: scale),
           SizedBox(height: scale.chartOuterPadding),
-          SizedBox(
-            height: scale.chartHeight,
-            child: CombinedLineChart(
-              factorRows: factorRows,
-              grandMean: grandMean,
-              lowerBound: lowerBound,
-              upperBound: upperBound,
-              detectableDiffPercent: detectableDiffPercent,
-              scale: scale,
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = math.max(
+                constraints.maxWidth,
+                factorRows.length * 160 * scale.textScale +
+                    scale.leftAxisReserve +
+                    scale.yAxisNameReserve,
+              );
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: width,
+                  height: scale.chartHeight,
+                  child: CombinedLineChart(
+                    factorRows: factorRows,
+                    grandMean: grandMean,
+                    lowerBound: lowerBound,
+                    upperBound: upperBound,
+                    detectableDiffPercent: detectableDiffPercent,
+                    scale: scale,
+                  ),
+                ),
+              );
+            },
           ),
           SizedBox(height: scale.chartOuterPadding),
           ChartLegend(

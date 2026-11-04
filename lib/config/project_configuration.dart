@@ -54,7 +54,8 @@ class BrandConfiguration {
   static const BrandConfiguration defaults = BrandConfiguration(
     appTitle: "Bramwell's Precision Test Kit",
     tagline: 'The modern tool for comparing projectile consistency',
-    copyrightNotice: '\u00A9 2026 Denton M. Bramwell. All rights reserved.',
+    copyrightNotice:
+        '\u00A9 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt',
     bannerLogoAsset: 'assets/projects_banner_logo.png',
     compactLogoAsset: 'assets/icon/app_icon_compact.png',
     bannerLogoAspectRatio: 1801 / 504,

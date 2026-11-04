@@ -1,7 +1,4 @@
-// Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
-// Use of this source code is governed by a proprietary license that can be
-// found in the LICENSE file at the root of this project.
-// Unauthorized use or reproduction of this source code is prohibited.
+import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -10,12 +7,7 @@ import '../../../styles/chart/chart_layout.dart';
 import '../../../styles/chart/chart_scale.dart';
 import '../services/factor_row_locator.dart';
 
-/// Builds the bottom axis [AxisTitles] for the combined results chart.
-///
-/// Lays out two stacked rows on the X-axis:
-///   * State labels at integer positions, on the row closest to the axis.
-///   * Factor names at half-integer (factor midpoint) positions, on a second
-///     row below the state labels with [ChartScale.factorLabelGap] between.
+/// Measures the actual label rows, rather than reserving a fixed vertical band.
 class ChartXAxis {
   const ChartXAxis._();
 
@@ -23,85 +15,115 @@ class ChartXAxis {
     required BuildContext context,
     required FactorRowLocator locator,
     required ChartScale scale,
+    required double plotWidth,
   }) {
     final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final stateStyle = Theme.of(context).textTheme.bodySmall!.copyWith(
+      fontSize: scale.stateLabelFontSize,
+      fontWeight: FontWeight.w600,
+      color: scheme.onSurfaceVariant,
+      height: 1.15,
+    );
+    final factorStyle = stateStyle.copyWith(
+      fontSize: scale.factorLabelFontSize,
+      fontWeight: FontWeight.w700,
+      color: scheme.onSurface,
+    );
+    final span = locator.rows.isEmpty
+        ? 2.0
+        : locator.rows.last.secondX + 2 * ChartLayout.edgePad;
+    final unitWidth = plotWidth / span;
+    final factorWidth = math.max(24.0, unitWidth * 2 - 8);
+    Size measure(String text, TextStyle style, double width) {
+      final painter = TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout(maxWidth: width);
+      final size = painter.size;
+      painter.dispose();
+      return size;
+    }
+
+    final labels = [
+      for (final row in locator.rows) ...[row.firstLabel, row.secondLabel],
+    ];
+    final rotated = labels.any(
+      (label) =>
+          measure(label, stateStyle, double.infinity).width > unitWidth - 8,
+    );
+    final labelWidth = math.max(24.0, unitWidth - (rotated ? 14 : 8));
+    final sizes = {
+      for (final label in labels) label: measure(label, stateStyle, labelWidth),
+    };
+    double rotatedHeight(Size size) =>
+        rotated ? (size.width + size.height) / math.sqrt2 : size.height;
+    final stateHeight = sizes.values.fold<double>(
+      0,
+      (height, size) => math.max(height, rotatedHeight(size)),
+    );
+    final factorHeight = locator.rows.fold<double>(
+      0,
+      (height, row) => math.max(
+        height,
+        measure(row.displayName, factorStyle, factorWidth).height,
+      ),
+    );
+    const topGap = 4.0;
+    const rowGap = 8.0;
 
     return AxisTitles(
       sideTitles: SideTitles(
         showTitles: true,
-        // Half-segment interval so fl_chart visits both state ticks
-        // (integer) and factor midpoints (half-integer).
         interval: ChartLayout.segmentSpan / 2,
-        reservedSize: scale.bottomStateLabelReserve,
+        reservedSize: topGap + stateHeight + rowGap + factorHeight + 2,
         getTitlesWidget: (value, _) {
-          final factorMatch = locator.factorAtMidpoint(value);
-          if (factorMatch != null) {
+          final factor = locator.factorAtMidpoint(value);
+          if (factor != null) {
             return Padding(
-              padding: EdgeInsets.only(
-                top: scale.stateLabelRowHeight + scale.factorLabelGap,
-              ),
+              padding: EdgeInsets.only(top: topGap + stateHeight + rowGap),
               child: SizedBox(
-                width: scale.factorLabelMaxWidth,
+                width: factorWidth,
                 child: Text(
-                  scale.isCompact
-                      ? 'F${factorMatch.index + 1}'
-                      : factorMatch.displayName,
-                  style: textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontSize: scale.factorLabelFontSize,
-                    color: scheme.onSurface,
-                    letterSpacing: 0,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
+                  factor.displayName,
+                  style: factorStyle,
                   textAlign: TextAlign.center,
                 ),
               ),
             );
           }
-          final stateLabel = locator.stateLabelAt(value);
-          if (stateLabel != null) {
-            return Padding(
-              padding: EdgeInsets.only(top: scale.stateLabelTopPad),
-              child: scale.isCompact
-                  ? RotatedBox(
-                      quarterTurns: 3,
-                      child: SizedBox(
-                        width: scale.stateLabelMaxWidth,
-                        child: Text(
-                          stateLabel,
-                          style: textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            fontSize: scale.stateLabelFontSize,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: false,
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    )
-                  : SizedBox(
-                      width: scale.stateLabelMaxWidth,
+          final label = locator.stateLabelAt(value);
+          if (label == null) return const SizedBox.shrink();
+          final size = sizes[label]!;
+          return Padding(
+            padding: const EdgeInsets.only(top: topGap),
+            child: SizedBox(
+              width: rotated
+                  ? (size.width + size.height) / math.sqrt2
+                  : size.width,
+              height: rotatedHeight(size),
+              child: Center(
+                child: OverflowBox(
+                  minWidth: size.width,
+                  maxWidth: size.width,
+                  minHeight: size.height,
+                  maxHeight: size.height,
+                  child: Transform.rotate(
+                    angle: rotated ? -math.pi / 4 : 0,
+                    child: SizedBox(
+                      width: size.width,
+                      height: size.height,
                       child: Text(
-                        stateLabel,
-                        style: textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: scale.stateLabelFontSize,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: false,
+                        label,
+                        style: stateStyle,
                         textAlign: TextAlign.center,
                       ),
                     ),
-            );
-          }
-          return const SizedBox.shrink();
+                  ),
+                ),
+              ),
+            ),
+          );
         },
       ),
     );

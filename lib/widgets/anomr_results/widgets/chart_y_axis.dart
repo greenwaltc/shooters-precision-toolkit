@@ -25,20 +25,17 @@ class ChartYAxis {
 
     return AxisTitles(
       axisNameSize: scale.yAxisNameReserve,
-      axisNameWidget: scale.isCompact
-          ? const SizedBox.shrink()
-          : Padding(
-              padding: scale.axisNamePadding,
-              child: Text(
-                'Group Size',
-                style: textTheme.labelLarge?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                  fontSize: scale.factorLabelFontSize,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
+      axisNameWidget: Text(
+        scale.isCompact
+            ? 'AVG. 2-SHOT GROUP SIZE'
+            : 'AVERAGE TWO SHOT GROUP SIZE',
+        style: textTheme.labelLarge?.copyWith(
+          color: scheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+          fontSize: scale.factorLabelFontSize,
+          letterSpacing: 0,
+        ),
+      ),
       sideTitles: SideTitles(
         showTitles: true,
         reservedSize: scale.leftAxisReserve,

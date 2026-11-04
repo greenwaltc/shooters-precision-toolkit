@@ -41,6 +41,7 @@ class ProjectFormPage extends StatelessWidget {
               final hasLeading = AppNavChrome.canPop(context);
               final actionItems = [
                 AppBarActionBar.instructions(context),
+                AppBarActionBar.contact(context),
                 AppNavChrome.homeActionItem(context: context, store: store),
                 ...AppBarActionBar.signOutActions(context),
               ];

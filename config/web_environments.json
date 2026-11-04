@@ -12,12 +12,14 @@
     "dev": {
       "projectId": "bramwellsprecisiontestkitdev",
       "siteId": "bramwellsprecisiontestkitdev",
-      "publicOrigin": "https://dev.bramwelltest.com"
+      "publicOrigin": "https://dev.bramwelltest.com",
+      "contactVerificationUrl": "https://dev.bramwelltest.com/contact-verification/"
     },
     "prod": {
       "projectId": "bramwells-precision-test-kit",
       "siteId": "bramwells-precision-test-kit",
-      "publicOrigin": "https://bramwelltest.com"
+      "publicOrigin": "https://bramwelltest.com",
+      "contactVerificationUrl": "https://bramwelltest.com/contact-verification/"
     }
   }
 }

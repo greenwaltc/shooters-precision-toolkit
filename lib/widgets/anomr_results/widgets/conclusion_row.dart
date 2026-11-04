@@ -104,7 +104,15 @@ class ConclusionRow extends StatelessWidget {
       children: [
         Text(row.displayName, style: _titleStyle(textTheme)),
         SizedBox(height: scale.conclusionRowLabelGap),
-        Text(_stateTransition, style: _stateStyle(textTheme, scheme)),
+        Text('Average group size', style: _stateStyle(textTheme, scheme)),
+        Text(
+          '${row.firstLabel}: ${row.stats.hasFirst ? row.stats.firstMean.toStringAsFixed(4) : "No data"}',
+          style: _stateStyle(textTheme, scheme),
+        ),
+        Text(
+          '${row.secondLabel}: ${row.stats.hasSecond ? row.stats.secondMean.toStringAsFixed(4) : "No data"}',
+          style: _stateStyle(textTheme, scheme),
+        ),
       ],
     );
   }
@@ -119,8 +127,6 @@ class ConclusionRow extends StatelessWidget {
       fontSize: scale.axisLabelFontSize + 1,
     );
   }
-
-  String get _stateTransition => '${row.firstLabel} → ${row.secondLabel}';
 
   TextStyle? _titleStyle(TextTheme textTheme) {
     return textTheme.titleSmall?.copyWith(

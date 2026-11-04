@@ -6,6 +6,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'contact/contact_page.dart';
 import 'package:provider/provider.dart';
 
 import 'config/project_configuration.dart';
@@ -78,6 +79,7 @@ class FirebaseApplication extends StatelessWidget {
 }
 
 final Map<String, WidgetBuilder> _appRoutes = {
+  AppRoutes.contact: (_) => const ContactPage(),
   AppRoutes.projects: (_) => const ProjectHomePage(),
   AppRoutes.projectForm: (_) => const ProjectFormPage(),
   AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),

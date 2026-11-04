@@ -12,6 +12,8 @@ import '../widgets/app_bar_actions.dart';
 import '../widgets/app_brand_bar.dart';
 import '../widgets/app_copyright_footer.dart';
 import 'auth_service.dart';
+import '../contact/contact_page.dart';
+import '../navigation/app_routes.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key, this.verification = false});
@@ -136,11 +138,13 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) => MaterialApp(
     theme: AppTheme.light(),
+    routes: {AppRoutes.contact: (_) => const ContactPage()},
     builder: (context, child) => AppBackground(child: child),
     home: Builder(
       builder: (context) => AppLayoutBuilder(
         builder: (context, layout) {
           final actions = <AppBarActionItem>[
+            AppBarActionBar.contact(context),
             if (widget.verification)
               AppBarActionItem(
                 label: 'Sign out',

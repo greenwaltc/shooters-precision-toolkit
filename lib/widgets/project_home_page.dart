@@ -43,6 +43,7 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
           ))
             _themeModeAction(context),
           AppBarActionBar.instructions(context),
+          AppBarActionBar.contact(context),
           ...AppBarActionBar.signOutActions(context),
         ];
 

@@ -105,7 +105,7 @@ class ChartScale {
   double get leftAxisReserve =>
       (isCompact ? 42 : (52 * scale).clamp(46.0, 72.0)) * textScale;
   double get yAxisNameReserve =>
-      (isCompact ? 0 : (26 * scale).clamp(22.0, 36.0)) * textScale;
+      (isCompact ? 20 : (26 * scale).clamp(22.0, 36.0)) * textScale;
 
   // Bottom axis is two stacked rows: state labels on top, factor names below.
   double get stateLabelTopPad => 6.0;

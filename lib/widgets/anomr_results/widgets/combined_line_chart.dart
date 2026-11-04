@@ -38,10 +38,13 @@ class CombinedLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LineChart(_chartData(context));
+    return LayoutBuilder(
+      builder: (context, constraints) =>
+          LineChart(_chartData(context, constraints.maxWidth)),
+    );
   }
 
-  LineChartData _chartData(BuildContext context) {
+  LineChartData _chartData(BuildContext context, double width) {
     final scheme = Theme.of(context).colorScheme;
     final locator = FactorRowLocator(factorRows);
 
@@ -57,7 +60,7 @@ class CombinedLineChart extends StatelessWidget {
       lineTouchData: _tooltip(context, locator),
       gridData: _grid(context, yRange),
       borderData: _border(scheme),
-      titlesData: _titles(context, locator),
+      titlesData: _titles(context, locator, width),
       extraLinesData: ChartReferenceLines.build(
         context: context,
         scale: scale,
@@ -99,7 +102,11 @@ class CombinedLineChart extends StatelessWidget {
     );
   }
 
-  FlTitlesData _titles(BuildContext context, FactorRowLocator locator) {
+  FlTitlesData _titles(
+    BuildContext context,
+    FactorRowLocator locator,
+    double width,
+  ) {
     return FlTitlesData(
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -107,6 +114,7 @@ class CombinedLineChart extends StatelessWidget {
         context: context,
         locator: locator,
         scale: scale,
+        plotWidth: width - scale.leftAxisReserve - scale.yAxisNameReserve,
       ),
       leftTitles: ChartYAxis.build(context: context, scale: scale),
     );

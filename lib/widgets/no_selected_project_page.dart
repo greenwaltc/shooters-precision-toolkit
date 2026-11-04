@@ -24,6 +24,7 @@ class NoSelectedProjectPage extends StatelessWidget {
         final hasLeading = AppNavChrome.canPop(context);
         final actionItems = [
           AppBarActionBar.instructions(context),
+          AppBarActionBar.contact(context),
           ...AppBarActionBar.signOutActions(context),
         ];
         final actionsMetrics = AppBarActionsMetrics.of(

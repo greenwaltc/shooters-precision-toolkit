@@ -75,3 +75,23 @@ test('Hosting keeps SPA routing, revalidates stable filenames, and isolates site
     assert.equal(headers['X-Robots-Tag'], environment === 'dev' ? 'noindex, nofollow, noarchive' : undefined);
   }
 });
+
+
+test('contact verification stays optional and cannot cross environments', () => {
+  const dev = settings.environments.dev;
+  const previous = dev.contactVerificationUrl;
+  try {
+    delete dev.contactVerificationUrl;
+    assert.equal(environmentConfig('dev').contactVerificationUrl, undefined);
+    dev.contactVerificationUrl = `${dev.publicOrigin}/contact-verification/`;
+    assert.equal(environmentConfig('dev').contactVerificationUrl, dev.contactVerificationUrl);
+    for (const url of [settings.canonicalOrigin + '/contact-verification/',
+      dev.publicOrigin + '/contact-verification/?email=anything', dev.publicOrigin + '/other']) {
+      dev.contactVerificationUrl = url;
+      assert.throws(() => environmentConfig('dev'), /Contact verification must use/);
+    }
+  } finally {
+    if (previous === undefined) delete dev.contactVerificationUrl;
+    else dev.contactVerificationUrl = previous;
+  }
+});

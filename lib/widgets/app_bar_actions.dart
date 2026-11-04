@@ -9,6 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../auth/workspace_sign_out.dart';
+import '../contact/contact_page.dart';
+import '../navigation/app_page_transitions.dart';
+import '../navigation/app_routes.dart';
 import '../help/help_instructions.dart';
 import '../styles/app_design.dart';
 import '../styles/layout/app_layout.dart';
@@ -110,6 +113,18 @@ abstract final class AppBarActionBar {
       onPressed: () => showHelpInstructionsSheet(context),
     );
   }
+
+  static AppBarActionItem contact(BuildContext context) => AppBarActionItem(
+    label: 'Contact',
+    icon: Icons.contact_mail_outlined,
+    tooltip: 'Contact',
+    onPressed: () => Navigator.of(context).push(
+      AppPageRoute<void>(
+        settings: const RouteSettings(name: AppRoutes.contact),
+        builder: (_) => const ContactPage(),
+      ),
+    ),
+  );
 
   static Widget _inlineAction(BuildContext context, AppBarActionItem item) {
     if (item.filledInline) {

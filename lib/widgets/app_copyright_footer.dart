@@ -46,7 +46,7 @@ class AppCopyrightFooter extends StatelessWidget {
                   Expanded(
                     child: Text(
                       noticeText,
-                      maxLines: 2,
+                      maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       textScaler: AppViewport.footerTextScaler(context),
                       style: theme.textTheme.bodySmall?.copyWith(

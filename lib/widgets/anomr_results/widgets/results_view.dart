@@ -59,6 +59,7 @@ class _ResultsViewState extends State<ResultsView> {
         final store = context.read<ProjectStore>();
         final actionItems = [
           AppBarActionBar.instructions(context),
+          AppBarActionBar.contact(context),
           AppBarActionItem(
             label: 'Projects',
             icon: Icons.home_outlined,

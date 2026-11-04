@@ -1,4 +1,5 @@
 import 'package:bramwells_precision_test_kit/auth/workspace_sign_out.dart';
+import 'package:bramwells_precision_test_kit/contact/contact_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_store.dart';
 import 'support/fake_project_repository.dart';
@@ -55,14 +56,41 @@ void main() {
       );
       await tester.pumpAndSettle();
       await _expectSignOut(tester);
+      await _tapAction(tester, 'Contact');
+      expect(find.byType(ContactPage), findsOneWidget);
+      expect(
+        find.textContaining('Engineered by Cameron Greenwalt'),
+        findsWidgets,
+      );
+      expect(find.textContaining('denton@'), findsNothing);
+      Navigator.of(tester.element(find.byType(ContactPage))).pop();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Sign-out test'));
       await tester.pumpAndSettle();
       expect(find.byType(AnomrMatrix), findsOneWidget);
       await _expectSignOut(tester);
+      await _tapAction(tester, 'Contact');
+      expect(find.byType(ContactPage), findsOneWidget);
+      expect(
+        find.textContaining('Engineered by Cameron Greenwalt'),
+        findsWidgets,
+      );
+      expect(find.textContaining('denton@'), findsNothing);
+      Navigator.of(tester.element(find.byType(ContactPage))).pop();
+      await tester.pumpAndSettle();
       await _tapAction(tester, 'Project setup');
       expect(find.byType(ProjectFormPage), findsOneWidget);
       await _expectSignOut(tester);
+      await _tapAction(tester, 'Contact');
+      expect(find.byType(ContactPage), findsOneWidget);
+      expect(
+        find.textContaining('Engineered by Cameron Greenwalt'),
+        findsWidgets,
+      );
+      expect(find.textContaining('denton@'), findsNothing);
+      Navigator.of(tester.element(find.byType(ContactPage))).pop();
+      await tester.pumpAndSettle();
       Navigator.of(tester.element(find.byType(ProjectFormPage))).pop();
       await tester.pumpAndSettle();
 
@@ -71,6 +99,15 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(ResultsView), findsOneWidget);
       await _expectSignOut(tester);
+      await _tapAction(tester, 'Contact');
+      expect(find.byType(ContactPage), findsOneWidget);
+      expect(
+        find.textContaining('Engineered by Cameron Greenwalt'),
+        findsWidgets,
+      );
+      expect(find.textContaining('denton@'), findsNothing);
+      Navigator.of(tester.element(find.byType(ContactPage))).pop();
+      await tester.pumpAndSettle();
       await _tapAction(tester, 'Sign out');
       expect(signOuts, 1);
       expect(find.byType(AlertDialog), findsNothing);

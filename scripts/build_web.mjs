@@ -11,6 +11,7 @@ try {
   await rm(directory, { recursive: true, force: true });
   const result = spawnSync('flutter', [
     'build', 'web', '--release', `--dart-define=APP_ENV=${environment}`,
+    `--dart-define=CONTACT_VERIFICATION_URL=${config.contactVerificationUrl ?? ''}`,
     '--no-web-resources-cdn', `--output=build/web-${environment}`,
   ], { cwd: root, stdio: 'inherit' });
   if (result.error) throw result.error;

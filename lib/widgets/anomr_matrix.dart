@@ -112,6 +112,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     final hasLeading = AppNavChrome.canPop(context);
     final actionItems = [
       AppBarActionBar.instructions(context),
+      AppBarActionBar.contact(context),
       AppNavChrome.homeActionItem(context: context, store: store),
       AppBarActionItem(
         label: 'Project setup',

@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/project_configuration.dart';
+import '../styles/app_design.dart';
 
 /// Full-bleed photographic atmosphere painted behind every route.
 ///
@@ -23,7 +24,7 @@ class AppAtmosphere extends StatelessWidget {
       child: IgnorePointer(
         child: SizedBox.expand(
           child: Opacity(
-            opacity: 0.045,
+            opacity: AppDesign.atmosphereOpacity,
             child: Image.asset(
               asset,
               fit: BoxFit.cover,

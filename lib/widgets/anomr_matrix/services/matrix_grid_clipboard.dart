@@ -16,44 +16,38 @@ class MatrixGridPasteTarget {
   const MatrixGridPasteTarget({
     required this.rowBounds,
     required this.hasSelectingPosition,
+    this.rangeOnly = true,
   });
 
   final (int, int) rowBounds;
   final bool hasSelectingPosition;
+  final bool rangeOnly;
 }
 
 /// Clipboard helpers for the ANOMR matrix grid.
 ///
-/// Flutter web shows a permission "Paste" button when [Clipboard.getData] is
-/// called, and often cannot read programmatic copies anyway. An in-memory
-/// buffer keeps same-session copy/paste working without touching the system
-/// clipboard on paste.
+/// Browser paste uses native clipboard events so external spreadsheet content
+/// is available without a clipboard-read permission prompt.
 class MatrixGridClipboard {
   MatrixGridClipboard._();
 
   static const _rangeField = 'range';
 
-  static String? _internalBuffer;
-
-  static String? get internalBuffer => _internalBuffer;
-
   static Future<void> copy(String text) async {
-    _internalBuffer = text;
     try {
       await Clipboard.setData(ClipboardData(text: text));
     } catch (_) {
-      // setData can fail on web; the in-memory buffer still supports grid paste.
+      // Browsers use their native copy event if programmatic access is denied.
     }
   }
 
   /// Reads clipboard text for paste.
   ///
-  /// On web, only the in-memory buffer is used so paste never triggers the
-  /// browser permission prompt from [Clipboard.getData]. On desktop, the
-  /// system clipboard is read first so paste from external apps still works.
+  /// Web uses native paste events instead of requesting clipboard permission.
+  /// Other platforms read the system clipboard, including external app copies.
   static Future<String?> readText() async {
     if (kIsWeb) {
-      return _internalBuffer;
+      return null;
     }
 
     try {
@@ -65,29 +59,54 @@ class MatrixGridClipboard {
     } catch (_) {
       // Clipboard read failed.
     }
-    return _internalBuffer;
+    return null;
   }
 
-  /// Builds newline-separated clipboard text for the selected range cells only.
-  ///
-  /// Returns null when there is no active cell/selection to copy from.
+  /// Copy the visible selection rectangle in display order, including read-only
+  /// columns. The hidden storage index is never part of the clipboard.
   static String? copyTextForSelection(PlutoGridStateManager manager) {
-    final rowBounds = _selectedRowBounds(manager);
-    if (rowBounds == null) {
-      return null;
+    final current = manager.currentCellPosition;
+    if (current?.rowIdx == null) return null;
+    final columns = manager.columnIndexesByShowFrozen;
+    String rowText(PlutoRow row, int start, int end) => [
+      for (var i = start; i <= end; i++)
+        row.cells[manager.refColumns[columns[i]].field]?.value?.toString() ??
+            '',
+    ].join('\t');
+    if (manager.selectingMode.isRow &&
+        manager.currentSelectingRows.isNotEmpty) {
+      final selected = manager.currentSelectingRows.toSet();
+      return manager.refRows
+          .where(selected.contains)
+          .map((row) => rowText(row, 0, columns.length - 1))
+          .join('\n');
     }
-
-    final rowStart = rowBounds.$1;
-    final rowEnd = rowBounds.$2;
-    final rows = <String>[];
-
-    for (var rowIdx = rowStart; rowIdx <= rowEnd; rowIdx += 1) {
-      final value = manager.refRows[rowIdx].cells[_rangeField]!.value;
-      rows.add(value?.toString() ?? '');
-    }
-
-    return rows.join('\n');
+    final end = manager.currentSelectingPosition ?? current!;
+    final colStart = math.min(current!.columnIdx!, end.columnIdx!);
+    final colEnd = math.max(current.columnIdx!, end.columnIdx!);
+    final bounds = _selectedRowBounds(manager)!;
+    return [
+      for (var i = bounds.$1; i <= bounds.$2; i++)
+        rowText(manager.refRows[i], colStart, colEnd),
+    ].join('\n');
   }
+
+  static const pasteRestrictionMessage =
+      'Paste is only permitted to the Group Size column.';
+
+  static List<List<String>> parsePaste(String text) {
+    var normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    // Excel adds a final row terminator; it is not an extra empty cell.
+    if (normalized.endsWith('\n')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    return normalized.split('\n').map((row) => row.split('\t')).toList();
+  }
+
+  static bool permitsPaste(
+    MatrixGridPasteTarget target,
+    List<List<String>> rows,
+  ) => target.rangeOnly && rows.every((row) => row.length == 1);
 
   static MatrixGridPasteTarget? capturePasteTarget(
     PlutoGridStateManager manager,
@@ -99,6 +118,17 @@ class MatrixGridClipboard {
 
     return MatrixGridPasteTarget(
       rowBounds: rowBounds,
+      rangeOnly:
+          manager.currentColumn?.field == _rangeField &&
+          (manager.currentSelectingPosition == null ||
+              manager
+                      .refColumns[manager.columnIndexesByShowFrozen[manager
+                          .currentSelectingPosition!
+                          .columnIdx!]]
+                      .field ==
+                  _rangeField) &&
+          !(manager.selectingMode.isRow &&
+              manager.currentSelectingRows.isNotEmpty),
       hasSelectingPosition: manager.currentSelectingPosition != null,
     );
   }
@@ -109,7 +139,7 @@ class MatrixGridClipboard {
     List<List<String>> textList, {
     required MatrixGridPasteTarget target,
   }) {
-    if (textList.isEmpty) {
+    if (textList.isEmpty || !permitsPaste(target, textList)) {
       return;
     }
 
@@ -145,10 +175,7 @@ class MatrixGridClipboard {
       valueIdx += 1;
 
       final cell = manager.refRows[rowIdx].cells[_rangeField]!;
-      manager.changeCellValue(
-        cell,
-        text.isEmpty ? null : text,
-      );
+      manager.changeCellValue(cell, text.isEmpty ? null : text);
     }
   }
 
@@ -180,18 +207,22 @@ class MatrixGridClipboard {
     final selectedRowCount = rowEnd - rowStart + 1;
 
     if (selectedRowCount > 1 || hasSelectingPosition) {
-      return [for (var rowIdx = rowStart; rowIdx <= rowEnd; rowIdx += 1) rowIdx];
+      return [
+        for (var rowIdx = rowStart; rowIdx <= rowEnd; rowIdx += 1) rowIdx,
+      ];
     }
 
     final lastRowIdx = math.min(
       manager.refRows.length - 1,
       rowStart + valueCount - 1,
     );
-    return [for (var rowIdx = rowStart; rowIdx <= lastRowIdx; rowIdx += 1) rowIdx];
+    return [
+      for (var rowIdx = rowStart; rowIdx <= lastRowIdx; rowIdx += 1) rowIdx,
+    ];
   }
 }
 
-/// Copies selected range values to the clipboard.
+/// Copies the visible selection, including read-only columns.
 class MatrixGridCopyValuesAction extends PlutoGridShortcutAction {
   const MatrixGridCopyValuesAction();
 
@@ -220,51 +251,50 @@ class MatrixGridCopyValuesAction extends PlutoGridShortcutAction {
 
 /// Pastes clipboard values into selected range cells.
 class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
-  MatrixGridPasteValuesAction({this.history});
-
+  MatrixGridPasteValuesAction({this.history, this.onRejected, this.canApply});
   final MatrixGridHistoryController? history;
+  final VoidCallback? onRejected;
+  final bool Function()? canApply;
+
+  bool applyText(
+    PlutoGridStateManager manager,
+    String? text, {
+    MatrixGridPasteTarget? target,
+  }) {
+    if (text == null || text.isEmpty || canApply?.call() == false) return false;
+    target ??= MatrixGridClipboard.capturePasteTarget(manager);
+    if (target == null) return false;
+    final values = MatrixGridClipboard.parsePaste(text);
+    if (!MatrixGridClipboard.permitsPaste(target, values)) {
+      onRejected?.call();
+      return false;
+    }
+    if (manager.isEditing == true) manager.setEditing(false);
+    history?.beginBatch();
+    try {
+      MatrixGridClipboard.pasteIntoRangeCells(manager, values, target: target);
+    } finally {
+      history?.endBatch();
+    }
+    return true;
+  }
 
   @override
   void execute({
     required PlutoKeyManagerEvent keyEvent,
     required PlutoGridStateManager stateManager,
   }) {
-    if (stateManager.currentCell == null) {
-      return;
-    }
+    pasteFromClipboard(stateManager);
+  }
 
-    // Capture paste target before edit mode is cleared (that clears selection).
+  void pasteFromClipboard(PlutoGridStateManager stateManager) {
+    // Web paste is handled by the native ClipboardEvent, including external
+    // clipboard content. Never substitute a previous in-app copy for it.
+    if (kIsWeb) return;
     final target = MatrixGridClipboard.capturePasteTarget(stateManager);
-    if (target == null) {
-      return;
-    }
-
-    if (stateManager.isEditing == true) {
-      stateManager.setEditing(false);
-    }
-
-    void applyPaste(String? text) {
-      if (text == null || text.isEmpty) {
-        return;
-      }
-
-      history?.beginBatch();
-      try {
-        MatrixGridClipboard.pasteIntoRangeCells(
-          stateManager,
-          PlutoClipboardTransformation.stringToList(text),
-          target: target,
-        );
-      } finally {
-        history?.endBatch();
-      }
-    }
-
-    if (kIsWeb) {
-      applyPaste(MatrixGridClipboard.internalBuffer);
-      return;
-    }
-
-    MatrixGridClipboard.readText().then(applyPaste);
+    if (target == null) return;
+    MatrixGridClipboard.readText().then(
+      (text) => applyText(stateManager, text, target: target),
+    );
   }
 }

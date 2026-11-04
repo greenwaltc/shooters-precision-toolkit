@@ -6,6 +6,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pluto_grid/pluto_grid.dart';
@@ -24,6 +26,8 @@ import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
 import 'anomr_matrix/services/matrix_grid_clipboard.dart';
+import 'anomr_matrix/services/matrix_browser_clipboard_stub.dart'
+    if (dart.library.js_interop) 'anomr_matrix/services/matrix_browser_clipboard_web.dart';
 import 'anomr_matrix/services/matrix_grid_data_builder.dart';
 import 'anomr_matrix/services/matrix_grid_history.dart';
 import 'anomr_matrix/services/range_value_parser.dart';
@@ -133,6 +137,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
       context,
       label: project.displayName,
       titleMaxWidth: actionsMetrics.titleMaxWidth,
+      logoScale: 1.5,
     );
 
     return AppBar(
@@ -163,7 +168,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
           final content = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!layout.isMobile)
+              if (!layout.isMobile && !layout.isDesktop)
                 _MatrixHeader(layout: layout, formModel: formModel),
               Expanded(child: _buildGrid(context, layout, formModel)),
             ],
@@ -326,6 +331,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   VoidCallback? _rangeEditSelectionGuardListener;
   VoidCallback? _rangeEditSyncListener;
   final MatrixGridHistoryController _history = MatrixGridHistoryController();
+  VoidCallback? _removeBrowserClipboard;
 
   static const Duration _rangeEditSelectionGuardDuration = Duration(
     milliseconds: 150,
@@ -687,29 +693,36 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     required PlutoGridStyleTheme plutoTheme,
     required bool showScrollbars,
   }) {
-    return PlutoGrid(
-      columns: _columns,
-      rows: _rows,
-      columnGroups: widget.isMobile ? const [] : _columnGroups,
-      onChanged: _handleOnChanged,
-      onLoaded: (PlutoGridOnLoadedEvent event) {
-        setState(() => _attachStateManager(event.stateManager));
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          _fitIndexColumns();
-        });
-      },
-      configuration: PlutoGridConfiguration(
-        style: _plutoStyleConfig(plutoTheme),
-        scrollbar: PlutoGridScrollbarConfig(
-          isAlwaysShown: showScrollbars,
-          scrollbarThickness: plutoTheme.scrollbarThickness,
-          scrollbarRadius: plutoTheme.scrollbarRadius,
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onKeyEvent: (_, event) => _isBrowserClipboardKey(event)
+          ? KeyEventResult.skipRemainingHandlers
+          : KeyEventResult.ignored,
+      child: PlutoGrid(
+        columns: _columns,
+        rows: _rows,
+        columnGroups: widget.isMobile ? const [] : _columnGroups,
+        onChanged: _handleOnChanged,
+        onLoaded: (PlutoGridOnLoadedEvent event) {
+          setState(() => _attachStateManager(event.stateManager));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            _fitIndexColumns();
+          });
+        },
+        configuration: PlutoGridConfiguration(
+          style: _plutoStyleConfig(plutoTheme),
+          scrollbar: PlutoGridScrollbarConfig(
+            isAlwaysShown: showScrollbars,
+            scrollbarThickness: plutoTheme.scrollbarThickness,
+            scrollbarRadius: plutoTheme.scrollbarRadius,
+          ),
+          columnSize: PlutoGridColumnSizeConfig(
+            autoSizeMode: PlutoAutoSizeMode.scale,
+          ),
+          shortcut: PlutoGridShortcut(actions: _shortcutActions()),
         ),
-        columnSize: PlutoGridColumnSizeConfig(
-          autoSizeMode: PlutoAutoSizeMode.scale,
-        ),
-        shortcut: PlutoGridShortcut(actions: _shortcutActions()),
       ),
     );
   }
@@ -730,8 +743,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       ]) ...{
         LogicalKeySet(modifier, LogicalKeyboardKey.keyC):
             const MatrixGridCopyValuesAction(),
-        LogicalKeySet(modifier, LogicalKeyboardKey.keyV):
-            MatrixGridPasteValuesAction(history: _history),
+        LogicalKeySet(modifier, LogicalKeyboardKey.keyV): _pasteAction(),
       },
       if (!widget.isMobile) ...{
         LogicalKeySet(LogicalKeyboardKey.enter):
@@ -908,18 +920,140 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     required Alignment alignment,
     bool fadeOverflow = true,
   }) {
-    return Container(
-      color: plutoTheme.factorCellBackground,
-      alignment: alignment,
-      padding: AppSpacing.plutoFactorCell,
-      child: Text(
-        rendererContext.cell.value?.toString() ?? '',
-        style: AppTextStyles.plutoFactorCell(context),
-        softWrap: false,
-        maxLines: fadeOverflow ? 2 : 1,
-        overflow: fadeOverflow ? TextOverflow.fade : TextOverflow.clip,
+    return _mouseSelectionCell(
+      rendererContext,
+      ListenableBuilder(
+        listenable: rendererContext.stateManager,
+        // Pluto caches renderer children between selection changes.
+        builder: (context, child) {
+          final manager = rendererContext.stateManager;
+          final selected = manager.isSelectedCell(
+            rendererContext.cell,
+            rendererContext.column,
+            rendererContext.rowIdx,
+          );
+          return Container(
+            color: selected
+                ? manager.style.activatedColor
+                : plutoTheme.factorCellBackground,
+            alignment: alignment,
+            padding: AppSpacing.plutoFactorCell,
+            child: child,
+          );
+        },
+        child: Text(
+          rendererContext.cell.value?.toString() ?? '',
+          style: AppTextStyles.plutoFactorCell(context),
+          softWrap: false,
+          maxLines: fadeOverflow ? 2 : 1,
+          overflow: fadeOverflow ? TextOverflow.fade : TextOverflow.clip,
+        ),
       ),
     );
+  }
+
+  /// Mouse drags select immediately; touch keeps its scrolling/entry behavior.
+  Widget _mouseSelectionCell(PlutoColumnRendererContext cell, Widget child) {
+    return GestureDetector(
+      key: ValueKey('matrix-cell-${cell.rowIdx}-${cell.column.field}'),
+      behavior: HitTestBehavior.opaque,
+      supportedDevices: const {PointerDeviceKind.mouse},
+      onPanStart: (details) {
+        final manager = cell.stateManager;
+        _commitActiveRangeEdit();
+        manager.setEditing(false);
+        manager.setCurrentCell(cell.cell, cell.rowIdx);
+        manager.setCurrentSelectingPosition(cellPosition: null);
+        manager.setKeepFocus(true);
+        manager.gridFocusNode.requestFocus();
+        manager.setSelecting(true);
+        manager.setCurrentSelectingPositionWithOffset(details.globalPosition);
+      },
+      onPanUpdate: (details) {
+        cell.stateManager.setCurrentSelectingPositionWithOffset(
+          details.globalPosition,
+        );
+        cell.stateManager.eventManager!.addEvent(
+          PlutoGridScrollUpdateEvent(offset: details.globalPosition),
+        );
+      },
+      onPanEnd: (_) => _endMouseSelection(cell.stateManager),
+      onPanCancel: () => _endMouseSelection(cell.stateManager),
+      child: child,
+    );
+  }
+
+  void _endMouseSelection(PlutoGridStateManager manager) {
+    manager.setSelecting(false);
+    PlutoGridScrollUpdateEvent.stopScroll(
+      manager,
+      PlutoGridScrollUpdateDirection.all,
+    );
+  }
+
+  bool get _acceptsGridClipboard =>
+      mounted &&
+      _stateManager?.hasFocus == true &&
+      ModalRoute.of(context)?.isCurrent == true;
+
+  MatrixGridPasteValuesAction _pasteAction() => MatrixGridPasteValuesAction(
+    history: _history,
+    canApply: () => _acceptsGridClipboard,
+    onRejected: _showPasteRestriction,
+  );
+
+  void _showPasteRestriction() {
+    final scheme = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context)
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            MatrixGridClipboard.pasteRestrictionMessage,
+            style: TextStyle(color: scheme.onErrorContainer),
+          ),
+          backgroundColor: scheme.errorContainer,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+  }
+
+  bool _isBrowserClipboardKey(KeyEvent event) {
+    if (!kIsWeb || !_acceptsGridClipboard || event is KeyUpEvent) return false;
+    final keyboard = HardwareKeyboard.instance;
+    return (keyboard.isMetaPressed || keyboard.isControlPressed) &&
+        !keyboard.isAltPressed &&
+        (event.logicalKey == LogicalKeyboardKey.keyV ||
+            (event.logicalKey == LogicalKeyboardKey.keyC &&
+                _stateManager?.isEditing != true));
+  }
+
+  KeyEventResult _clipboardKeyHandler(KeyEvent event) {
+    if (!_acceptsGridClipboard) return KeyEventResult.ignored;
+    final keyboard = HardwareKeyboard.instance;
+    if (!(keyboard.isMetaPressed || keyboard.isControlPressed) ||
+        keyboard.isAltPressed) {
+      return KeyEventResult.ignored;
+    }
+    final paste = event.logicalKey == LogicalKeyboardKey.keyV;
+    if (_isBrowserClipboardKey(event)) {
+      // Pluto normally consumes every key. Skip its handler, then the enclosing
+      // Focus returns this clipboard keystroke to the browser. Returning skip
+      // from an early handler alone still walks the focus tree in Flutter 3.41.
+      _stateManager!.keyManager!.eventResult.skip(KeyEventResult.ignored);
+      return KeyEventResult.ignored;
+    }
+    if (!kIsWeb && paste) {
+      if (event is KeyDownEvent) {
+        _pasteAction().pasteFromClipboard(_stateManager!);
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
   }
 
   @override
@@ -927,11 +1061,21 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     super.initState();
     _initializeGridData();
     HardwareKeyboard.instance.addHandler(_matrixKeyboardHandler);
+    FocusManager.instance.addEarlyKeyEventHandler(_clipboardKeyHandler);
+    _removeBrowserClipboard = registerMatrixBrowserClipboard(
+      acceptsPaste: () => _acceptsGridClipboard,
+      copyText: () => _acceptsGridClipboard && _stateManager?.isEditing != true
+          ? MatrixGridClipboard.copyTextForSelection(_stateManager!)
+          : null,
+      pasteText: (text) => _pasteAction().applyText(_stateManager!, text),
+    );
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_matrixKeyboardHandler);
+    FocusManager.instance.removeEarlyKeyEventHandler(_clipboardKeyHandler);
+    _removeBrowserClipboard?.call();
     _detachScrollListeners();
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
     _stateManager?.removeListener(_handleRangeCellEditFocus);
@@ -1045,7 +1189,20 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       enableContextMenu: false,
       enableDropToResize: true,
       width: MatrixGridStyle.rangeColumnWidth,
-      renderer: widget.isMobile ? _mobileRangeCellRenderer : null,
+      renderer: (cell) => _mouseSelectionCell(
+        cell,
+        widget.isMobile
+            ? _mobileRangeCellRenderer(cell)
+            : Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  cell.cell.value?.toString() ?? '',
+                  style: cell.stateManager.configuration.style.cellTextStyle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+      ),
     );
   }
 
@@ -1361,12 +1518,59 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final plutoTheme = _plutoTheme();
     final scheme = Theme.of(context).colorScheme;
 
-    final desktop = !widget.isMobile;
+    final desktop = AppLayoutMetrics.of(context).isDesktop;
+    final nonMobile = !widget.isMobile;
     final content = AppLayoutBuilder(
       builder: (context, layout) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (desktop)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Data matrix',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        Text(
+                          widget.project.formModel.experimentStructure.label,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  _RandomizeOrderToggle(
+                    value: _randomizeOrder,
+                    compact: true,
+                    onChanged: _stateManager == null
+                        ? null
+                        : _onRandomizeToggled,
+                  ),
+                  const SizedBox(width: 12),
+                  TextButton.icon(
+                    onPressed: _clearRanges,
+                    icon: const Icon(Icons.clear_all),
+                    label: const Text('Clear'),
+                    style: TextButton.styleFrom(foregroundColor: scheme.error),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: _stateManager == null
+                        ? null
+                        : () => _showResults(context),
+                    icon: const Icon(Icons.analytics),
+                    label: const Text('Results'),
+                  ),
+                ],
+              ),
+            ),
+          if (nonMobile && !desktop)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Wrap(
@@ -1406,7 +1610,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                 ],
               ),
             ),
-          if (!desktop)
+          if (widget.isMobile)
             _MatrixHeader(
               layout: layout,
               formModel: widget.project.formModel,
@@ -1417,7 +1621,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               ),
             ),
           Expanded(child: _buildGridArea(plutoTheme, scheme)),
-          if (!desktop)
+          if (widget.isMobile)
             _MatrixActions(
               layout: layout,
               canShowResults: _stateManager != null,
@@ -1427,7 +1631,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         ],
       ),
     );
-    if (!desktop) return content;
+    if (!nonMobile) return content;
     // Give the toolbar and grid the same centered bounds on wide windows.
     return Align(
       alignment: Alignment.topCenter,

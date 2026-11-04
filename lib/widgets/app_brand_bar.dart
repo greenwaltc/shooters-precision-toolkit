@@ -254,14 +254,14 @@ class AppProjectsBannerTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppBrandLogo(height: logoHeight, alignment: Alignment.center),
+        AppBrandLogo(height: logoHeight, alignment: Alignment.centerLeft),
         if (showTagline) ...[
           const SizedBox(height: AppDesign.homeBannerTaglineGap),
           Text(
             AppBrandAssets.projectsSubtext,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             style: AppBrandAssets.taglineStyle(context),
             maxLines: AppBrandAssets.taglineMaxLines(context),
             overflow: TextOverflow.ellipsis,
@@ -298,7 +298,8 @@ class ProjectsBannerAppBar extends StatelessWidget
     return AppBar(
       toolbarHeight: metrics.toolbarHeight,
       automaticallyImplyLeading: false,
-      centerTitle: true,
+      centerTitle: false,
+      titleSpacing: 16,
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.transparent,
@@ -377,6 +378,25 @@ class AppBrandTitleMetrics {
   /// On mobile landscape, prefers a compact single-row bar (with ellipsis if
   /// needed) so the scaffold body keeps as much height as possible.
   factory AppBrandTitleMetrics.of(
+    BuildContext context, {
+    required String label,
+    required double titleMaxWidth,
+    double logoScale = 1,
+  }) {
+    final base = _base(context, label: label, titleMaxWidth: titleMaxWidth);
+    final height = base.logoHeight * logoScale;
+    return AppBrandTitleMetrics(
+      stacked: base.stacked,
+      toolbarHeight: base.stacked
+          ? base.toolbarHeight + height - base.logoHeight
+          : math.max(base.toolbarHeight, height + 2 * base.brandingPadding),
+      logoHeight: height,
+      brandTitleGap: base.brandTitleGap,
+      brandingPadding: base.brandingPadding,
+    );
+  }
+
+  static AppBrandTitleMetrics _base(
     BuildContext context, {
     required String label,
     required double titleMaxWidth,

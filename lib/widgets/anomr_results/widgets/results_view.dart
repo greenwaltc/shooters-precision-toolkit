@@ -79,6 +79,7 @@ class _ResultsViewState extends State<ResultsView> {
           context,
           label: label,
           titleMaxWidth: actionsMetrics.titleMaxWidth,
+          logoScale: 1.5,
         );
 
         return Scaffold(

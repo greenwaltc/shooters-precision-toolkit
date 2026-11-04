@@ -18,6 +18,7 @@ import 'package:bramwells_precision_test_kit/styles/chart/chart_scale.dart';
 import 'package:bramwells_precision_test_kit/widgets/anomr_results/widgets/empty_results_state.dart';
 import 'package:bramwells_precision_test_kit/widgets/range_entry_sheet.dart';
 import 'package:bramwells_precision_test_kit/widgets/app_copyright_footer.dart';
+import 'package:bramwells_precision_test_kit/widgets/app_brand_bar.dart';
 
 /// A worst-case cell context: four factors with long state names.
 const _fourFactorEntry = RangeEntryContext(
@@ -124,11 +125,33 @@ void main() {
           );
           if (width >= 1024) {
             final gridBounds = tester.getRect(grid);
+            final results = find.widgetWithText(FilledButton, 'Results');
+            final clear = find.widgetWithText(TextButton, 'Clear');
             expect(
-              tester.getTopRight(find.byType(Switch)).dx,
+              tester.getTopRight(results).dx,
               closeTo(gridBounds.right, 1),
               reason:
-                  'Randomize aligns with the matrix right edge at width=$width',
+                  'Results aligns with the matrix right edge at width=$width',
+            );
+            expect(
+              tester.getTopLeft(find.text('Data matrix')).dx,
+              closeTo(gridBounds.left, 1),
+            );
+            expect(
+              tester.getCenter(find.byType(Switch)).dx,
+              lessThan(tester.getCenter(clear).dx),
+            );
+            expect(
+              tester.getCenter(clear).dx,
+              lessThan(tester.getCenter(results).dx),
+            );
+            expect(
+              tester.getCenter(clear).dy,
+              closeTo(tester.getCenter(results).dy, 1),
+            );
+            expect(
+              tester.getCenter(find.byType(Switch)).dy,
+              closeTo(tester.getCenter(results).dy, 1),
             );
           }
           expect(
@@ -249,6 +272,11 @@ void main() {
 
           await _pumpApp(tester);
           _expectNoLayoutErrors(tester, '$label — home empty state');
+          final homeLogo = find.descendant(
+            of: find.byType(AppProjectsBannerTitle),
+            matching: find.byType(Image),
+          );
+          expect(tester.getTopLeft(homeLogo).dx, closeTo(16, 1));
 
           await _tapText(
             tester,
@@ -276,6 +304,15 @@ void main() {
           await _pumpCompletedProject(tester, factorCount: factorCount);
           await _tapText(tester, 'Bench Rest Comparison');
           _expectNoLayoutErrors(tester, '$label — data matrix');
+          final matrixMetrics = tester
+              .widget<AppBrandTitle>(find.byType(AppBrandTitle))
+              .metrics;
+          final baseMetrics = AppBrandTitleMetrics.of(
+            tester.element(find.byType(AppBrandTitle)),
+            label: 'Bench Rest Comparison',
+            titleMaxWidth: entry.value.width / 2,
+          );
+          expect(matrixMetrics.logoHeight, baseMetrics.logoHeight * 1.5);
 
           await _tapText(tester, 'Results');
           expect(
@@ -284,6 +321,13 @@ void main() {
             reason: 'should have navigated to the results page',
           );
           _expectNoLayoutErrors(tester, '$label — results page');
+          expect(
+            tester
+                .widget<AppBrandTitle>(find.byType(AppBrandTitle))
+                .metrics
+                .logoHeight,
+            matrixMetrics.logoHeight,
+          );
         });
       }
     }

@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../auth/workspace_sign_out.dart';
 import '../contact/contact_page.dart';
@@ -118,6 +119,7 @@ abstract final class AppBarActionBar {
     label: 'Contact',
     icon: Icons.contact_mail_outlined,
     tooltip: 'Contact',
+    filledInline: true,
     onPressed: () => Navigator.of(context).push(
       AppPageRoute<void>(
         settings: const RouteSettings(name: AppRoutes.contact),
@@ -126,19 +128,54 @@ abstract final class AppBarActionBar {
     ),
   );
 
+  static final donationsUrl = Uri.https(
+    'www.paypal.com',
+    '/paypalme/dentonbramwell',
+  );
+
+  static AppBarActionItem donations(BuildContext context) => AppBarActionItem(
+    label: 'Donations',
+    icon: Icons.volunteer_activism_outlined,
+    tooltip: 'Donations',
+    filledInline: true,
+    onPressed: () async {
+      var opened = false;
+      try {
+        opened = await launchUrl(
+          donationsUrl,
+          mode: LaunchMode.externalApplication,
+          webOnlyWindowName: '_blank',
+        );
+      } catch (_) {
+        // Keep the app usable if the platform has no link handler.
+      }
+      if (!opened && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to open PayPal. Please try again.'),
+          ),
+        );
+      }
+    },
+  );
+
   static Widget _inlineAction(BuildContext context, AppBarActionItem item) {
     if (item.filledInline) {
       return Padding(
         padding: AppDesign.appBarFilledActionMargin,
-        child: FilledButton(
-          onPressed: item.onPressed,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(0, AppDesign.appBarFilledActionMinHeight),
-            padding: AppDesign.appBarFilledActionPadding,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
+        child: Tooltip(
+          message: item.tooltip ?? item.label,
+          excludeFromSemantics: true,
+          child: FilledButton(
+            onPressed: item.onPressed,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, AppDesign.appBarFilledActionMinHeight),
+              padding: AppDesign.appBarFilledActionPadding,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: Text(item.label),
           ),
-          child: Text(item.label),
         ),
       );
     }
@@ -179,14 +216,13 @@ class AppBarActionsMetrics {
     );
     final compact = layout.preferCompactChrome;
 
-    // Collapse on mobile when inline actions would leave the brand title too
-    // narrow for logo + label in a row, and collapsing to one menu control
-    // actually frees horizontal space.
+    // Reserve room for the brand/title at every breakpoint, including tablets
+    // and enlarged text. Filled actions can otherwise crowd the toolbar.
     final collapsed =
-        layout.isMobile &&
         items.isNotEmpty &&
         inlineWidth > AppBarActionBar.iconActionWidth &&
-        !_rowBrandTitleFits(titleWithInline, compact: compact);
+        (inlineWidth > screenWidth / 2 ||
+            !_rowBrandTitleFits(titleWithInline, compact: compact));
 
     final actionsWidth = collapsed
         ? AppBarActionBar.iconActionWidth

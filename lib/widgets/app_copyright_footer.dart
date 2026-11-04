@@ -29,7 +29,6 @@ class AppCopyrightFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final mobile = AppLayoutMetrics.of(context).isMobile;
     final store = context.watch<ProjectStore?>();
     if (mobile) {
@@ -43,17 +42,7 @@ class AppCopyrightFooter extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 48),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      noticeText,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      textScaler: AppViewport.footerTextScaler(context),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _noticeLine(context)),
                   if (store?.selectedProject != null)
                     const ProjectSaveStatus(compact: true),
                 ],
@@ -81,23 +70,33 @@ class AppCopyrightFooter extends StatelessWidget {
                   ? 0
                   : AppSpacing.xs,
             ),
-            child: Text(
-              noticeText,
-              textAlign:
-                  MediaQuery.sizeOf(context).width >=
-                      AppLayoutMetrics.mobileBreakpoint
-                  ? TextAlign.left
-                  : TextAlign.center,
-              maxLines: AppBrandAssets.isMobileLandscapeBanner(context) ? 1 : 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                height: 1.2,
-              ),
-            ),
+            child: _noticeLine(context),
           ),
         ),
       ),
     );
   }
+
+  Widget _noticeLine(BuildContext context) => Tooltip(
+    message: noticeText,
+    excludeFromSemantics: true,
+    child: Align(
+      alignment: Alignment.centerLeft,
+      heightFactor: 1,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          noticeText,
+          maxLines: 1,
+          softWrap: false,
+          textScaler: AppViewport.footerTextScaler(context),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.2,
+          ),
+        ),
+      ),
+    ),
+  );
 }

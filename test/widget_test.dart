@@ -146,7 +146,13 @@ void main() {
     await _createProject(tester);
     await _enterSimpleProject(tester);
 
-    await tester.tap(find.byIcon(Icons.home_outlined));
+    if (find.byTooltip('Projects').evaluate().isEmpty) {
+      await tester.tap(find.byTooltip('Menu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Projects'));
+    } else {
+      await tester.tap(find.byTooltip('Projects'));
+    }
     await tester.pumpAndSettle();
 
     final reloadedStore = ProjectStore(
@@ -176,7 +182,13 @@ void main() {
     await _createProject(tester);
     await _enterSimpleProject(tester);
 
-    await tester.tap(find.byIcon(Icons.home_outlined));
+    if (find.byTooltip('Projects').evaluate().isEmpty) {
+      await tester.tap(find.byTooltip('Menu'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Projects'));
+    } else {
+      await tester.tap(find.byTooltip('Projects'));
+    }
     await tester.pumpAndSettle();
 
     await tester.tap(find.byIcon(Icons.delete_outline));

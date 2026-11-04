@@ -19,7 +19,10 @@ class ContactPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AppLayoutBuilder(
     builder: (context, layout) {
-      final actions = [AppBarActionBar.instructions(context)];
+      final actions = [
+        AppBarActionBar.instructions(context),
+        AppBarActionBar.donations(context),
+      ];
       final metrics = AppBarActionsMetrics.of(
         context,
         layout: layout,

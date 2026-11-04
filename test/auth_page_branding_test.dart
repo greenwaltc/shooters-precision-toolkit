@@ -41,10 +41,18 @@ void main() {
         expect(find.byType(AppAtmosphere), findsOneWidget);
         expect(find.byType(ProjectsBannerAppBar), findsOneWidget);
         expect(find.byType(AppBrandLogo), findsOneWidget);
-        expect(
-          find.byTooltip('Sign out'),
-          verification ? findsOneWidget : findsNothing,
-        );
+        if (verification && find.byTooltip('Sign out').evaluate().isEmpty) {
+          await tester.tap(find.byTooltip('Menu'));
+          await tester.pumpAndSettle();
+          expect(find.text('Sign out'), findsOneWidget);
+          Navigator.of(tester.element(find.text('Sign out'))).pop();
+          await tester.pumpAndSettle();
+        } else {
+          expect(
+            find.byTooltip('Sign out'),
+            verification ? findsOneWidget : findsNothing,
+          );
+        }
         expect(tester.takeException(), isNull);
 
         if (!verification) {

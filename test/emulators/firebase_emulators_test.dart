@@ -19,6 +19,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_firestore_web/cloud_firestore_web.dart';
 import 'package:firebase_auth_web/firebase_auth_web.dart';
 import 'package:firebase_core_web/firebase_core_web.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +49,53 @@ void main() {
   });
 
   setUp(rootBundle.clear);
+
+  testWidgets('stale hot-restart hint cannot skip Auth emulator connection', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final name = 'hot-restart-${DateTime.now().microsecondsSinceEpoch}';
+      final app = await Firebase.initializeApp(
+        name: name,
+        demoProjectId: localFirebaseProjectId,
+      );
+      final auth = FirebaseAuth.instanceFor(app: app);
+      // A fresh JS Auth object plus the previous Dart run's session marker is
+      // the state left by hot restart on 127.0.0.1. Plugin auto-restore has
+      // already run without a marker here, reproducing that state on any host.
+      web.window.sessionStorage.setItem(
+        getOriginName(name),
+        'http://127.0.0.1:9099',
+      );
+      final email = '$name@example.test';
+      const password = 'Local-restart-test-123!';
+      try {
+        await connectAuthToEmulator(auth, '127.0.0.1', 9099);
+        await auth
+            .createUserWithEmailAndPassword(email: email, password: password)
+            .timeout(const Duration(seconds: 15));
+        await auth.signOut();
+        await auth
+            .signInWithEmailAndPassword(email: email, password: password)
+            .timeout(const Duration(seconds: 15));
+        final token = await auth.currentUser!.getIdToken();
+        final claims =
+            jsonDecode(
+                  utf8.decode(
+                    base64Url.decode(base64Url.normalize(token!.split('.')[1])),
+                  ),
+                )
+                as Map<String, dynamic>;
+        expect(claims['aud'], localFirebaseProjectId);
+      } finally {
+        // Delete only this test's unique account; keep interactive users intact.
+        if (auth.currentUser?.email == email) await auth.currentUser!.delete();
+        await auth.signOut();
+        web.window.sessionStorage.removeItem(getOriginName(name));
+        await app.delete();
+      }
+    });
+  });
 
   testWidgets('Flutter boots with local Auth and Firestore services', (
     tester,

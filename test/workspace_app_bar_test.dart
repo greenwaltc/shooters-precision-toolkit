@@ -56,6 +56,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       await _expectSignOut(tester);
+      await _expectDonations(tester);
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
       expect(
@@ -70,6 +71,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AnomrMatrix), findsOneWidget);
       await _expectSignOut(tester);
+      await _expectDonations(tester);
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
       expect(
@@ -79,9 +81,10 @@ void main() {
       expect(find.textContaining('denton@'), findsNothing);
       Navigator.of(tester.element(find.byType(ContactPage))).pop();
       await tester.pumpAndSettle();
-      await _tapAction(tester, 'Project setup');
+      await _tapAction(tester, 'Test Design');
       expect(find.byType(ProjectFormPage), findsOneWidget);
       await _expectSignOut(tester);
+      await _expectDonations(tester);
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
       expect(
@@ -94,11 +97,12 @@ void main() {
       Navigator.of(tester.element(find.byType(ProjectFormPage))).pop();
       await tester.pumpAndSettle();
 
-      await tester.ensureVisible(find.text('Show Results'));
-      await tester.tap(find.text('Show Results'));
+      await tester.ensureVisible(find.text('Results'));
+      await tester.tap(find.text('Results'));
       await tester.pumpAndSettle();
       expect(find.byType(ResultsView), findsOneWidget);
       await _expectSignOut(tester);
+      await _expectDonations(tester);
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
       expect(
@@ -140,4 +144,16 @@ Future<void> _tapAction(WidgetTester tester, String label) async {
     await tester.tap(find.text(label));
   }
   await tester.pumpAndSettle();
+}
+
+Future<void> _expectDonations(WidgetTester tester) async {
+  if (find.byTooltip('Donations').evaluate().isNotEmpty) {
+    expect(find.byTooltip('Donations'), findsOneWidget);
+  } else {
+    await tester.tap(find.byTooltip('Menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Donations'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Donations'))).pop();
+    await tester.pumpAndSettle();
+  }
 }

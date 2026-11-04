@@ -145,6 +145,7 @@ class _AuthPageState extends State<AuthPage> {
         builder: (context, layout) {
           final actions = <AppBarActionItem>[
             AppBarActionBar.contact(context),
+            AppBarActionBar.donations(context),
             if (widget.verification)
               AppBarActionItem(
                 label: 'Sign out',

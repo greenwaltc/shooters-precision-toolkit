@@ -25,6 +25,7 @@ class NoSelectedProjectPage extends StatelessWidget {
         final actionItems = [
           AppBarActionBar.instructions(context),
           AppBarActionBar.contact(context),
+          AppBarActionBar.donations(context),
           ...AppBarActionBar.signOutActions(context),
         ];
         final actionsMetrics = AppBarActionsMetrics.of(

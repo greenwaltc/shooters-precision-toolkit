@@ -113,11 +113,12 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     final actionItems = [
       AppBarActionBar.instructions(context),
       AppBarActionBar.contact(context),
+      AppBarActionBar.donations(context),
       AppNavChrome.homeActionItem(context: context, store: store),
       AppBarActionItem(
-        label: 'Project setup',
+        label: 'Test Design',
         icon: Icons.tune,
-        tooltip: 'Project setup',
+        tooltip: 'Test Design',
         onPressed: () => _goToProjectSetup(context, store),
       ),
       ...AppBarActionBar.signOutActions(context),
@@ -162,7 +163,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
           final content = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _MatrixHeader(layout: layout, formModel: formModel),
+              if (!layout.isMobile)
+                _MatrixHeader(layout: layout, formModel: formModel),
               Expanded(child: _buildGrid(context, layout, formModel)),
             ],
           );
@@ -225,18 +227,23 @@ class _AnomrMatrixScaffold extends StatelessWidget {
 }
 
 class _MatrixHeader extends StatelessWidget {
-  const _MatrixHeader({required this.layout, required this.formModel});
+  const _MatrixHeader({
+    required this.layout,
+    required this.formModel,
+    this.trailing,
+  });
 
   final AppLayoutMetrics layout;
   final ProjectFormModel formModel;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        layout.isMobile ? layout.pageGutter : 24,
+        layout.isMobile ? 0 : 24,
         layout.isMobile ? AppSpacing.md : 12,
-        layout.isMobile ? layout.pageGutter : 24,
+        layout.isMobile ? 0 : 24,
         layout.isMobile ? AppSpacing.sm : AppSpacing.lg,
       ),
       child: Align(
@@ -267,7 +274,19 @@ class _MatrixHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Data matrix', style: Theme.of(context).textTheme.titleLarge),
+        Row(
+          children: [
+            Expanded(
+              flex: 4,
+              child: Text(
+                'Data matrix',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (trailing != null) Expanded(flex: 6, child: trailing!),
+          ],
+        ),
         Text(
           '$count ${count == 1 ? "factor" : "factors"} · ${formModel.sampleSizeOption.totalSamples} runs',
           style: Theme.of(context).textTheme.bodySmall,
@@ -393,7 +412,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   /// Keeps the in-progress range edit synced to row/project state on every
-  /// keystroke so validation and "Show Results" see the latest value without
+  /// keystroke so validation and "Results" see the latest value without
   /// requiring Enter or an explicit blur.
   void _attachRangeEditSyncListener() {
     _detachRangeEditSyncListener();
@@ -969,10 +988,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     return [
       _readOnlyIndexColumn(
-        title: widget.isMobile ? 'Run' : 'Run Order',
+        title: 'Run Order',
         field: 'row',
         maxValue: totalSamples,
       ),
+      ..._buildFactorColumns(formModel),
       // One-factor designs collapse to a single state per row, so the
       // replicate index is meaningless and the column is omitted.
       if (!isOneFactor)
@@ -981,7 +1001,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           field: 'group',
           maxValue: formModel.sampleSizeOption.rangesPerGroup.toInt(),
         ),
-      ..._buildFactorColumns(formModel),
       _buildRangeColumn(),
     ];
   }
@@ -1296,7 +1315,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   AlertDialog _buildClearRangesDialog(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: const Text('Clear All Group Sizes?'),
+      title: const Text('Clear Group Sizes?'),
       content: const Text(
         'Are you sure you want to clear all entered group size values? This action cannot be undone.',
       ),
@@ -1307,7 +1326,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         ),
         TextButton(
           onPressed: () => _confirmClearRanges(context),
-          child: Text('Clear All', style: TextStyle(color: scheme.error)),
+          child: Text('Clear', style: TextStyle(color: scheme.error)),
         ),
       ],
     );
@@ -1351,18 +1370,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
+                alignment: WrapAlignment.end,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 spacing: 16,
                 runSpacing: 8,
                 children: [
-                  _RandomizeOrderToggle(
-                    value: _randomizeOrder,
-                    onChanged: _stateManager == null
-                        ? null
-                        : _onRandomizeToggled,
-                    compact: true,
-                  ),
                   Wrap(
                     spacing: 12,
                     runSpacing: 8,
@@ -1370,7 +1382,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                       TextButton.icon(
                         onPressed: _clearRanges,
                         icon: const Icon(Icons.clear_all),
-                        label: const Text('Clear All'),
+                        label: const Text('Clear'),
                         style: TextButton.styleFrom(
                           foregroundColor: scheme.error,
                         ),
@@ -1380,20 +1392,27 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                             ? null
                             : () => _showResults(context),
                         icon: const Icon(Icons.analytics),
-                        label: const Text('Show Results'),
+                        label: const Text('Results'),
                       ),
                     ],
+                  ),
+                  _RandomizeOrderToggle(
+                    value: _randomizeOrder,
+                    onChanged: _stateManager == null
+                        ? null
+                        : _onRandomizeToggled,
+                    compact: true,
                   ),
                 ],
               ),
             ),
           if (!desktop)
-            Align(
-              alignment: Alignment.centerRight,
-              child: _RandomizeOrderToggle(
+            _MatrixHeader(
+              layout: layout,
+              formModel: widget.project.formModel,
+              trailing: _RandomizeOrderToggle(
                 value: _randomizeOrder,
                 compact: true,
-                showValue: false,
                 onChanged: _stateManager == null ? null : _onRandomizeToggled,
               ),
             ),
@@ -1517,11 +1536,9 @@ class _RandomizeOrderToggle extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.compact = false,
-    this.showValue = true,
   });
 
   final bool compact;
-  final bool showValue;
 
   final bool value;
   final ValueChanged<bool>? onChanged;
@@ -1543,8 +1560,6 @@ class _RandomizeOrderToggle extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          if (showValue)
-            Text(value ? 'Yes' : 'No', style: textTheme.labelLarge),
           Switch(value: value, onChanged: onChanged),
         ],
       ),
@@ -1571,12 +1586,12 @@ class _MatrixActions extends StatelessWidget {
     final showResults = FilledButton.icon(
       onPressed: canShowResults ? onShowResults : null,
       icon: const Icon(Icons.analytics),
-      label: const Text('Show Results'),
+      label: const Text('Results'),
     );
     final clearAll = OutlinedButton.icon(
       onPressed: onClearRanges,
       icon: const Icon(Icons.clear_all),
-      label: const Text('Clear All'),
+      label: const Text('Clear'),
       style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
     );
 
@@ -1600,7 +1615,7 @@ class _MatrixActions extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: scheme.error,
                   ).merge(style),
-                  child: const Text('Clear All', textAlign: TextAlign.center),
+                  child: const Text('Clear', textAlign: TextAlign.center),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1609,10 +1624,7 @@ class _MatrixActions extends StatelessWidget {
                 child: FilledButton(
                   onPressed: canShowResults ? onShowResults : null,
                   style: style,
-                  child: const Text(
-                    'Show Results',
-                    textAlign: TextAlign.center,
-                  ),
+                  child: const Text('Results', textAlign: TextAlign.center),
                 ),
               ),
             ],

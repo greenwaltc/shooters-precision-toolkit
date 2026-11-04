@@ -27,7 +27,7 @@ class ProjectFormPage extends StatelessWidget {
     final project = store.selectedProject;
 
     if (project == null) {
-      return const NoSelectedProjectPage(title: 'Project Setup');
+      return const NoSelectedProjectPage(title: 'Test Design');
     }
 
     return ChangeNotifierProvider<ProjectFormModel>.value(
@@ -42,6 +42,7 @@ class ProjectFormPage extends StatelessWidget {
               final actionItems = [
                 AppBarActionBar.instructions(context),
                 AppBarActionBar.contact(context),
+                AppBarActionBar.donations(context),
                 AppNavChrome.homeActionItem(context: context, store: store),
                 ...AppBarActionBar.signOutActions(context),
               ];

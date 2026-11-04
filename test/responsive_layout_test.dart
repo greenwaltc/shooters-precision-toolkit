@@ -97,6 +97,12 @@ void main() {
         final manager = tester.state<PlutoGridState>(grid).stateManager;
         final store = tester.widget<MyApp>(find.byType(MyApp)).projectStore!;
         final originalValues = Map.of(store.selectedProject!.matrixState);
+        expect(manager.columns.map((column) => column.field).toList(), [
+          'row',
+          for (var index = 0; index < factorCount; index++) 'factor_$index',
+          if (factorCount > 1) 'group',
+          'range',
+        ]);
         for (final width in [
           1920.0,
           1440.0,
@@ -118,23 +124,11 @@ void main() {
           );
           if (width >= 1024) {
             final gridBounds = tester.getRect(grid);
-            final resultsButton = find.ancestor(
-              of: find.text('Show Results'),
-              matching: find.byWidgetPredicate(
-                (widget) => widget is FilledButton,
-              ),
-            );
             expect(
-              tester.getTopLeft(find.text('Randomize order?')).dx,
-              closeTo(gridBounds.left, 1),
-              reason:
-                  'Randomize aligns with the matrix left edge at width=$width',
-            );
-            expect(
-              tester.getTopRight(resultsButton).dx,
+              tester.getTopRight(find.byType(Switch)).dx,
               closeTo(gridBounds.right, 1),
               reason:
-                  'The action group aligns with the matrix right edge at width=$width',
+                  'Randomize aligns with the matrix right edge at width=$width',
             );
           }
           expect(
@@ -187,13 +181,13 @@ void main() {
           final grid = find.byType(PlutoGrid);
           final gridBounds = tester.getRect(grid);
           final clear = find.ancestor(
-            of: find.text('Clear All'),
+            of: find.text('Clear'),
             matching: find.byWidgetPredicate(
               (widget) => widget is OutlinedButton,
             ),
           );
           final results = find.ancestor(
-            of: find.text('Show Results'),
+            of: find.text('Results'),
             matching: find.byWidgetPredicate(
               (widget) => widget is FilledButton,
             ),
@@ -210,6 +204,17 @@ void main() {
             tester.getTopRight(find.byType(Switch)).dx,
             closeTo(gridBounds.right, 1),
           );
+          expect(
+            tester.getCenter(find.text('Data matrix')).dy,
+            closeTo(tester.getCenter(find.byType(Switch)).dy, 1),
+          );
+          expect(find.text('Yes'), findsNothing);
+          expect(find.text('No'), findsNothing);
+          final footerText = tester.widget<Text>(
+            find.text(AppCopyrightFooter.noticeText),
+          );
+          expect(footerText.maxLines, 1);
+          expect(footerText.softWrap, false);
           expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 56);
           expect(gridBounds.height, greaterThan(100));
           final original = tester.getRect(grid);
@@ -272,7 +277,7 @@ void main() {
           await _tapText(tester, 'Bench Rest Comparison');
           _expectNoLayoutErrors(tester, '$label — data matrix');
 
-          await _tapText(tester, 'Show Results');
+          await _tapText(tester, 'Results');
           expect(
             find.textContaining('Results'),
             findsWidgets,
@@ -310,7 +315,7 @@ void main() {
 
       await _pumpCompletedProject(tester);
       await _tapText(tester, 'Bench Rest Comparison');
-      await _tapText(tester, 'Show Results');
+      await _tapText(tester, 'Results');
       await _tapText(tester, 'Export');
 
       expect(find.text('Export Results'), findsOneWidget);
@@ -407,7 +412,7 @@ void main() {
 
         expect(find.text('Instructions'), findsWidgets);
         expect(find.text('Projects'), findsWidgets);
-        expect(find.text('Project setup'), findsOneWidget);
+        expect(find.text('Test Design'), findsOneWidget);
         _expectNoLayoutErrors(tester, 'app-bar overflow menu');
       },
     );

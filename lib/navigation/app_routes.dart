@@ -15,7 +15,7 @@ class AppRoutes {
   static const anomrMatrix = '/anomr-matrix';
   static const anomrResults = '/anomr-results';
 
-  /// [RouteSettings.arguments] value used when Project Setup is opened from
+  /// [RouteSettings.arguments] value used when Test Design is opened from
   /// the Data Matrix "tune" control. Submit then pops back to the matrix
   /// instead of pushing a second matrix route onto the stack.
   static const String projectFormOpenedFromMatrix =
@@ -26,7 +26,7 @@ class AppRoutes {
     return project.setupComplete ? anomrMatrix : projectForm;
   }
 
-  /// Whether the current route is Project Setup opened from the Data Matrix.
+  /// Whether the current route is Test Design opened from the Data Matrix.
   static bool isProjectFormOpenedFromMatrix(BuildContext context) {
     return ModalRoute.of(context)?.settings.arguments ==
         projectFormOpenedFromMatrix;
@@ -37,7 +37,7 @@ class AppRoutes {
     return navigator.pushNamedAndRemoveUntil(projects, (_) => false);
   }
 
-  /// Opens Project Setup on top of the Data Matrix so Back returns to it.
+  /// Opens Test Design on top of the Data Matrix so Back returns to it.
   static Future<Object?> openProjectFormFromMatrix(NavigatorState navigator) {
     return navigator.pushNamed(
       projectForm,

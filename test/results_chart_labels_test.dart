@@ -74,8 +74,28 @@ void main() {
           rotation.transform.storage[1],
           closeTo(longLabels ? -math.sqrt1_2 : 0, .001),
         );
+        final factorBounds = _paintedBounds(
+          tester,
+          find.text(row.displayName).first,
+        );
+        for (final label in [first, second]) {
+          final tickBounds = _paintedBounds(tester, find.text(label));
+          expect(
+            factorBounds.top - tickBounds.bottom,
+            greaterThanOrEqualTo(7),
+            reason: 'State ticks and factor labels need a visible gap.',
+          );
+        }
         expect(tester.takeException(), isNull);
       },
     );
   }
+}
+
+Rect _paintedBounds(WidgetTester tester, Finder finder) {
+  final box = tester.renderObject<RenderBox>(finder);
+  return MatrixUtils.transformRect(
+    box.getTransformTo(null),
+    Offset.zero & box.size,
+  );
 }

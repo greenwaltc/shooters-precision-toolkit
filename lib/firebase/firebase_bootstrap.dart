@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart' show appFlavor;
 
+import 'auth_emulator_hint_stub.dart'
+    if (dart.library.js_interop) 'auth_emulator_hint_web.dart';
 import 'firebase_options_dev.dart' as dev;
 import 'firebase_options_prod.dart' as prod;
 
@@ -82,9 +84,19 @@ Future<FirebaseServices> bootstrapFirebase() async {
   // Cloud-only application: do not retain Firestore documents across sessions.
   db.settings = const Settings(persistenceEnabled: false);
   if (useEmulators) {
-    await auth.useAuthEmulator(emulatorHost, 9099);
-    if (kIsWeb) await auth.setPersistence(Persistence.NONE);
+    await connectAuthToEmulator(auth, emulatorHost, 9099);
     db.useFirestoreEmulator(emulatorHost, 8080);
   }
   return FirebaseServices(app: app, auth: auth, db: db);
+}
+
+/// Reapply the emulator connection even if a web hot restart left a stale hint.
+Future<void> connectAuthToEmulator(
+  FirebaseAuth auth,
+  String host,
+  int port,
+) async {
+  clearAuthEmulatorHint(auth.app.name);
+  await auth.useAuthEmulator(host, port);
+  if (kIsWeb) await auth.setPersistence(Persistence.NONE);
 }

@@ -72,22 +72,29 @@ class ChartXAxis {
     const topGap = 4.0;
     const rowGap = 8.0;
 
+    final reserve = topGap + stateHeight + rowGap + factorHeight + 2;
+    Widget labelBand(Widget child) => SizedBox(
+      height: reserve,
+      child: Align(alignment: Alignment.topCenter, child: child),
+    );
     return AxisTitles(
       sideTitles: SideTitles(
         showTitles: true,
         interval: ChartLayout.segmentSpan / 2,
-        reservedSize: topGap + stateHeight + rowGap + factorHeight + 2,
+        reservedSize: reserve,
         getTitlesWidget: (value, _) {
           final factor = locator.factorAtMidpoint(value);
           if (factor != null) {
-            return Padding(
-              padding: EdgeInsets.only(top: topGap + stateHeight + rowGap),
-              child: SizedBox(
-                width: factorWidth,
-                child: Text(
-                  factor.displayName,
-                  style: factorStyle,
-                  textAlign: TextAlign.center,
+            return labelBand(
+              Padding(
+                padding: EdgeInsets.only(top: topGap + stateHeight + rowGap),
+                child: SizedBox(
+                  width: factorWidth,
+                  child: Text(
+                    factor.displayName,
+                    style: factorStyle,
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             );
@@ -95,28 +102,30 @@ class ChartXAxis {
           final label = locator.stateLabelAt(value);
           if (label == null) return const SizedBox.shrink();
           final size = sizes[label]!;
-          return Padding(
-            padding: const EdgeInsets.only(top: topGap),
-            child: SizedBox(
-              width: rotated
-                  ? (size.width + size.height) / math.sqrt2
-                  : size.width,
-              height: rotatedHeight(size),
-              child: Center(
-                child: OverflowBox(
-                  minWidth: size.width,
-                  maxWidth: size.width,
-                  minHeight: size.height,
-                  maxHeight: size.height,
-                  child: Transform.rotate(
-                    angle: rotated ? -math.pi / 4 : 0,
-                    child: SizedBox(
-                      width: size.width,
-                      height: size.height,
-                      child: Text(
-                        label,
-                        style: stateStyle,
-                        textAlign: TextAlign.center,
+          return labelBand(
+            Padding(
+              padding: const EdgeInsets.only(top: topGap),
+              child: SizedBox(
+                width: rotated
+                    ? (size.width + size.height) / math.sqrt2
+                    : size.width,
+                height: rotatedHeight(size),
+                child: Center(
+                  child: OverflowBox(
+                    minWidth: size.width,
+                    maxWidth: size.width,
+                    minHeight: size.height,
+                    maxHeight: size.height,
+                    child: Transform.rotate(
+                      angle: rotated ? -math.pi / 4 : 0,
+                      child: SizedBox(
+                        width: size.width,
+                        height: size.height,
+                        child: Text(
+                          label,
+                          style: stateStyle,
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ),

@@ -20,7 +20,7 @@ import 'anomr_matrix/widgets/grid_scroll_cue.dart';
 import 'project_form/controllers/factor_input_controllers.dart';
 import 'project_form/services/project_form_validator.dart';
 
-/// Project setup form for experiment design, risk, and sample-size choices.
+/// Test Design form for experiment design, risk, and sample-size choices.
 class ProjectForm extends StatefulWidget {
   const ProjectForm({super.key, required this.formModel, this.onSubmit});
 
@@ -292,7 +292,7 @@ class _ProjectFormState extends State<ProjectForm> {
           ? Alignment.centerLeft
           : Alignment.center,
       child: Text(
-        'Project Setup',
+        'Test Design',
         style: Theme.of(context).textTheme.titleLarge,
         textAlign: TextAlign.center,
       ),

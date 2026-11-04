@@ -60,6 +60,7 @@ class _ResultsViewState extends State<ResultsView> {
         final actionItems = [
           AppBarActionBar.instructions(context),
           AppBarActionBar.contact(context),
+          AppBarActionBar.donations(context),
           AppBarActionItem(
             label: 'Projects',
             icon: Icons.home_outlined,

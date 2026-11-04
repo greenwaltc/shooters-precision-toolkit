@@ -175,6 +175,13 @@ class ProjectsBannerMetrics {
     double? actionsWidth,
   }) {
     final viewport = MediaQuery.sizeOf(context);
+    if (viewport.width >= AppLayoutMetrics.desktopBreakpoint) {
+      return const ProjectsBannerMetrics(
+        logoHeight: 48,
+        toolbarHeight: 72,
+        showTagline: false,
+      );
+    }
     final compact = AppBrandAssets.isMobileLandscapeBanner(context);
     final showTagline = !AppBrandAssets.hideBannerTagline(context);
     final taglineHeight = showTagline
@@ -359,6 +366,16 @@ class AppBrandTitleMetrics {
     required String label,
     required double titleMaxWidth,
   }) {
+    if (MediaQuery.sizeOf(context).width >=
+        AppLayoutMetrics.desktopBreakpoint) {
+      return const AppBrandTitleMetrics(
+        stacked: false,
+        toolbarHeight: 64,
+        logoHeight: 36,
+        brandTitleGap: 20,
+        brandingPadding: 8,
+      );
+    }
     final compact = AppBrandAssets.isMobileLandscapeBanner(context);
     final logoHeight = compact
         ? AppDesign.appBarLogoHeightCompact

@@ -258,17 +258,34 @@ class _ResultsBody extends StatelessWidget {
     final scale = ChartScale.of(context, constraints);
     final summary = _summaryFor(scale);
 
+    final desktop = MediaQuery.sizeOf(context).width >= 1024;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildHeader(summary),
-        SizedBox(height: scale.chartOuterPadding + AppSpacing.sm),
+        if (desktop)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildHeader(summary)),
+              const SizedBox(width: 16),
+              ExportActionButton(
+                onPressed: onExportPressed,
+                isExporting: isExporting,
+              ),
+            ],
+          )
+        else
+          _buildHeader(summary),
+        SizedBox(
+          height: desktop ? 12 : scale.chartOuterPadding + AppSpacing.sm,
+        ),
         _buildChart(summary, scale),
         SizedBox(height: scale.chartOuterPadding),
-        ExportActionButton(
-          onPressed: onExportPressed,
-          isExporting: isExporting,
-        ),
+        if (!desktop)
+          ExportActionButton(
+            onPressed: onExportPressed,
+            isExporting: isExporting,
+          ),
       ],
     );
   }

@@ -174,11 +174,9 @@ class _MyAppState extends State<MyApp> {
             themeMode: _resolveThemeMode(themeController),
             initialRoute: AppRoutes.projects,
             builder: (context, child) => AppBackground(
-              child: Column(
-                children: [
-                  Expanded(child: child ?? const SizedBox.shrink()),
-                  ProjectSaveStatus(navigatorKey: _navigatorKey),
-                ],
+              child: ProjectWorkspaceFrame(
+                navigatorKey: _navigatorKey,
+                child: child ?? const SizedBox.shrink(),
               ),
             ),
             onGenerateRoute: (settings) {

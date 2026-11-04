@@ -191,7 +191,9 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     ProjectFormModel formModel,
   ) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: layout.pageGutter),
+      padding: EdgeInsets.symmetric(
+        horizontal: layout.isMobile ? layout.pageGutter : 24,
+      ),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
@@ -231,9 +233,9 @@ class _MatrixHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        layout.pageGutter,
-        layout.pageGutterVertical,
-        layout.pageGutter,
+        layout.isMobile ? layout.pageGutter : 24,
+        layout.isMobile ? layout.pageGutterVertical : 12,
+        layout.isMobile ? layout.pageGutter : 24,
         layout.preferCompactChrome ? AppSpacing.sm : AppSpacing.lg,
       ),
       child: Align(
@@ -247,6 +249,19 @@ class _MatrixHeader extends StatelessWidget {
   }
 
   Widget _buildTitle(BuildContext context) {
+    if (!layout.isMobile) {
+      return Wrap(
+        spacing: 16,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text('Data matrix', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            formModel.experimentStructure.label,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -279,6 +294,7 @@ class AnomrMatrixGrid extends StatefulWidget {
 }
 
 class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
+  static const double _desktopMaxWidth = 1180;
   late List<PlutoColumn> _columns;
   late List<PlutoRow> _rows;
   late List<PlutoColumnGroup> _columnGroups;
@@ -468,8 +484,18 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   PlutoGridStyleTheme _plutoTheme() {
-    return Theme.of(context).extension<PlutoGridStyleTheme>() ??
+    final theme =
+        Theme.of(context).extension<PlutoGridStyleTheme>() ??
         const PlutoGridStyleTheme.standard();
+    if (!widget.isMobile) {
+      // Spreadsheet density, with extra height retained for enlarged text.
+      final textScale = MediaQuery.textScalerOf(context).scale(1);
+      return theme.copyWith(
+        rowHeight: 36 * textScale,
+        columnHeight: 40 * textScale,
+      );
+    }
+    return theme;
   }
 
   double _columnTotalWidth() {
@@ -521,9 +547,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final overflowHeight = contentHeight > maxHeight;
     final overflowWidth = contentWidth > maxWidth;
 
+    final fittedWidth = contentWidth + (overflowHeight ? scrollbar : 0);
     final width = overflowWidth
         ? maxWidth
-        : contentWidth + (overflowHeight ? scrollbar : 0);
+        : !widget.isMobile
+        ? math.min(maxWidth, _desktopMaxWidth)
+        : fittedWidth;
     final height = overflowHeight
         ? maxHeight
         : contentHeight + (overflowWidth ? scrollbar : 0);
@@ -535,15 +564,27 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
   }
 
-  void _handleGridResize() {
-    if (mounted) {
-      _updateScrollCues();
-      setState(() {});
-    }
-  }
+  bool _gridUpdateScheduled = false;
+  bool _pendingGridResize = false;
 
-  void _handleScroll() {
-    _updateScrollCues();
+  void _handleGridResize() => _scheduleGridUpdate(resize: true);
+
+  void _handleScroll() => _scheduleGridUpdate();
+
+  void _scheduleGridUpdate({bool resize = false}) {
+    // Column autosizing can notify scroll/resize listeners during grid layout.
+    // Coalesce those notifications and update our chrome after layout finishes.
+    _pendingGridResize = _pendingGridResize || resize;
+    if (_gridUpdateScheduled) return;
+    _gridUpdateScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _gridUpdateScheduled = false;
+      if (!mounted) return;
+      final resized = _pendingGridResize;
+      _pendingGridResize = false;
+      _updateScrollCues();
+      if (resized) setState(() {});
+    });
   }
 
   void _updateScrollCues() {
@@ -656,8 +697,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           scrollbarThickness: plutoTheme.scrollbarThickness,
           scrollbarRadius: plutoTheme.scrollbarRadius,
         ),
-        columnSize: const PlutoGridColumnSizeConfig(
-          autoSizeMode: PlutoAutoSizeMode.none,
+        columnSize: PlutoGridColumnSizeConfig(
+          autoSizeMode: widget.isMobile
+              ? PlutoAutoSizeMode.none
+              : PlutoAutoSizeMode.scale,
         ),
         shortcut: PlutoGridShortcut(actions: _shortcutActions()),
       ),
@@ -777,6 +820,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       enableColumnDrag: false,
       enableContextMenu: false,
       enableDropToResize: false,
+      suppressedAutoSize: true,
       width: _initialIndexColumnWidth(title: title, maxValue: maxValue),
       textAlign: PlutoColumnTextAlign.center,
       titleTextAlign: PlutoColumnTextAlign.center,
@@ -1309,22 +1353,74 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final plutoTheme = _plutoTheme();
     final scheme = Theme.of(context).colorScheme;
 
-    return AppLayoutBuilder(
+    final desktop = !widget.isMobile;
+    final content = AppLayoutBuilder(
       builder: (context, layout) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _RandomizeOrderToggle(
-            value: _randomizeOrder,
-            onChanged: _stateManager == null ? null : _onRandomizeToggled,
-          ),
+          if (desktop)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 16,
+                runSpacing: 8,
+                children: [
+                  _RandomizeOrderToggle(
+                    value: _randomizeOrder,
+                    onChanged: _stateManager == null
+                        ? null
+                        : _onRandomizeToggled,
+                    compact: true,
+                  ),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _clearRanges,
+                        icon: const Icon(Icons.clear_all),
+                        label: const Text('Clear All Group Sizes'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: scheme.error,
+                        ),
+                      ),
+                      FilledButton.icon(
+                        onPressed: _stateManager == null
+                            ? null
+                            : () => _showResults(context),
+                        icon: const Icon(Icons.analytics),
+                        label: const Text('Show Results'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          if (!desktop)
+            _RandomizeOrderToggle(
+              value: _randomizeOrder,
+              onChanged: _stateManager == null ? null : _onRandomizeToggled,
+            ),
           Expanded(child: _buildGridArea(plutoTheme, scheme)),
-          _MatrixActions(
-            layout: layout,
-            canShowResults: _stateManager != null,
-            onShowResults: () => _showResults(context),
-            onClearRanges: _clearRanges,
-          ),
+          if (!desktop)
+            _MatrixActions(
+              layout: layout,
+              canShowResults: _stateManager != null,
+              onShowResults: () => _showResults(context),
+              onClearRanges: _clearRanges,
+            ),
         ],
+      ),
+    );
+    if (!desktop) return content;
+    // Give the toolbar and grid the same centered bounds on wide windows.
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _desktopMaxWidth),
+        child: content,
       ),
     );
   }
@@ -1423,7 +1519,13 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 }
 
 class _RandomizeOrderToggle extends StatelessWidget {
-  const _RandomizeOrderToggle({required this.value, required this.onChanged});
+  const _RandomizeOrderToggle({
+    required this.value,
+    required this.onChanged,
+    this.compact = false,
+  });
+
+  final bool compact;
 
   final bool value;
   final ValueChanged<bool>? onChanged;
@@ -1432,8 +1534,9 @@ class _RandomizeOrderToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: EdgeInsets.only(bottom: compact ? 0 : AppSpacing.md),
       child: Row(
+        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           Flexible(

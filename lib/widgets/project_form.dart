@@ -185,11 +185,18 @@ class _ProjectFormState extends State<ProjectForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-      child: AppLayoutBuilder(
-        builder: (context, layout) => _buildFormLayout(context, layout),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        visualDensity: MediaQuery.sizeOf(context).width >= 1024
+            ? VisualDensity.compact
+            : Theme.of(context).visualDensity,
+      ),
+      child: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: AppLayoutBuilder(
+          builder: (context, layout) => _buildFormLayout(context, layout),
+        ),
       ),
     );
   }
@@ -240,20 +247,14 @@ class _ProjectFormState extends State<ProjectForm> {
             top: 0,
             left: 0,
             right: 0,
-            child: GridScrollCue(
-              edge: ScrollCueEdge.top,
-              scheme: scheme,
-            ),
+            child: GridScrollCue(edge: ScrollCueEdge.top, scheme: scheme),
           ),
         if (_showBottomScrollCue)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: GridScrollCue(
-              edge: ScrollCueEdge.bottom,
-              scheme: scheme,
-            ),
+            child: GridScrollCue(edge: ScrollCueEdge.bottom, scheme: scheme),
           ),
       ],
     );
@@ -369,6 +370,16 @@ class _ProjectFormState extends State<ProjectForm> {
         child: Column(
           children: ExperimentStructure.values.map((structure) {
             return RadioListTile<ExperimentStructure>(
+              dense: MediaQuery.sizeOf(context).width >= 1024,
+              minTileHeight: MediaQuery.sizeOf(context).width >= 1024
+                  ? 40
+                  : null,
+              materialTapTargetSize: MediaQuery.sizeOf(context).width >= 1024
+                  ? MaterialTapTargetSize.shrinkWrap
+                  : null,
+              visualDensity: MediaQuery.sizeOf(context).width >= 1024
+                  ? VisualDensity.compact
+                  : null,
               value: structure,
               title: Text(structure.label),
             );
@@ -452,6 +463,16 @@ class _ProjectFormState extends State<ProjectForm> {
         child: Column(
           children: RiskLevel.values.map((level) {
             return RadioListTile<RiskLevel>(
+              dense: MediaQuery.sizeOf(context).width >= 1024,
+              minTileHeight: MediaQuery.sizeOf(context).width >= 1024
+                  ? 40
+                  : null,
+              materialTapTargetSize: MediaQuery.sizeOf(context).width >= 1024
+                  ? MaterialTapTargetSize.shrinkWrap
+                  : null,
+              visualDensity: MediaQuery.sizeOf(context).width >= 1024
+                  ? VisualDensity.compact
+                  : null,
               value: level,
               title: Text(level.label),
             );
@@ -481,6 +502,21 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildSampleSizeOption(SampleSizeOption option) {
+    if (MediaQuery.sizeOf(context).width >= 1024) {
+      return RadioListTile<SampleSizeOption>(
+        dense: true,
+        minTileHeight: 56,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        value: option,
+        title: Text(
+          option.formOptionLabel(widget.formModel.experimentStructure),
+        ),
+        subtitle: Text(
+          'Detects a difference of ${option.detectableDifferenceLabel(widget.formModel.riskLevel)}',
+        ),
+      );
+    }
     return Padding(
       padding: AppSpacing.radioItemVertical,
       child: RadioListTile<SampleSizeOption>(

@@ -24,7 +24,9 @@ class AppAtmosphere extends StatelessWidget {
       child: IgnorePointer(
         child: SizedBox.expand(
           child: Opacity(
-            opacity: AppDesign.atmosphereOpacity,
+            opacity: MediaQuery.sizeOf(context).width >= 1024
+                ? 0.045
+                : AppDesign.atmosphereOpacity,
             child: Image.asset(
               asset,
               fit: BoxFit.cover,

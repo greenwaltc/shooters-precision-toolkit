@@ -1,7 +1,64 @@
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../model/project_store.dart';
+import '../styles/layout/app_layout.dart';
+
+/// Floats save feedback over the footer without reserving a second footer row.
+/// Its presence and height never change the Navigator's available space.
+class ProjectWorkspaceFrame extends StatelessWidget {
+  const ProjectWorkspaceFrame({
+    super.key,
+    required this.child,
+    this.navigatorKey,
+  });
+
+  final Widget child;
+  final GlobalKey<NavigatorState>? navigatorKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = ProjectSaveStatus(navigatorKey: navigatorKey);
+    if (MediaQuery.sizeOf(context).width < AppLayoutMetrics.mobileBreakpoint) {
+      return Column(
+        children: [
+          Expanded(child: child),
+          status,
+        ],
+      );
+    }
+    // Firebase Auth's local-only DOM banner overlays the bottom 20px.
+    const emulatorInset =
+        kIsWeb && bool.fromEnvironment('USE_FIREBASE_EMULATORS') ? 20.0 : 0.0;
+    final bottomInset = math.max(
+      MediaQuery.paddingOf(context).bottom,
+      emulatorInset,
+    );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: emulatorInset),
+          child: child,
+        ),
+        Positioned(
+          bottom: 4 + bottomInset,
+          left: 24,
+          right: 24,
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 540),
+              child: IntrinsicWidth(child: status),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 enum _ConflictChoice { keepEditing, loadCloud, saveCopy }
 
@@ -28,8 +85,19 @@ class ProjectSaveStatus extends StatelessWidget {
           };
     return Material(
       color: Theme.of(context).colorScheme.surface,
+      elevation:
+          MediaQuery.sizeOf(context).width >= AppLayoutMetrics.mobileBreakpoint
+          ? 3
+          : 0,
+      borderRadius:
+          MediaQuery.sizeOf(context).width >= AppLayoutMetrics.mobileBreakpoint
+          ? BorderRadius.circular(12)
+          : null,
       child: SafeArea(
         top: false,
+        bottom:
+            MediaQuery.sizeOf(context).width <
+            AppLayoutMetrics.mobileBreakpoint,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Wrap(

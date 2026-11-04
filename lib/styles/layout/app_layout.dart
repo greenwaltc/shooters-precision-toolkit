@@ -19,10 +19,7 @@ typedef AppLayoutWidgetBuilder =
 /// thresholds.
 @immutable
 class AppLayoutMetrics {
-  const AppLayoutMetrics({
-    required this.width,
-    required this.height,
-  });
+  const AppLayoutMetrics({required this.width, required this.height});
 
   /// Content/viewport width used for breakpoints.
   final double width;
@@ -45,21 +42,22 @@ class AppLayoutMetrics {
   bool get useTwoColumnForms => width >= 900;
   bool get useStackedActions => width < 560;
 
-  double get pageGutter => isMobile ? AppSpacing.lg : AppSpacing.xxxxl;
+  double get pageGutter =>
+      isMobile ? AppSpacing.lg : (isDesktop ? 24 : AppSpacing.xxxxl);
 
   /// Vertical gutter; tighter on mobile landscape to reclaim body height.
   double get pageGutterVertical =>
-      preferCompactChrome ? AppSpacing.sm : pageGutter;
+      isDesktop ? 12 : (preferCompactChrome ? AppSpacing.sm : pageGutter);
 
   EdgeInsets get pagePadding => EdgeInsets.symmetric(
     horizontal: pageGutter,
     vertical: pageGutterVertical,
   );
 
-  double get homeMaxWidth => isDesktop ? 980 : double.infinity;
-  double get formMaxWidth => isDesktop ? 1080 : double.infinity;
+  double get homeMaxWidth => isDesktop ? 1200 : double.infinity;
+  double get formMaxWidth => isDesktop ? 1280 : double.infinity;
   double get resultsMaxWidth => isDesktop ? 1180 : double.infinity;
-  double get matrixHeaderMaxWidth => isDesktop ? 1180 : double.infinity;
+  double get matrixHeaderMaxWidth => isDesktop ? 1440 : double.infinity;
 
   /// Help instructions sheet uses full width on mobile; 80% of the viewport
   /// on tablet and desktop so long-form text stays readable without feeling narrow.

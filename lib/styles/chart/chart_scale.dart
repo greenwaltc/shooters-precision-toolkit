@@ -21,6 +21,7 @@ class ChartScale {
     required this.scale,
     required this.isCompact,
     required this.textScale,
+    this.desktopChartHeight,
   });
 
   factory ChartScale.of(BuildContext context, BoxConstraints constraints) {
@@ -33,6 +34,10 @@ class ChartScale {
       scale: clamped,
       isCompact: width < AppLayoutMetrics.mobileBreakpoint,
       textScale: MediaQuery.textScalerOf(context).scale(1),
+      desktopChartHeight:
+          MediaQuery.sizeOf(context).width >= AppLayoutMetrics.desktopBreakpoint
+          ? (MediaQuery.sizeOf(context).height * 0.38).clamp(280.0, 380.0)
+          : null,
     );
   }
 
@@ -56,6 +61,10 @@ class ChartScale {
   static ChartScale get export =>
       const ChartScale._(scale: 1.0, isCompact: false, textScale: 1.0);
 
+  /// Desktop charts use viewport height instead of growing taller with width.
+  /// Export sizing continues to use its independent, fixed geometry.
+  final double? desktopChartHeight;
+
   final double scale;
   final bool isCompact;
 
@@ -66,9 +75,10 @@ class ChartScale {
 
   // Layout sizes
   double get chartHeight =>
-      (isCompact
-          ? (360 * scale).clamp(300.0, 390.0)
-          : (340 * scale).clamp(280.0, 540.0)) *
+      (desktopChartHeight ??
+          (isCompact
+              ? (360 * scale).clamp(300.0, 390.0)
+              : (340 * scale).clamp(280.0, 540.0))) *
       textScale;
   double get chartOuterPadding => isCompact
       ? (14 * scale).clamp(10.0, 18.0)

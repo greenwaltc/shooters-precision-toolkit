@@ -29,7 +29,9 @@ class GroupedFieldPanel extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: outerPadding,
+      padding: MediaQuery.sizeOf(context).width >= 1024
+          ? const EdgeInsets.symmetric(vertical: 6, horizontal: 8)
+          : outerPadding,
       child: Material(
         color: scheme.surfaceContainerLow,
         shape: RoundedRectangleBorder(
@@ -37,7 +39,12 @@ class GroupedFieldPanel extends StatelessWidget {
           borderRadius: AppRadius.mdRadius,
         ),
         clipBehavior: Clip.antiAlias,
-        child: Padding(padding: innerPadding, child: child),
+        child: Padding(
+          padding: MediaQuery.sizeOf(context).width >= 1024
+              ? const EdgeInsets.all(8)
+              : innerPadding,
+          child: child,
+        ),
       ),
     );
   }

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../config/project_configuration.dart';
 import '../styles/layout/app_viewport.dart';
+import '../styles/layout/app_layout.dart';
 import '../styles/tokens/app_spacing.dart';
 import 'app_brand_bar.dart';
 
@@ -30,9 +31,9 @@ class AppCopyrightFooter extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          textScaler: AppViewport.footerTextScaler(context),
-        ),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: AppViewport.footerTextScaler(context)),
         child: SafeArea(
           top: false,
           minimum: AppViewport.needsWebBottomClearance
@@ -47,7 +48,11 @@ class AppCopyrightFooter extends StatelessWidget {
             ),
             child: Text(
               noticeText,
-              textAlign: TextAlign.center,
+              textAlign:
+                  MediaQuery.sizeOf(context).width >=
+                      AppLayoutMetrics.mobileBreakpoint
+                  ? TextAlign.left
+                  : TextAlign.center,
               maxLines: AppBrandAssets.isMobileLandscapeBanner(context) ? 1 : 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(

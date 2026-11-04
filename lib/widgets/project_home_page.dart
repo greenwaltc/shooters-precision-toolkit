@@ -121,7 +121,7 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
   Widget _buildBody(
     BuildContext context,
     ProjectStore store,
-    AppLayoutMetrics _, {
+    AppLayoutMetrics layout, {
     bool clearFloatingAction = false,
   }) {
     final projects = store.projects;
@@ -221,15 +221,35 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                FilledButton.icon(
-                  onPressed: () => _createProject(context, store),
-                  icon: const Icon(Icons.add),
-                  label: Text(
-                    ProjectConfiguration.current.uiCopy.createProjectLabel,
+                if (layout.isDesktop)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text('Projects', style: AppHeadings.h3(context)),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () => _createProject(context, store),
+                        icon: const Icon(Icons.add),
+                        label: Text(
+                          ProjectConfiguration
+                              .current
+                              .uiCopy
+                              .createProjectLabel,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
+                if (!layout.isDesktop)
+                  FilledButton.icon(
+                    onPressed: () => _createProject(context, store),
+                    icon: const Icon(Icons.add),
+                    label: Text(
+                      ProjectConfiguration.current.uiCopy.createProjectLabel,
+                    ),
+                  ),
                 const SizedBox(height: AppSpacing.xl),
-                Text('Projects', style: AppHeadings.h3(context)),
+                if (!layout.isDesktop)
+                  Text('Projects', style: AppHeadings.h3(context)),
                 const SizedBox(height: AppSpacing.md),
                 ListView.separated(
                   shrinkWrap: true,
@@ -293,9 +313,11 @@ class _ProjectListTile extends StatelessWidget {
         borderRadius: AppRadius.lgRadius,
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
+        contentPadding: EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
+          vertical: MediaQuery.sizeOf(context).width >= 1024
+              ? 4
+              : AppSpacing.md,
         ),
         leading: _LeadingBadge(
           icon: Icons.analytics_outlined,
@@ -307,10 +329,12 @@ class _ProjectListTile extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         subtitle: Text(
-          'Created ${formatProjectTimestamp(project.createdAt)}\n'
-          'Modified ${formatProjectTimestamp(project.updatedAt)}',
+          MediaQuery.sizeOf(context).width >= 1024
+              ? 'Created ${formatProjectTimestamp(project.createdAt)}  ·  Modified ${formatProjectTimestamp(project.updatedAt)}'
+              : 'Created ${formatProjectTimestamp(project.createdAt)}\n'
+                    'Modified ${formatProjectTimestamp(project.updatedAt)}',
         ),
-        isThreeLine: true,
+        isThreeLine: MediaQuery.sizeOf(context).width < 1024,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

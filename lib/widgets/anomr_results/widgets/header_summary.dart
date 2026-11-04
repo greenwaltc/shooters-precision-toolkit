@@ -32,6 +32,63 @@ class HeaderSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
+    if (MediaQuery.sizeOf(context).width >=
+        AppLayoutMetrics.desktopBreakpoint) {
+      return OutlinedSurfaceCard(
+        variant: OutlinedSurfaceVariant.tinted,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Project Parameters',
+                    style: AppTextStyles.headerSummaryTitle(context),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(sampleSizeLabel, style: textTheme.bodyMedium),
+                ],
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              flex: 6,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: StatTile(
+                      label: 'Grand Mean',
+                      value: grandMean.toStringAsFixed(4),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: StatTile(
+                      label: 'Risk Level',
+                      value: riskLevel.label,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: StatTile(
+                      label: 'Detectable Difference',
+                      value: SampleSizeOption.formatFraction(
+                        detectableDiffPercent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return OutlinedSurfaceCard(
       variant: OutlinedSurfaceVariant.tinted,
       child: Column(
@@ -43,7 +100,11 @@ class HeaderSummary extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(sampleSizeLabel, style: textTheme.bodyMedium),
-          const SizedBox(height: AppSpacing.xl),
+          SizedBox(
+            height: MediaQuery.sizeOf(context).width >= 1024
+                ? 8
+                : AppSpacing.xl,
+          ),
           LayoutBuilder(
             builder: (context, constraints) {
               final layout = AppLayoutMetrics(

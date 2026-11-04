@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:pluto_grid/pluto_grid.dart';
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
 // Use of this source code is governed by a proprietary license that can be
 // found in the LICENSE file at the root of this project.
@@ -15,6 +17,7 @@ import 'support/fake_project_repository.dart';
 import 'package:bramwells_precision_test_kit/styles/chart/chart_scale.dart';
 import 'package:bramwells_precision_test_kit/widgets/anomr_results/widgets/empty_results_state.dart';
 import 'package:bramwells_precision_test_kit/widgets/range_entry_sheet.dart';
+import 'package:bramwells_precision_test_kit/widgets/app_copyright_footer.dart';
 
 /// A worst-case cell context: four factors with long state names.
 const _fourFactorEntry = RangeEntryContext(
@@ -45,6 +48,130 @@ const _viewports = <String, Size>{
 const _textScales = <double>[1.0, 1.6];
 
 void main() {
+  testWidgets(
+    'desktop matrix keeps its viewport through saving and retry feedback',
+    (tester) async {
+      _configureViewport(tester, size: const Size(1440, 900), textScale: 1);
+      await _pumpCompletedProject(tester, factorCount: 4);
+      await _tapText(tester, 'Bench Rest Comparison');
+      final grid = find.byType(PlutoGrid);
+      final original = tester.getRect(grid);
+      expect(original.top, lessThan(200));
+      expect(original.height, greaterThan(550));
+      expect(original.width, greaterThanOrEqualTo(840));
+      final store = tester.widget<MyApp>(find.byType(MyApp)).projectStore!;
+      final repository = store.repository as FakeProjectRepository;
+      final barrier = Completer<void>();
+      repository.saveBarrier = barrier.future;
+      store.selectedProject!.formModel.setProjectTitle('Desktop layout check');
+      await tester.pump(const Duration(milliseconds: 10));
+      await tester.pump();
+      expect(
+        find.text('Saving…'),
+        findsOneWidget,
+        reason: 'The pending repository request must expose saving feedback.',
+      );
+      expect(tester.getRect(grid), original);
+      repository.saveFailure = StateError('Simulated network failure');
+      barrier.complete();
+      await tester.pumpAndSettle();
+      expect(find.text('Retry save'), findsOneWidget);
+      expect(tester.getRect(grid), original);
+      repository.saveFailure = null;
+      await store.saveSelectedProject();
+      await tester.pumpAndSettle();
+      expect(find.text('Saved'), findsOneWidget);
+      expect(tester.getRect(grid), original);
+      _expectNoLayoutErrors(tester, 'desktop save feedback');
+    },
+  );
+
+  for (final factorCount in [1, 4]) {
+    testWidgets(
+      'live $factorCount-factor matrix refits across desktop and tablet widths',
+      (tester) async {
+        _configureViewport(tester, size: const Size(1440, 900), textScale: 1);
+        await _pumpCompletedProject(tester, factorCount: factorCount);
+        await _tapText(tester, 'Bench Rest Comparison');
+        final grid = find.byType(PlutoGrid);
+        final manager = tester.state<PlutoGridState>(grid).stateManager;
+        final store = tester.widget<MyApp>(find.byType(MyApp)).projectStore!;
+        final originalValues = Map.of(store.selectedProject!.matrixState);
+        for (final width in [
+          1920.0,
+          1440.0,
+          1100.0,
+          1024.0,
+          1000.0,
+          900.0,
+          800.0,
+          720.0,
+          900.0,
+          1024.0,
+          1440.0,
+        ]) {
+          tester.view.physicalSize = Size(width, 900);
+          await tester.pumpAndSettle();
+          expect(
+            tester.state<PlutoGridState>(grid).stateManager,
+            same(manager),
+          );
+          if (width >= 1024) {
+            final gridBounds = tester.getRect(grid);
+            final resultsButton = find.ancestor(
+              of: find.text('Show Results'),
+              matching: find.byWidgetPredicate(
+                (widget) => widget is FilledButton,
+              ),
+            );
+            expect(
+              tester.getTopLeft(find.text('Randomize order?')).dx,
+              closeTo(gridBounds.left, 1),
+              reason:
+                  'Randomize aligns with the matrix left edge at width=$width',
+            );
+            expect(
+              tester.getTopRight(resultsButton).dx,
+              closeTo(gridBounds.right, 1),
+              reason:
+                  'The action group aligns with the matrix right edge at width=$width',
+            );
+          }
+          expect(
+            manager.configuration.style.rowHeight,
+            36,
+            reason: 'width=$width',
+          );
+          final scroll = manager.scroll.bodyRowsHorizontal!.position;
+          final minimumWidth = manager.columns.fold<double>(
+            0,
+            (sum, column) =>
+                sum +
+                (column.suppressedAutoSize ? column.width : column.minWidth),
+          );
+          // Many-factor grids may genuinely exceed a narrow viewport. Only
+          // their minimum readable widths may cause horizontal scrolling.
+          final requiredOverflow = minimumWidth > scroll.viewportDimension
+              ? minimumWidth - scroll.viewportDimension
+              : 0.0;
+          expect(
+            scroll.maxScrollExtent,
+            lessThanOrEqualTo(requiredOverflow + 1),
+            reason: 'Unnecessary horizontal overflow at width=$width',
+          );
+          expect(
+            tester.getBottomRight(find.byType(AppCopyrightFooter)).dy,
+            900,
+            reason:
+                'No reserved status band below the copyright at width=$width',
+          );
+          expect(store.selectedProject!.matrixState, originalValues);
+          _expectNoLayoutErrors(tester, 'live resize at width=$width');
+        }
+      },
+    );
+  }
+
   group('setup flow', () {
     for (final entry in _viewports.entries) {
       for (final textScale in _textScales) {
@@ -210,13 +337,13 @@ void main() {
       (WidgetTester tester) async {
         _configureViewport(tester, size: const Size(320, 568), textScale: 1.6);
 
-      await _pumpCompletedProject(tester);
-      await _tapText(tester, 'Bench Rest Comparison');
+        await _pumpCompletedProject(tester);
+        await _tapText(tester, 'Bench Rest Comparison');
 
-      final menu = find.byIcon(Icons.menu);
-      expect(menu, findsOneWidget);
-      await tester.tap(menu);
-      await tester.pumpAndSettle();
+        final menu = find.byIcon(Icons.menu);
+        expect(menu, findsOneWidget);
+        await tester.tap(menu);
+        await tester.pumpAndSettle();
 
         expect(find.text('Instructions'), findsWidgets);
         expect(find.text('Projects'), findsWidgets);
@@ -355,11 +482,7 @@ Future<void> _pumpCompletedProject(
   }
   expect(await store.completeProjectSetup(), isTrue);
 
-  for (
-    var index = 0;
-    index < model.sampleSizeOption.totalSamples;
-    index++
-  ) {
+  for (var index = 0; index < model.sampleSizeOption.totalSamples; index++) {
     project.matrixState['range_$index'] = '${index % 5 + 1}';
   }
 
@@ -382,8 +505,9 @@ Future<void> _tapText(WidgetTester tester, String label) async {
           widget is OutlinedButton,
     ),
   );
-  final finder =
-      buttonFinder.evaluate().isNotEmpty ? buttonFinder.first : textFinder.first;
+  final finder = buttonFinder.evaluate().isNotEmpty
+      ? buttonFinder.first
+      : textFinder.first;
 
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();

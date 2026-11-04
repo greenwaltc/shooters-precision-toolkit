@@ -184,9 +184,11 @@ class _MyAppState extends State<MyApp> {
                 settings: settings,
                 builder: (context) {
                   final page = builder(context);
-                  // These editors show save feedback beside the project title.
+                  // Editors show status in their banners; Results needs no
+                  // floating footer status.
                   if (settings.name == AppRoutes.projectForm ||
-                      settings.name == AppRoutes.anomrMatrix) {
+                      settings.name == AppRoutes.anomrMatrix ||
+                      settings.name == AppRoutes.anomrResults) {
                     return page;
                   }
                   return ProjectWorkspaceFrame(

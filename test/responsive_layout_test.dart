@@ -321,6 +321,9 @@ void main() {
             reason: 'should have navigated to the results page',
           );
           _expectNoLayoutErrors(tester, '$label — results page');
+          if (entry.value.width >= 1024) {
+            expect(find.text('Saved'), findsNothing);
+          }
           expect(
             tester
                 .widget<AppBrandTitle>(find.byType(AppBrandTitle))

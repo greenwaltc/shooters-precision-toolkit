@@ -65,6 +65,7 @@ void main() {
       );
       expect(selectedBackground.color, manager.style.activatedColor);
       final expected = [
+        'Run Order\tFactor 0\tFactor 1\tReplicate\tGroup Size',
         for (var i = 0; i < 4; i++)
           [
             'row',
@@ -94,7 +95,11 @@ void main() {
       await reverse.up();
       await tester.pumpAndSettle();
       final rectangle = MatrixGridClipboard.copyTextForSelection(manager)!;
-      expect(rectangle.split('\n'), hasLength(3));
+      expect(rectangle.split('\n'), hasLength(4));
+      expect(
+        rectangle.split('\n').first,
+        'Factor 0\tFactor 1\tReplicate\tGroup Size',
+      );
       expect(rectangle.split('\n').first.split('\t'), hasLength(4));
       expect(manager.isEditing, isFalse);
       expect(tester.takeException(), isNull);
@@ -112,14 +117,49 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pumpAndSettle();
     final forward = MatrixGridClipboard.copyTextForSelection(manager)!;
-    expect(forward.split('\n'), hasLength(3));
+    expect(forward.split('\n'), hasLength(4));
     expect(forward.split('\n').first.split('\t'), hasLength(5));
-    expect(forward.split('\n').first, startsWith('1\tLow 0\tLow 1\t1\t'));
+    expect(
+      forward.split('\n').first,
+      'Run Order\tFactor 0\tFactor 1\tReplicate\tGroup Size',
+    );
+    expect(forward.split('\n')[1], startsWith('1\tLow 0\tLow 1\t1\t'));
     manager.setCurrentCell(manager.rows[2].cells['range'], 2);
     manager.setCurrentSelectingPosition(
       cellPosition: const PlutoGridCellPosition(columnIdx: 0, rowIdx: 0),
     );
     expect(MatrixGridClipboard.copyTextForSelection(manager), forward);
+  });
+
+  testWidgets(
+    'Group Size-only copies include a header and can be pasted back',
+    (tester) async {
+      final (_, manager) = await pumpMatrixFixture(tester);
+      manager.setCurrentSelectingPosition(
+        cellPosition: const PlutoGridCellPosition(columnIdx: 4, rowIdx: 1),
+      );
+      clipboard = MatrixGridClipboard.copyTextForSelection(manager)!;
+      expect(clipboard, 'Group Size\n1\n2');
+      manager.setCurrentCell(manager.rows[2].cells['range'], 2);
+      await tester.pumpAndSettle();
+      await _paste(tester);
+      expect(manager.rows[2].cells['range']!.value, '1');
+      expect(manager.rows[3].cells['range']!.value, '2');
+      expect(manager.rows[4].cells['range']!.value, '5');
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets('whole-row copies include all headers in display order', (
+    tester,
+  ) async {
+    final (_, manager) = await pumpMatrixFixture(tester);
+    manager.setSelectingMode(PlutoGridSelectingMode.row);
+    manager.setCurrentSelectingRowsByRange(0, 1);
+    final rows = MatrixGridClipboard.copyTextForSelection(manager)!.split('\n');
+    expect(rows, hasLength(3));
+    expect(rows.first, 'Run Order\tFactor 0\tFactor 1\tReplicate\tGroup Size');
+    expect(rows[1], startsWith('1\tLow 0\tLow 1\t1\t'));
   });
 
   testWidgets(

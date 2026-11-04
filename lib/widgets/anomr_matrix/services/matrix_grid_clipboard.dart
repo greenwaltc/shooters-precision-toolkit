@@ -62,12 +62,15 @@ class MatrixGridClipboard {
     return null;
   }
 
-  /// Copy the visible selection rectangle in display order, including read-only
-  /// columns. The hidden storage index is never part of the clipboard.
+  /// Copy column titles followed by the selected rectangle in display order,
+  /// including read-only columns. Hidden storage indexes are excluded.
   static String? copyTextForSelection(PlutoGridStateManager manager) {
     final current = manager.currentCellPosition;
     if (current?.rowIdx == null) return null;
     final columns = manager.columnIndexesByShowFrozen;
+    String headers(int start, int end) => [
+      for (var i = start; i <= end; i++) manager.refColumns[columns[i]].title,
+    ].join('\t');
     String rowText(PlutoRow row, int start, int end) => [
       for (var i = start; i <= end; i++)
         row.cells[manager.refColumns[columns[i]].field]?.value?.toString() ??
@@ -76,16 +79,18 @@ class MatrixGridClipboard {
     if (manager.selectingMode.isRow &&
         manager.currentSelectingRows.isNotEmpty) {
       final selected = manager.currentSelectingRows.toSet();
-      return manager.refRows
+      final rows = manager.refRows
           .where(selected.contains)
           .map((row) => rowText(row, 0, columns.length - 1))
           .join('\n');
+      return '${headers(0, columns.length - 1)}\n$rows';
     }
     final end = manager.currentSelectingPosition ?? current!;
     final colStart = math.min(current!.columnIdx!, end.columnIdx!);
     final colEnd = math.max(current.columnIdx!, end.columnIdx!);
     final bounds = _selectedRowBounds(manager)!;
     return [
+      headers(colStart, colEnd),
       for (var i = bounds.$1; i <= bounds.$2; i++)
         rowText(manager.refRows[i], colStart, colEnd),
     ].join('\n');
@@ -269,6 +274,9 @@ class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
       onRejected?.call();
       return false;
     }
+    // Allow a copied Group Size column to round-trip with its new header.
+    if (values.first.single.trim() == 'Group Size') values.removeAt(0);
+    if (values.isEmpty) return false;
     if (manager.isEditing == true) manager.setEditing(false);
     history?.beginBatch();
     try {

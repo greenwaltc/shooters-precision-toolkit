@@ -16,6 +16,7 @@ import 'app_copyright_footer.dart';
 import 'app_nav_chrome.dart';
 import 'project_form.dart';
 import 'no_selected_project_page.dart';
+import 'project_save_status.dart';
 
 /// Route that hosts setup editing for the selected project.
 class ProjectFormPage extends StatelessWidget {
@@ -66,6 +67,10 @@ class ProjectFormPage extends StatelessWidget {
                   title: AppBrandTitle(
                     label: project.displayName,
                     metrics: titleMetrics,
+                    trailing: ProjectSaveStatus(
+                      inBanner: true,
+                      compact: layout.isMobile,
+                    ),
                   ),
                   actions: AppBarActionBar.build(
                     context,
@@ -81,7 +86,9 @@ class ProjectFormPage extends StatelessWidget {
                     onSubmit: () => _goToMatrix(context, store),
                   ),
                 ),
-                bottomNavigationBar: const AppCopyrightFooter(),
+                bottomNavigationBar: const AppCopyrightFooter(
+                  showSaveStatus: false,
+                ),
               );
             },
           );

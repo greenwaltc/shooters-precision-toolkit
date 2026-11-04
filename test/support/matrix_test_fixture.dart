@@ -9,8 +9,9 @@ import 'package:pluto_grid/pluto_grid.dart';
 import 'fake_project_repository.dart';
 
 Future<(ProjectStore, PlutoGridStateManager)> pumpMatrixFixture(
-  WidgetTester tester,
-) async {
+  WidgetTester tester, {
+  Duration saveDebounce = Duration.zero,
+}) async {
   rootBundle.clear();
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = const Size(1440, 900);
@@ -18,7 +19,7 @@ Future<(ProjectStore, PlutoGridStateManager)> pumpMatrixFixture(
   addTearDown(tester.view.resetPhysicalSize);
   final store = ProjectStore(
     repository: FakeProjectRepository(),
-    saveDebounce: Duration.zero,
+    saveDebounce: saveDebounce,
   );
   addTearDown(store.dispose);
   await store.load();

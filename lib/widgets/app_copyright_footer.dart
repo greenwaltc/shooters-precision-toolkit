@@ -21,7 +21,10 @@ import 'app_brand_bar.dart';
 /// This is also the single owner of bottom system-inset clearance (taskbar /
 /// gesture bar) so page bodies do not pad a second time above the footer.
 class AppCopyrightFooter extends StatelessWidget {
-  const AppCopyrightFooter({super.key});
+  const AppCopyrightFooter({super.key, this.showSaveStatus = true});
+
+  /// Editors with status in their banner use only the slim copyright line.
+  final bool showSaveStatus;
 
   /// Single source of truth for the user-facing copyright line.
   static String get noticeText =>
@@ -31,7 +34,7 @@ class AppCopyrightFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final mobile = AppLayoutMetrics.of(context).isMobile;
     final store = context.watch<ProjectStore?>();
-    if (mobile) {
+    if (mobile && showSaveStatus) {
       return Material(
         type: MaterialType.transparency,
         child: SafeArea(

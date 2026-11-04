@@ -44,11 +44,17 @@ class ProjectWorkspaceFrame extends StatelessWidget {
 
 enum _ConflictChoice { keepEditing, loadCloud, saveCopy }
 
-/// Save feedback shared by every route in the selected project's workspace.
+/// Save feedback in a project banner or floating over the workspace footer.
 class ProjectSaveStatus extends StatelessWidget {
-  const ProjectSaveStatus({super.key, this.navigatorKey, this.compact = false});
+  const ProjectSaveStatus({
+    super.key,
+    this.navigatorKey,
+    this.compact = false,
+    this.inBanner = false,
+  });
 
   final bool compact;
+  final bool inBanner;
 
   final GlobalKey<NavigatorState>? navigatorKey;
 
@@ -67,14 +73,55 @@ class ProjectSaveStatus extends StatelessWidget {
             ProjectSaveState.conflict => 'Save conflict. Your draft is kept.',
             ProjectSaveState.error => 'Unable to save. Your changes are kept.',
           };
-    if (compact) {
-      final actionable =
-          state.hasConflict || state.isDirty || state.error != null;
+    if (compact || inBanner) {
+      final hasError = state.error != null || state.draftError != null;
+      final actionable = state.hasConflict || state.isDirty || hasError;
       final tooltip = state.hasConflict
           ? '$label Review conflict'
           : actionable
-          ? '$label ${state.error == null ? "Save" : "Retry save"}'
+          ? '$label ${hasError ? "Retry save" : "Save"}'
           : label;
+      final color = !hasError
+          ? Theme.of(context).colorScheme.primary
+          : Theme.of(context).colorScheme.error;
+      final icon = state.hasConflict || hasError
+          ? Icons.cloud_off_outlined
+          : state.isSaving
+          ? Icons.sync
+          : state.isDirty
+          ? Icons.cloud_upload_outlined
+          : Icons.cloud_done_outlined;
+      final VoidCallback? onPressed = !actionable || state.isSaving
+          ? null
+          : () => state.hasConflict
+                ? _reviewConflict(context, store, project!.id)
+                : _save(store);
+      if (inBanner && !compact) {
+        final shortLabel = state.hasConflict
+            ? 'Review conflict'
+            : hasError
+            ? 'Retry save'
+            : label;
+        return Semantics(
+          liveRegion: true,
+          child: Tooltip(
+            message: tooltip,
+            child: TextButton.icon(
+              onPressed: onPressed,
+              icon: Icon(icon, size: 18),
+              label: Text(shortLabel, maxLines: 1),
+              style: TextButton.styleFrom(
+                foregroundColor: color,
+                disabledForegroundColor: color,
+                backgroundColor: color.withValues(alpha: 0.08),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                minimumSize: const Size(0, 36),
+                shape: const StadiumBorder(),
+              ),
+            ),
+          ),
+        );
+      }
       return Semantics(
         liveRegion: true,
         child: SizedBox(
@@ -82,23 +129,10 @@ class ProjectSaveStatus extends StatelessWidget {
           height: 48,
           child: IconButton(
             tooltip: tooltip,
-            color: state.error == null
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.error,
-            icon: Icon(
-              state.hasConflict || state.error != null
-                  ? Icons.cloud_off_outlined
-                  : state.isSaving
-                  ? Icons.sync
-                  : state.isDirty
-                  ? Icons.cloud_upload_outlined
-                  : Icons.cloud_done_outlined,
-            ),
-            onPressed: !actionable || state.isSaving
-                ? null
-                : () => state.hasConflict
-                      ? _reviewConflict(context, store, project!.id)
-                      : _save(store),
+            color: color,
+            disabledColor: inBanner ? color : null,
+            icon: Icon(icon),
+            onPressed: onPressed,
           ),
         ),
       );

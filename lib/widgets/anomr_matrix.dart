@@ -39,6 +39,7 @@ import 'app_copyright_footer.dart';
 import 'app_nav_chrome.dart';
 import 'no_selected_project_page.dart';
 import 'range_entry_sheet.dart';
+import 'project_save_status.dart';
 
 /// Route that renders the selected project's ANOMR data-entry matrix.
 class AnomrMatrix extends StatelessWidget {
@@ -103,7 +104,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
       builder: (context, layout) => Scaffold(
         appBar: _buildAppBar(context, layout, store),
         body: _buildBody(context, layout, formModel),
-        bottomNavigationBar: const AppCopyrightFooter(),
+        bottomNavigationBar: const AppCopyrightFooter(showSaveStatus: false),
       ),
     );
   }
@@ -144,7 +145,11 @@ class _AnomrMatrixScaffold extends StatelessWidget {
       toolbarHeight: titleMetrics.toolbarHeight,
       automaticallyImplyLeading: false,
       leading: AppNavChrome.backLeading(context),
-      title: AppBrandTitle(label: project.displayName, metrics: titleMetrics),
+      title: AppBrandTitle(
+        label: project.displayName,
+        metrics: titleMetrics,
+        trailing: ProjectSaveStatus(inBanner: true, compact: layout.isMobile),
+      ),
       actions: AppBarActionBar.build(
         context,
         layout: layout,

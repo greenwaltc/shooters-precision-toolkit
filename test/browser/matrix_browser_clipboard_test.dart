@@ -33,7 +33,11 @@ void main() {
       web.document.dispatchEvent(copyEvent);
       expect(copyEvent.defaultPrevented, isTrue);
       final copied = copyData.getData('text/plain');
-      expect(copied.split('\n'), hasLength(3));
+      expect(copied.split('\n'), hasLength(4));
+      expect(
+        copied.split('\n').first,
+        'Run Order\tFactor 0\tFactor 1\tReplicate\tGroup Size',
+      );
       expect(copied.split('\n').first.split('\t'), hasLength(5));
       // Native clipboard keys must escape Flutter/Pluto's default handlers so
       // the browser can generate real copy/paste events (no permission prompt).

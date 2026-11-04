@@ -525,10 +525,16 @@ class AppBrandTitleMetrics {
 /// When [metrics.stacked] is true the logo sits above the label (start-aligned)
 /// so the label is not forced into a single-line ellipsis beside a wide mark.
 class AppBrandTitle extends StatelessWidget {
-  const AppBrandTitle({super.key, required this.label, required this.metrics});
+  const AppBrandTitle({
+    super.key,
+    required this.label,
+    required this.metrics,
+    this.trailing,
+  });
 
   final String label;
   final AppBrandTitleMetrics metrics;
+  final Widget? trailing;
 
   static double get logoHeight => AppDesign.appBarLogoHeight;
 
@@ -553,11 +559,9 @@ class AppBrandTitle extends StatelessWidget {
             children: [
               AppBrandTitleLogo(height: logoHeight, maxWidth: maxWidth),
               const SizedBox(height: AppDesign.appBarBrandStackedGap),
-              Text(
-                label,
-                style: AppHeadings.h2(context),
+              _label(
+                context,
                 maxLines: AppDesign.appBarBrandLabelMaxLinesStacked,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           );
@@ -580,17 +584,28 @@ class AppBrandTitle extends StatelessWidget {
           children: [
             AppBrandTitleLogo(height: logoHeight, maxWidth: logoWidth),
             SizedBox(width: metrics.brandTitleGap),
-            Expanded(
-              child: Text(
-                label,
-                style: AppHeadings.h2(context),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            Expanded(child: _label(context)),
           ],
         );
       },
+    );
+  }
+
+  Widget _label(BuildContext context, {int maxLines = 1}) {
+    final text = Text(
+      label,
+      style: AppHeadings.h2(context),
+      maxLines: trailing == null ? maxLines : 1,
+      overflow: TextOverflow.ellipsis,
+    );
+    if (trailing == null) return text;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(child: text),
+        const SizedBox(width: 8),
+        trailing!,
+      ],
     );
   }
 }

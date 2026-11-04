@@ -175,16 +175,26 @@ class _MyAppState extends State<MyApp> {
             darkTheme: AppTheme.dark(),
             themeMode: _resolveThemeMode(themeController),
             initialRoute: AppRoutes.projects,
-            builder: (context, child) => AppBackground(
-              child: ProjectWorkspaceFrame(
-                navigatorKey: _navigatorKey,
-                child: child ?? const SizedBox.shrink(),
-              ),
-            ),
+            builder: (context, child) =>
+                AppBackground(child: child ?? const SizedBox.shrink()),
             onGenerateRoute: (settings) {
               final builder = _appRoutes[settings.name];
               if (builder == null) return null;
-              return AppPageRoute<void>(settings: settings, builder: builder);
+              return AppPageRoute<void>(
+                settings: settings,
+                builder: (context) {
+                  final page = builder(context);
+                  // These editors show save feedback beside the project title.
+                  if (settings.name == AppRoutes.projectForm ||
+                      settings.name == AppRoutes.anomrMatrix) {
+                    return page;
+                  }
+                  return ProjectWorkspaceFrame(
+                    navigatorKey: _navigatorKey,
+                    child: page,
+                  );
+                },
+              );
             },
           );
         },

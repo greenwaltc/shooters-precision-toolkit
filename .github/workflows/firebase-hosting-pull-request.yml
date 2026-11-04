@@ -1,9 +1,12 @@
-name: Firebase dev preview
-on: pull_request
+name: Firebase dev Hosting
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
 permissions:
   contents: read
 concurrency:
-  group: hosting-pr-${{ github.event.number }}
+  # All dev-to-main releases share the dev live site. Other PRs stay isolated.
+  group: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'dev' && github.base_ref == 'main' && 'hosting-dev-live' || format('hosting-pr-{0}', github.event.number) }}
   cancel-in-progress: true
 
 jobs:
@@ -11,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Dev live reflects the pushed dev commit; other PRs test the merge ref.
+          ref: ${{ github.head_ref == 'dev' && github.base_ref == 'main' && github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -36,7 +42,7 @@ jobs:
           path: build/web-transfer-dev.json
           retention-days: 2
 
-  preview:
+  deploy:
     needs: validate
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
@@ -46,6 +52,8 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref == 'dev' && github.base_ref == 'main' && github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -67,8 +75,17 @@ jobs:
               sys.exit("Deployment credential belongs to the wrong Firebase project.")
           PYTHON
       - run: cp firebase.dev.json firebase.json
-      # Previews isolate Hosting content; each app still uses dev Auth/Firestore.
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Deploy dev live
+        if: ${{ github.head_ref == 'dev' && github.base_ref == 'main' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV }}
+          channelId: live
+          projectId: bramwellsprecisiontestkitdev
+      # Other same-repository PRs get isolated files with dev Auth/Firestore.
+      - name: Deploy PR preview
+        if: ${{ github.head_ref != 'dev' || github.base_ref != 'main' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV }}

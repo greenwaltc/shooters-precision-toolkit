@@ -81,7 +81,7 @@ task web:deploy ENV=prod  # Check, rebuild, and publish to production Hosting
 
 Environment commands default to `dev` and accept only `dev` or `prod`. Deploy/preview commands run checks, rebuild, measure transfer, and verify file hashes and the Hosting destination before uploading. Dev builds have indexing disabled. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates. Node 22+ and Google Chrome are required for web release checks; set `CHROME_EXECUTABLE` if Chrome is installed elsewhere.
 
-PRs now deploy dev previews; production uses a manual workflow from `main` and the GitHub `production` environment. Configure its reviewer/branch protections before the first production run. See [web release instructions](docs/web_releases.md) for setup, retention, and Spark traffic limits.
+An open `dev` → `main` PR deploys each pushed dev commit to the dev live site at `https://dev.bramwelltest.com`. Other same-repository PRs deploy dev previews. Production uses a manual workflow from `main` and the GitHub `production` environment. Configure its reviewer/branch protections before the first production run. See [web release instructions](docs/web_releases.md) for setup, retention, and Spark traffic limits.
 
 ### Native dev and production apps
 
@@ -184,7 +184,7 @@ Configuration is in `pubspec.yaml` under `flutter_launcher_icons` (Android adapt
 
 The web app deploys to Firebase Hosting (project `bramwells-precision-test-kit`), serving `build/web` as a single-page app (`firebase.json`).
 
-- **CI/CD** — GitHub Actions build and deploy automatically: pull requests get preview channels, merges to `main` deploy to the live channel (`.github/workflows/firebase-hosting-*.yml`). Requires the `FIREBASE_SERVICE_ACCOUNT_BRAMWELLS_PRECISION_TEST_KIT` repository secret.
+- **CI/CD** — GitHub Actions validate every PR. Same-repository `dev` → `main` PRs publish to dev live; other same-repository PRs get preview channels. Production uses a manual release from `main` (`.github/workflows/firebase-hosting-*.yml`). Requires separate dev and production Firebase service-account secrets; see [web release setup](docs/web_releases.md#configure-github-once).
 - **Manual deploy:**
 
 ```bash

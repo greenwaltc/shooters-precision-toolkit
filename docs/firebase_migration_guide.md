@@ -1216,7 +1216,7 @@ Dev artifacts go to dev; production releases go to prod. The confirmed productio
 
 Measure transferred bytes for a cold web load and set a Hosting traffic budget. For example, 40 new sessions/day at 6 MB/session is about 240 MB/day before repeat traffic and previews. Optimize oversized images and unnecessary assets; use caching compatible with release updates, with long immutable caching only for content-addressed filenames. Limit retained live releases and expire dev previews after about two days. Check Hosting storage and transfer before large releases. Export PDFs/JSON locally and distribute native installers through appropriate release channels; keep them out of this Spark Hosting quota. Spark Hosting also restricts certain executable file types. [Hosting file restrictions](https://firebase.google.com/docs/hosting/faq-and-troubleshooting)
 
-The two GitHub workflows now validate dev PR builds and publish same-repository PRs to dev preview channels with a two-day expiry. Preview channels only isolate Hosting content; their database/Auth connections still follow the compiled app configuration. Production uses a manual release from `main`, validation before deployment, and the GitHub `production` environment; configure its protection rules as described in the release setup. Terraform adopts live channels with 2 previous dev releases and 5 production releases retained after apply. [Hosting preview behavior](https://firebase.google.com/docs/hosting/test-preview-deploy)
+The two GitHub workflows validate dev PR builds. Same-repository PRs from `dev` into `main` publish each pushed dev head commit to the dev live channel at `https://dev.bramwelltest.com`; other same-repository PRs use dev preview channels with a two-day expiry. Preview channels only isolate Hosting content; their database/Auth connections still follow the compiled app configuration. Production uses a manual release from `main`, validation before deployment, and the GitHub `production` environment; configure its protection rules as described in the release setup. Terraform adopts live channels with 2 previous dev releases and 5 production releases retained after apply. [Hosting preview behavior](https://firebase.google.com/docs/hosting/test-preview-deploy)
 
 **15. Use short-lived CI credentials and environment-specific permissions**
 
@@ -1420,7 +1420,7 @@ Project change checklist:
 | `lib/model/theme_controller.dart` | Keep local initially; scope any account-specific preferences |
 | `android/app/build.gradle.kts` and AndroidManifest | Dev/prod flavors and labels, selected service files, proper release signing |
 | iOS/macOS Xcode/Podfile configuration | Schemes/configurations, bundle IDs, deployment targets, selected plists/capabilities |
-| `.github/workflows/firebase-hosting-*.yml` | Dev previews; explicit production builds/deployments; environment credentials/checks |
+| `.github/workflows/firebase-hosting-*.yml` | Dev live for `dev` → `main` PRs; other dev previews; explicit production builds/deployments; environment credentials/checks |
 | `firebase.dev.json`, `firebase.prod.json`, `firebase.emulators.json` | Separate content paths and isolated local emulator configuration |
 | `firestore.rules`, `infra/` | Spark Standard configuration, index exemptions, bounded queries, separate local states |
 | `firebase.auth.dev.json`, `firebase.auth.prod.json` | Basic provider provisioning; documented manual domain/template settings |
@@ -1434,6 +1434,6 @@ Spark revision verification: five JSON examples parsed successfully and code fen
 **Step-6 verification and deployment prerequisites (October 29, 2026)**
 
 - Use `firebase.dev.json` with `build/web-dev` and `firebase.prod.json` with `build/web-prod`. CI selects the matching file as `firebase.json` on its temporary runner.
-- PR previews require the GitHub Actions secret `FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV`, containing a dev-only Hosting deployment credential. The production workflow retains its separate production secret. Provision that repository secret before the first preview run; it cannot be supplied by a checked-in file.
+- Dev live releases and PR previews require the GitHub Actions secret `FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV`, containing a dev-only Hosting deployment credential. The production workflow retains its separate production secret. Provision that repository secret before the first dev deployment; it cannot be supplied by a checked-in file.
 - Auth provider JSON is checked in for both environments. Email/password and authorized domains were verified through the Auth configuration API. Password policies, email templates, and end-to-end action links remain explicit Console/application checks; do not mark them verified merely because the provider is enabled.
 - Native options/flavors remain step 12. Android Internet and macOS outgoing-network permissions are present; those permissions alone do not configure native environment selection.

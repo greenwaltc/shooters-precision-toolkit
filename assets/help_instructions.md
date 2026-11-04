@@ -32,7 +32,7 @@ Bramwell’s Precision Test Kit is designed to compare firearm (or other project
 - Values can be entered as decimals or fractions — typing `1/4` records `0.25`.
 - Enter and Tab advance to the next cell, spreadsheet-style, and Cmd/Ctrl+Z undoes changes.
 - Switch on **Randomize order?** to shuffle the shooting sequence, which guards against drift (barrel heating, fatigue, changing light) biasing one factor state.
-- **Clear All Group Sizes** erases every entry if you need to start the data over.
+- **Clear All** erases every group size entry if you need to start the data over.
 - Your project saves automatically, so you can leave the app mid-test and pick up where you left off.
 
 **Pro-tip:** To establish a reliable basis for comparison, shoot a set of two-shot groups with a setup you already prefer.

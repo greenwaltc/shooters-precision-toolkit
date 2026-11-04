@@ -30,7 +30,13 @@ class AppLayoutMetrics {
   static const double mobileBreakpoint = 720;
   static const double desktopBreakpoint = 1024;
 
-  bool get isMobile => width < mobileBreakpoint;
+  factory AppLayoutMetrics.of(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return AppLayoutMetrics(width: size.width, height: size.height);
+  }
+
+  bool get isMobile =>
+      width < mobileBreakpoint || (width < desktopBreakpoint && height < 500);
   bool get isDesktop => width >= desktopBreakpoint;
 
   /// Mobile width with a landscape viewport — prioritize body height.
@@ -47,7 +53,7 @@ class AppLayoutMetrics {
 
   /// Vertical gutter; tighter on mobile landscape to reclaim body height.
   double get pageGutterVertical =>
-      isDesktop ? 12 : (preferCompactChrome ? AppSpacing.sm : pageGutter);
+      isMobile ? AppSpacing.md : (isDesktop ? 12 : pageGutter);
 
   EdgeInsets get pagePadding => EdgeInsets.symmetric(
     horizontal: pageGutter,

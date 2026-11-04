@@ -172,6 +172,66 @@ void main() {
     );
   }
 
+  for (final size in [
+    const Size(280, 653),
+    const Size(390, 844),
+    const Size(844, 390),
+  ]) {
+    for (final textScale in [1.0, 1.6]) {
+      testWidgets(
+        'mobile matrix toolbar at $size and $textScale keeps one action row',
+        (tester) async {
+          _configureViewport(tester, size: size, textScale: textScale);
+          await _pumpCompletedProject(tester);
+          await _tapText(tester, 'Bench Rest Comparison');
+          final grid = find.byType(PlutoGrid);
+          final gridBounds = tester.getRect(grid);
+          final clear = find.ancestor(
+            of: find.text('Clear All'),
+            matching: find.byWidgetPredicate(
+              (widget) => widget is OutlinedButton,
+            ),
+          );
+          final results = find.ancestor(
+            of: find.text('Show Results'),
+            matching: find.byWidgetPredicate(
+              (widget) => widget is FilledButton,
+            ),
+          );
+          final clearBounds = tester.getRect(clear);
+          final resultsBounds = tester.getRect(results);
+          expect(clearBounds.center.dy, closeTo(resultsBounds.center.dy, 1));
+          expect(clearBounds.left, closeTo(gridBounds.left, 1));
+          expect(resultsBounds.right, closeTo(gridBounds.right, 1));
+          expect(clearBounds.right, lessThan(resultsBounds.left));
+          expect(clearBounds.height, greaterThanOrEqualTo(48));
+          expect(resultsBounds.height, greaterThanOrEqualTo(48));
+          expect(
+            tester.getTopRight(find.byType(Switch)).dx,
+            closeTo(gridBounds.right, 1),
+          );
+          expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 56);
+          expect(gridBounds.height, greaterThan(100));
+          final original = tester.getRect(grid);
+          final store = tester.widget<MyApp>(find.byType(MyApp)).projectStore!;
+          final repository = store.repository as FakeProjectRepository;
+          final barrier = Completer<void>();
+          repository.saveBarrier = barrier.future;
+          store.selectedProject!.formModel.setProjectTitle(
+            'Phone layout check',
+          );
+          await tester.pump(const Duration(milliseconds: 10));
+          await tester.pump();
+          expect(tester.getRect(grid), original);
+          barrier.complete();
+          await tester.pumpAndSettle();
+          expect(tester.getRect(grid), original);
+          _expectNoLayoutErrors(tester, 'mobile matrix toolbar');
+        },
+      );
+    }
+  }
+
   group('setup flow', () {
     for (final entry in _viewports.entries) {
       for (final textScale in _textScales) {

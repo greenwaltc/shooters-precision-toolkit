@@ -274,18 +274,19 @@ class _ResultsBody extends StatelessWidget {
               ),
             ],
           )
-        else
+        else ...[
+          ExportActionButton(
+            onPressed: onExportPressed,
+            isExporting: isExporting,
+          ),
+          const SizedBox(height: 8),
           _buildHeader(summary),
+        ],
         SizedBox(
           height: desktop ? 12 : scale.chartOuterPadding + AppSpacing.sm,
         ),
         _buildChart(summary, scale),
         SizedBox(height: scale.chartOuterPadding),
-        if (!desktop)
-          ExportActionButton(
-            onPressed: onExportPressed,
-            isExporting: isExporting,
-          ),
       ],
     );
   }

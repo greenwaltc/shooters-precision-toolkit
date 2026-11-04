@@ -32,6 +32,41 @@ class HeaderSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
+    if (AppLayoutMetrics.of(context).isMobile) {
+      final parameters = <String, String>{
+        'Grand mean': grandMean.toStringAsFixed(4),
+        'Risk level': riskLevel.label,
+        'Detectable difference': SampleSizeOption.formatFraction(
+          detectableDiffPercent,
+        ),
+      };
+      return OutlinedSurfaceCard(
+        variant: OutlinedSurfaceVariant.tinted,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Project Parameters', style: textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(sampleSizeLabel, style: textTheme.bodySmall),
+            const SizedBox(height: 8),
+            for (final entry in parameters.entries)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(entry.key, style: textTheme.bodyMedium),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(entry.value, style: textTheme.titleMedium),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    }
     if (MediaQuery.sizeOf(context).width >=
         AppLayoutMetrics.desktopBreakpoint) {
       return OutlinedSurfaceCard(

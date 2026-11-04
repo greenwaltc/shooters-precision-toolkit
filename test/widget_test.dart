@@ -61,10 +61,10 @@ void main() {
     await tester.tap(find.text('5%').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('±52%'), findsOneWidget);
-    expect(find.text('±40%'), findsOneWidget);
-    expect(find.text('±20%'), findsOneWidget);
-    expect(find.text('±45%'), findsNothing);
+    expect(find.textContaining('±52%'), findsOneWidget);
+    expect(find.textContaining('±40%'), findsOneWidget);
+    expect(find.textContaining('±20%'), findsOneWidget);
+    expect(find.textContaining('±45%'), findsNothing);
     expect(find.textContaining('+-'), findsNothing);
   });
 

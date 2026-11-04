@@ -167,7 +167,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
           );
 
           final minHeight =
-              AppDesign.matrixMinBodyHeight *
+              (layout.isMobile ? 280 : AppDesign.matrixMinBodyHeight) *
               MediaQuery.textScalerOf(context).scale(1);
           if (!constraints.hasBoundedHeight ||
               constraints.maxHeight >= minHeight) {
@@ -234,9 +234,9 @@ class _MatrixHeader extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(
         layout.isMobile ? layout.pageGutter : 24,
-        layout.isMobile ? layout.pageGutterVertical : 12,
+        layout.isMobile ? AppSpacing.md : 12,
         layout.isMobile ? layout.pageGutter : 24,
-        layout.preferCompactChrome ? AppSpacing.sm : AppSpacing.lg,
+        layout.isMobile ? AppSpacing.sm : AppSpacing.lg,
       ),
       child: Align(
         alignment: Alignment.centerLeft,
@@ -262,17 +262,15 @@ class _MatrixHeader extends StatelessWidget {
         ],
       );
     }
+    final count = formModel.experimentStructure.factorCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text('Data matrix', style: Theme.of(context).textTheme.titleLarge),
         Text(
-          'Factors and Group Size',
-          style: Theme.of(context).textTheme.titleLarge,
+          '$count ${count == 1 ? "factor" : "factors"} · ${formModel.sampleSizeOption.totalSamples} runs',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (!layout.preferCompactChrome) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(formModel.experimentStructure.label),
-        ],
       ],
     );
   }
@@ -487,15 +485,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final theme =
         Theme.of(context).extension<PlutoGridStyleTheme>() ??
         const PlutoGridStyleTheme.standard();
-    if (!widget.isMobile) {
-      // Spreadsheet density, with extra height retained for enlarged text.
-      final textScale = MediaQuery.textScalerOf(context).scale(1);
-      return theme.copyWith(
-        rowHeight: 36 * textScale,
-        columnHeight: 40 * textScale,
-      );
-    }
-    return theme;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    return theme.copyWith(
+      rowHeight: (widget.isMobile ? 48 : 36) * textScale,
+      columnHeight: 40 * textScale,
+    );
   }
 
   double _columnTotalWidth() {
@@ -520,7 +514,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final scrollbarHeight = includeHorizontalScrollbar
         ? plutoTheme.scrollbarThickness
         : 0;
-    final columnGroupHeight = _columnGroups.isEmpty
+    final columnGroupHeight = widget.isMobile || _columnGroups.isEmpty
         ? 0
         : plutoTheme.columnHeight;
 
@@ -547,12 +541,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final overflowHeight = contentHeight > maxHeight;
     final overflowWidth = contentWidth > maxWidth;
 
-    final fittedWidth = contentWidth + (overflowHeight ? scrollbar : 0);
-    final width = overflowWidth
-        ? maxWidth
-        : !widget.isMobile
-        ? math.min(maxWidth, _desktopMaxWidth)
-        : fittedWidth;
+    final width = math.min(maxWidth, _desktopMaxWidth);
     final height = overflowHeight
         ? maxHeight
         : contentHeight + (overflowWidth ? scrollbar : 0);
@@ -681,7 +670,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     return PlutoGrid(
       columns: _columns,
       rows: _rows,
-      columnGroups: _columnGroups,
+      columnGroups: widget.isMobile ? const [] : _columnGroups,
       onChanged: _handleOnChanged,
       onLoaded: (PlutoGridOnLoadedEvent event) {
         setState(() => _attachStateManager(event.stateManager));
@@ -698,9 +687,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           scrollbarRadius: plutoTheme.scrollbarRadius,
         ),
         columnSize: PlutoGridColumnSizeConfig(
-          autoSizeMode: widget.isMobile
-              ? PlutoAutoSizeMode.none
-              : PlutoAutoSizeMode.scale,
+          autoSizeMode: PlutoAutoSizeMode.scale,
         ),
         shortcut: PlutoGridShortcut(actions: _shortcutActions()),
       ),
@@ -746,7 +733,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       return manager.rowsTopOffset + PlutoGridSettings.gridBorderWidth;
     }
 
-    final columnGroupHeight = _columnGroups.isEmpty
+    final columnGroupHeight = widget.isMobile || _columnGroups.isEmpty
         ? 0
         : plutoTheme.columnHeight;
     return PlutoGridSettings.gridInnerSpacing +
@@ -821,6 +808,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       enableContextMenu: false,
       enableDropToResize: false,
       suppressedAutoSize: true,
+      minWidth: widget.isMobile ? 64 : PlutoGridSettings.minColumnWidth,
       width: _initialIndexColumnWidth(title: title, maxValue: maxValue),
       textAlign: PlutoColumnTextAlign.center,
       titleTextAlign: PlutoColumnTextAlign.center,
@@ -980,7 +968,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
     return [
       _readOnlyIndexColumn(
-        title: 'Run Order',
+        title: widget.isMobile ? 'Run' : 'Run Order',
         field: 'row',
         maxValue: totalSamples,
       ),
@@ -1381,7 +1369,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                       TextButton.icon(
                         onPressed: _clearRanges,
                         icon: const Icon(Icons.clear_all),
-                        label: const Text('Clear All Group Sizes'),
+                        label: const Text('Clear All'),
                         style: TextButton.styleFrom(
                           foregroundColor: scheme.error,
                         ),
@@ -1399,9 +1387,14 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               ),
             ),
           if (!desktop)
-            _RandomizeOrderToggle(
-              value: _randomizeOrder,
-              onChanged: _stateManager == null ? null : _onRandomizeToggled,
+            Align(
+              alignment: Alignment.centerRight,
+              child: _RandomizeOrderToggle(
+                value: _randomizeOrder,
+                compact: true,
+                showValue: false,
+                onChanged: _stateManager == null ? null : _onRandomizeToggled,
+              ),
             ),
           Expanded(child: _buildGridArea(plutoTheme, scheme)),
           if (!desktop)
@@ -1523,9 +1516,11 @@ class _RandomizeOrderToggle extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.compact = false,
+    this.showValue = true,
   });
 
   final bool compact;
+  final bool showValue;
 
   final bool value;
   final ValueChanged<bool>? onChanged;
@@ -1547,7 +1542,8 @@ class _RandomizeOrderToggle extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          Text(value ? 'Yes' : 'No', style: textTheme.labelLarge),
+          if (showValue)
+            Text(value ? 'Yes' : 'No', style: textTheme.labelLarge),
           Switch(value: value, onChanged: onChanged),
         ],
       ),
@@ -1579,15 +1575,51 @@ class _MatrixActions extends StatelessWidget {
     final clearAll = OutlinedButton.icon(
       onPressed: onClearRanges,
       icon: const Icon(Icons.clear_all),
-      label: const Text('Clear All Group Sizes'),
+      label: const Text('Clear All'),
       style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
     );
 
-    // Narrow/stacked: primary action on top. Desktop row: Clear All on the
-    // left, Show Results on the right (mirrors Setup's right-aligned Submit).
-    final children = layout.useStackedActions
-        ? <Widget>[showResults, clearAll]
-        : <Widget>[clearAll, showResults];
+    if (layout.isMobile) {
+      final style = ButtonStyle(
+        minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        ),
+      );
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                flex: 4,
+                child: OutlinedButton(
+                  onPressed: onClearRanges,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: scheme.error,
+                  ).merge(style),
+                  child: const Text('Clear All', textAlign: TextAlign.center),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 6,
+                child: FilledButton(
+                  onPressed: canShowResults ? onShowResults : null,
+                  style: style,
+                  child: const Text(
+                    'Show Results',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final children = <Widget>[clearAll, showResults];
 
     return Padding(
       padding: EdgeInsets.only(

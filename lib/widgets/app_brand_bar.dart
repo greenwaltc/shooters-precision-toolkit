@@ -31,7 +31,7 @@ abstract final class AppBrandAssets {
 
   /// Whether the projects banner is laid out at a mobile width.
   static bool isMobileBanner(BuildContext context) {
-    return MediaQuery.sizeOf(context).width < AppLayoutMetrics.mobileBreakpoint;
+    return AppLayoutMetrics.of(context).isMobile;
   }
 
   /// Tagline style: h4 on mobile, h2 on larger viewports.
@@ -56,8 +56,7 @@ abstract final class AppBrandAssets {
   /// Mobile width in landscape orientation.
   static bool isMobileLandscapeBanner(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    return size.width < AppLayoutMetrics.mobileBreakpoint &&
-        size.height < size.width;
+    return AppLayoutMetrics.of(context).isMobile && size.height < size.width;
   }
 
   /// Returns true when [availableWidth] cannot fit [bannerLogo] at [height].
@@ -175,6 +174,13 @@ class ProjectsBannerMetrics {
     double? actionsWidth,
   }) {
     final viewport = MediaQuery.sizeOf(context);
+    if (AppLayoutMetrics.of(context).isMobile) {
+      return const ProjectsBannerMetrics(
+        logoHeight: 40,
+        toolbarHeight: 64,
+        showTagline: false,
+      );
+    }
     if (viewport.width >= AppLayoutMetrics.desktopBreakpoint) {
       return const ProjectsBannerMetrics(
         logoHeight: 48,
@@ -323,6 +329,15 @@ class AppBrandTitleLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (AppLayoutMetrics.of(context).isMobile) {
+      return Image.asset(
+        AppBrandAssets.compactIcon,
+        width: height,
+        height: height,
+        fit: BoxFit.contain,
+        semanticLabel: AppBrandAssets.logoSemanticLabel,
+      );
+    }
     final slotWidth = AppBrandAssets.logoSlotWidth(
       availableWidth: maxWidth,
       height: height,
@@ -366,6 +381,15 @@ class AppBrandTitleMetrics {
     required String label,
     required double titleMaxWidth,
   }) {
+    if (AppLayoutMetrics.of(context).isMobile) {
+      return const AppBrandTitleMetrics(
+        stacked: false,
+        toolbarHeight: 56,
+        logoHeight: 32,
+        brandTitleGap: 8,
+        brandingPadding: 4,
+      );
+    }
     if (MediaQuery.sizeOf(context).width >=
         AppLayoutMetrics.desktopBreakpoint) {
       return const AppBrandTitleMetrics(
@@ -519,10 +543,12 @@ class AppBrandTitle extends StatelessWidget {
           );
         }
 
-        final logoWidth = AppBrandAssets.logoSlotWidth(
-          availableWidth: maxWidth,
-          height: logoHeight,
-        );
+        final logoWidth = AppLayoutMetrics.of(context).isMobile
+            ? logoHeight
+            : AppBrandAssets.logoSlotWidth(
+                availableWidth: maxWidth,
+                height: logoHeight,
+              );
         final labelMaxWidth = maxWidth - logoWidth - metrics.brandTitleGap;
 
         if (labelMaxWidth <= 0) {

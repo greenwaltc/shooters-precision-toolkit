@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/project_configuration.dart';
-import '../help/help_instructions.dart';
 import '../model/project_store.dart';
 import '../model/saved_project.dart';
 import '../model/theme_controller.dart';
@@ -27,16 +26,6 @@ import 'confirm_delete_project_dialog.dart';
 class ProjectHomePage extends StatefulWidget {
   const ProjectHomePage({super.key});
 
-  /// Mobile portrait: Instructions moves to a bottom-right FAB so the banner
-  /// keeps more room for the logo and tagline.
-  static bool _useInstructionsFab(
-    BuildContext context,
-    AppLayoutMetrics layout,
-  ) {
-    return layout.isMobile &&
-        MediaQuery.orientationOf(context) == Orientation.portrait;
-  }
-
   @override
   State<ProjectHomePage> createState() => _ProjectHomePageState();
 }
@@ -48,16 +37,12 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
 
     return AppLayoutBuilder(
       builder: (context, layout) {
-        final instructionsAsFab = ProjectHomePage._useInstructionsFab(
-          context,
-          layout,
-        );
         final appBarActions = <AppBarActionItem>[
           if (ProjectConfiguration.current.featureFlags.isEnabled(
             FeatureFlag.themeModeToggle,
           ))
             _themeModeAction(context),
-          if (!instructionsAsFab) AppBarActionBar.instructions(context),
+          AppBarActionBar.instructions(context),
           ...AppBarActionBar.signOutActions(context),
         ];
 
@@ -105,13 +90,9 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                     context,
                     store,
                     layout,
-                    clearFloatingAction: instructionsAsFab,
+                    clearFloatingAction: false,
                   ),
           ),
-          floatingActionButton: instructionsAsFab
-              ? const _InstructionsFab()
-              : null,
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
@@ -247,7 +228,9 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                       ProjectConfiguration.current.uiCopy.createProjectLabel,
                     ),
                   ),
-                const SizedBox(height: AppSpacing.xl),
+                SizedBox(
+                  height: layout.isMobile ? AppSpacing.md : AppSpacing.xl,
+                ),
                 if (!layout.isDesktop)
                   Text('Projects', style: AppHeadings.h3(context)),
                 const SizedBox(height: AppSpacing.md),
@@ -317,7 +300,7 @@ class _ProjectListTile extends StatelessWidget {
           horizontal: AppSpacing.lg,
           vertical: MediaQuery.sizeOf(context).width >= 1024
               ? 4
-              : AppSpacing.md,
+              : AppSpacing.sm,
         ),
         leading: _LeadingBadge(
           icon: Icons.analytics_outlined,
@@ -381,25 +364,6 @@ AppBarActionItem _themeModeAction(BuildContext context) {
     tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
     onPressed: () => controller.setDarkMode(enabled: !isDark),
   );
-}
-
-/// Compact primary FAB used for Instructions on mobile portrait Projects.
-class _InstructionsFab extends StatelessWidget {
-  const _InstructionsFab();
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return FloatingActionButton(
-      tooltip: 'Instructions',
-      backgroundColor: scheme.primary,
-      foregroundColor: scheme.onPrimary,
-      elevation: AppDesign.elevationFloating,
-      onPressed: () => showHelpInstructionsSheet(context),
-      child: const Icon(Icons.menu_book_outlined),
-    );
-  }
 }
 
 /// Tinted, rounded badge that frames a leading icon on list/hero surfaces.

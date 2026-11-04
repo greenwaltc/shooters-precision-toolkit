@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -21,28 +19,12 @@ class ProjectWorkspaceFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = ProjectSaveStatus(navigatorKey: navigatorKey);
-    if (MediaQuery.sizeOf(context).width < AppLayoutMetrics.mobileBreakpoint) {
-      return Column(
-        children: [
-          Expanded(child: child),
-          status,
-        ],
-      );
-    }
-    // Firebase Auth's local-only DOM banner overlays the bottom 20px.
-    const emulatorInset =
-        kIsWeb && bool.fromEnvironment('USE_FIREBASE_EMULATORS') ? 20.0 : 0.0;
-    final bottomInset = math.max(
-      MediaQuery.paddingOf(context).bottom,
-      emulatorInset,
-    );
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    if (AppLayoutMetrics.of(context).isMobile) return child;
     return Stack(
       fit: StackFit.expand,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: emulatorInset),
-          child: child,
-        ),
+        child,
         Positioned(
           bottom: 4 + bottomInset,
           left: 24,
@@ -64,7 +46,9 @@ enum _ConflictChoice { keepEditing, loadCloud, saveCopy }
 
 /// Save feedback shared by every route in the selected project's workspace.
 class ProjectSaveStatus extends StatelessWidget {
-  const ProjectSaveStatus({super.key, this.navigatorKey});
+  const ProjectSaveStatus({super.key, this.navigatorKey, this.compact = false});
+
+  final bool compact;
 
   final GlobalKey<NavigatorState>? navigatorKey;
 
@@ -83,6 +67,42 @@ class ProjectSaveStatus extends StatelessWidget {
             ProjectSaveState.conflict => 'Save conflict. Your draft is kept.',
             ProjectSaveState.error => 'Unable to save. Your changes are kept.',
           };
+    if (compact) {
+      final actionable =
+          state.hasConflict || state.isDirty || state.error != null;
+      final tooltip = state.hasConflict
+          ? '$label Review conflict'
+          : actionable
+          ? '$label ${state.error == null ? "Save" : "Retry save"}'
+          : label;
+      return Semantics(
+        liveRegion: true,
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: IconButton(
+            tooltip: tooltip,
+            color: state.error == null
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.error,
+            icon: Icon(
+              state.hasConflict || state.error != null
+                  ? Icons.cloud_off_outlined
+                  : state.isSaving
+                  ? Icons.sync
+                  : state.isDirty
+                  ? Icons.cloud_upload_outlined
+                  : Icons.cloud_done_outlined,
+            ),
+            onPressed: !actionable || state.isSaving
+                ? null
+                : () => state.hasConflict
+                      ? _reviewConflict(context, store, project!.id)
+                      : _save(store),
+          ),
+        ),
+      );
+    }
     return Material(
       color: Theme.of(context).colorScheme.surface,
       elevation:
@@ -108,16 +128,7 @@ class ProjectSaveStatus extends StatelessWidget {
               Semantics(liveRegion: true, child: Text(label)),
               if (!state.hasConflict && (state.isDirty || state.error != null))
                 TextButton(
-                  onPressed: state.isSaving
-                      ? null
-                      : () async {
-                          try {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            await store.saveSelectedProject();
-                          } catch (_) {
-                            // The store retains the error and the draft for retry.
-                          }
-                        },
+                  onPressed: state.isSaving ? null : () => _save(store),
                   child: Text(state.error == null ? 'Save' : 'Retry save'),
                 ),
               if (state.hasConflict)
@@ -130,6 +141,15 @@ class ProjectSaveStatus extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _save(ProjectStore store) async {
+    try {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await store.saveSelectedProject();
+    } catch (_) {
+      // The store retains the error and draft for retry.
+    }
   }
 
   Future<void> _reviewConflict(
@@ -175,12 +195,16 @@ class ProjectSaveStatus extends StatelessWidget {
         // Both the original and failed copy remain recoverable in the store.
       }
       if (context.mounted) {
-        navigatorKey?.currentState?.popUntil((route) => route.isFirst);
+        (navigatorKey?.currentState ?? Navigator.maybeOf(context))?.popUntil(
+          (route) => route.isFirst,
+        );
       }
     } else if (choice == _ConflictChoice.loadCloud && context.mounted) {
       store.discardConflictingDraft(id);
       // Dispose editors that still hold the replaced draft's model/grid state.
-      navigatorKey?.currentState?.popUntil((route) => route.isFirst);
+      (navigatorKey?.currentState ?? Navigator.maybeOf(context))?.popUntil(
+        (route) => route.isFirst,
+      );
     }
   }
 }

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../tokens/app_opacity.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
+import '../layout/app_layout.dart';
 
 /// Visual variant for [OutlinedSurfaceCard].
 enum OutlinedSurfaceVariant {
@@ -51,14 +52,21 @@ class OutlinedSurfaceCard extends StatelessWidget {
       elevation: 0,
       color: switch (variant) {
         OutlinedSurfaceVariant.surface => scheme.surface,
-        OutlinedSurfaceVariant.tinted => scheme.surfaceContainerHighest
-            .withValues(alpha: AppOpacity.cardTint),
+        OutlinedSurfaceVariant.tinted =>
+          scheme.surfaceContainerHighest.withValues(alpha: AppOpacity.cardTint),
       },
       shape: RoundedRectangleBorder(
         borderRadius: borderRadius,
         side: BorderSide(color: borderColor ?? scheme.outlineVariant),
       ),
-      child: Padding(padding: padding, child: child),
+      child: Padding(
+        padding:
+            AppLayoutMetrics.of(context).isMobile &&
+                padding == AppSpacing.cardPadding
+            ? const EdgeInsets.all(12)
+            : padding,
+        child: child,
+      ),
     );
   }
 }

@@ -17,7 +17,12 @@ class AppBackground extends StatelessWidget {
       children: [
         ColoredBox(color: Theme.of(context).colorScheme.surface),
         const AppAtmosphere(),
-        child ?? const SizedBox.shrink(),
+        Padding(
+          padding: EdgeInsets.only(
+            bottom: AppViewport.emulatorBannerInset(context),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        ),
       ],
     ),
   );

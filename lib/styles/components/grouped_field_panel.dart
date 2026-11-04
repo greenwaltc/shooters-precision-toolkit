@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../tokens/app_borders.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
+import '../layout/app_layout.dart';
 
 /// Lightly tinted container used to visually group related form fields
 /// (e.g. each factor's name + states). Pure styling shell — callers stack
@@ -31,6 +32,8 @@ class GroupedFieldPanel extends StatelessWidget {
     return Padding(
       padding: MediaQuery.sizeOf(context).width >= 1024
           ? const EdgeInsets.symmetric(vertical: 6, horizontal: 8)
+          : AppLayoutMetrics.of(context).isMobile
+          ? const EdgeInsets.symmetric(vertical: 6)
           : outerPadding,
       child: Material(
         color: scheme.surfaceContainerLow,
@@ -41,6 +44,8 @@ class GroupedFieldPanel extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Padding(
           padding: MediaQuery.sizeOf(context).width >= 1024
+              ? const EdgeInsets.all(8)
+              : AppLayoutMetrics.of(context).isMobile
               ? const EdgeInsets.all(8)
               : innerPadding,
           child: child,

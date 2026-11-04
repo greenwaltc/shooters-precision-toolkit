@@ -49,6 +49,13 @@ class AppViewport {
   static bool get needsWebBottomClearance =>
       kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
+  /// The Auth emulator adds a DOM banner outside Flutter. Its message wraps
+  /// to two lines on phones; reserve that space for auth and workspace routes.
+  static double emulatorBannerInset(BuildContext context) =>
+      kIsWeb && const bool.fromEnvironment('USE_FIREBASE_EMULATORS')
+      ? (MediaQuery.sizeOf(context).width < 600 ? 40 : 20)
+      : 0;
+
   /// Applies web-safe bottom insets and a clamped text scaler to [mediaQuery].
   ///
   /// The text-scale clamp keeps the app responsive to magnification while

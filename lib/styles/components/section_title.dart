@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 
 import '../tokens/app_spacing.dart';
+import '../layout/app_layout.dart';
 import '../tokens/app_text_styles.dart';
 
 /// Heading shown above a form section. Standard padding + `titleMedium`
@@ -23,7 +24,9 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: padding,
+      padding: AppLayoutMetrics.of(context).isMobile
+          ? const EdgeInsets.fromLTRB(0, 12, 0, 8)
+          : padding,
       child: Text(title, style: AppTextStyles.sectionTitle(context)),
     );
   }

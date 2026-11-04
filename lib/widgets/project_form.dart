@@ -190,6 +190,11 @@ class _ProjectFormState extends State<ProjectForm> {
         visualDensity: MediaQuery.sizeOf(context).width >= 1024
             ? VisualDensity.compact
             : Theme.of(context).visualDensity,
+        listTileTheme: AppLayoutMetrics.of(context).isMobile
+            ? Theme.of(context).listTileTheme.copyWith(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              )
+            : Theme.of(context).listTileTheme,
       ),
       child: Form(
         key: _formKey,
@@ -282,7 +287,10 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildFormTitle(BuildContext context) {
-    return Center(
+    return Align(
+      alignment: AppLayoutMetrics.of(context).isMobile
+          ? Alignment.centerLeft
+          : Alignment.center,
       child: Text(
         'Project Setup',
         style: Theme.of(context).textTheme.titleLarge,
@@ -424,7 +432,9 @@ class _ProjectFormState extends State<ProjectForm> {
           validator: (value) => _validateFactorName(index, value),
         ),
         Padding(
-          padding: AppSpacing.factorStateFieldIndent,
+          padding: AppLayoutMetrics.of(context).isMobile
+              ? EdgeInsets.zero
+              : AppSpacing.factorStateFieldIndent,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -502,71 +512,14 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildSampleSizeOption(SampleSizeOption option) {
-    if (MediaQuery.sizeOf(context).width >= 1024) {
-      return RadioListTile<SampleSizeOption>(
-        dense: true,
-        minTileHeight: 56,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-        value: option,
-        title: Text(
-          option.formOptionLabel(widget.formModel.experimentStructure),
-        ),
-        subtitle: Text(
-          'Detects a difference of ${option.detectableDifferenceLabel(widget.formModel.riskLevel)}',
-        ),
-      );
-    }
-    return Padding(
-      padding: AppSpacing.radioItemVertical,
-      child: RadioListTile<SampleSizeOption>(
-        value: option,
-        title: Text(
-          option.formOptionLabel(widget.formModel.experimentStructure),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.md),
-          child: _buildDetectableDifferenceTable(option),
-        ),
-        isThreeLine: true,
+    return RadioListTile<SampleSizeOption>(
+      dense: MediaQuery.sizeOf(context).width >= 1024,
+      minTileHeight: 56,
+      value: option,
+      title: Text(option.formOptionLabel(widget.formModel.experimentStructure)),
+      subtitle: Text(
+        'Detects a difference of ${option.detectableDifferenceLabel(widget.formModel.riskLevel)}',
       ),
-    );
-  }
-
-  Widget _buildDetectableDifferenceTable(SampleSizeOption option) {
-    final headerStyle = AppTextStyles.formTableHeader(context);
-    final riskLevel = widget.formModel.riskLevel;
-    final detectableLabel = option.detectableDifferenceLabel(riskLevel);
-
-    return Table(
-      columnWidths: const {0: FlexColumnWidth(), 1: FlexColumnWidth()},
-      children: [
-        _buildTableRow(
-          'Risk Level',
-          'Detects Difference of',
-          textStyle: headerStyle,
-        ),
-        _buildTableRow(riskLevel.label, detectableLabel),
-      ],
-    );
-  }
-
-  TableRow _buildTableRow(
-    String riskLevel,
-    String detectableDifference, {
-    TextStyle? textStyle,
-  }) {
-    return TableRow(
-      children: [
-        Padding(
-          padding: AppSpacing.tableCellVertical,
-          child: Text(riskLevel, style: textStyle),
-        ),
-        Padding(
-          padding: AppSpacing.tableCellVertical,
-          child: Text(detectableDifference, style: textStyle),
-        ),
-      ],
     );
   }
 

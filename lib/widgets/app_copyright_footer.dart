@@ -4,6 +4,9 @@
 // Unauthorized use or reproduction of this source code is prohibited.
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../model/project_store.dart';
+import 'project_save_status.dart';
 
 import '../config/project_configuration.dart';
 import '../styles/layout/app_viewport.dart';
@@ -27,7 +30,39 @@ class AppCopyrightFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
+    final mobile = AppLayoutMetrics.of(context).isMobile;
+    final store = context.watch<ProjectStore?>();
+    if (mobile) {
+      return Material(
+        type: MaterialType.transparency,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      noticeText,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textScaler: AppViewport.footerTextScaler(context),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  if (store?.selectedProject != null)
+                    const ProjectSaveStatus(compact: true),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Material(
       type: MaterialType.transparency,
       child: MediaQuery(

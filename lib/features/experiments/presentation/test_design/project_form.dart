@@ -27,14 +27,23 @@ class ProjectForm extends StatefulWidget {
   /// Creates the experiment-design form around [formModel].
   ///
   /// [onSubmit], when supplied, lets the parent decide what happens when the
-  /// user submits it.
-  const ProjectForm({super.key, required this.formModel, this.onSubmit});
+  /// user submits it. Set [showPinnedControls] to false while a mobile
+  /// keyboard covers the bottom of the screen.
+  const ProjectForm({
+    super.key,
+    required this.formModel,
+    this.onSubmit,
+    this.showPinnedControls = true,
+  });
 
   /// Mutable setup state shared with the selected project.
   final ProjectFormModel formModel;
 
   /// Called after validation succeeds.
   final Future<void> Function()? onSubmit;
+
+  /// Whether to show the pinned submit button and scroll cues.
+  final bool showPinnedControls;
 
   @override
   State<ProjectForm> createState() => _ProjectFormState();
@@ -228,14 +237,13 @@ class _ProjectFormState extends State<ProjectForm> {
     );
   }
 
-  /// Splits the form into a scrollable field region and a statically pinned
-  /// submit button so the submit action is always visible.
+  /// Lets the field list use the whole available area while typing on mobile.
   Widget _buildFormLayout(BuildContext context, AppLayoutMetrics layout) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(child: _buildScrollableFields(context, layout)),
-        _buildSubmitButton(layout),
+        if (widget.showPinnedControls) _buildSubmitButton(layout),
       ],
     );
   }
@@ -269,14 +277,14 @@ class _ProjectFormState extends State<ProjectForm> {
             ),
           ),
         ),
-        if (_showTopScrollCue)
+        if (_showTopScrollCue && widget.showPinnedControls)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: GridScrollCue(edge: ScrollCueEdge.top, scheme: scheme),
           ),
-        if (_showBottomScrollCue)
+        if (_showBottomScrollCue && widget.showPinnedControls)
           Positioned(
             bottom: 0,
             left: 0,

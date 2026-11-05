@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../foundation/behavior_policy.dart';
 import '../foundation/external_links.dart';
 import '../l10n/app_copy.dart';
+import 'app_brand_bar.dart';
 import 'help/help_instructions.dart';
 import 'navigation/app_routes.dart';
 import 'theme/app_design.dart';
@@ -22,13 +23,15 @@ import 'workspace_exit.dart';
 class AppBarActionItem {
   /// Describes one banner action for inline display or an overflow menu.
   ///
-  /// Set [filledInline] to emphasize the action when it fits in the banner.
+  /// Set [filledInline] to show a text button in the banner. Set [isDonation]
+  /// for the accent style and higher priority when space runs out.
   const AppBarActionItem({
     required this.label,
     required this.icon,
     required this.onPressed,
     this.tooltip,
     this.filledInline = false,
+    this.isDonation = false,
   });
 
   /// Menu and accessibility label.
@@ -41,6 +44,9 @@ class AppBarActionItem {
   /// When true, the inline control is a compact filled (primary) button —
   /// purple background with on-primary lettering — instead of an icon button.
   final bool filledInline;
+
+  /// Whether to use the donation style and keep this action inline longest.
+  final bool isDonation;
 }
 
 /// App bar actions that move into a menu when the title needs more room.
@@ -65,12 +71,17 @@ abstract final class AppBarActionBar {
     ];
   }
 
-  /// Builds the widgets for [AppBar.actions].
+  /// Builds inline actions and an overflow menu for [AppBar.actions].
+  ///
+  /// Set [hasTitleStatus] when the title needs room for a save indicator.
+  /// Pass the app bar's [titleSpacing] if it differs from the standard.
   static List<Widget> build(
     BuildContext context, {
     required AppLayoutMetrics layout,
     required List<AppBarActionItem> items,
     bool hasLeading = false,
+    bool hasTitleStatus = false,
+    double titleSpacing = AppDesign.appBarTitleSpacing,
   }) {
     if (items.isEmpty) {
       return const [];
@@ -81,32 +92,38 @@ abstract final class AppBarActionBar {
       layout: layout,
       items: items,
       hasLeading: hasLeading,
+      hasTitleStatus: hasTitleStatus,
+      titleSpacing: titleSpacing,
     );
 
-    if (!metrics.collapsed) {
-      return [for (final item in items) _inlineAction(context, item)];
-    }
-
+    final overflow = metrics.overflowItems;
     return [
-      PopupMenuButton<int>(
-        tooltip: context.l10n.menu,
-        position: PopupMenuPosition.under,
-        icon: const Icon(Icons.menu),
-        onSelected: (index) => items[index].onPressed(),
-        itemBuilder: (context) => [
-          for (var i = 0; i < items.length; i++)
-            PopupMenuItem<int>(
-              value: i,
-              child: Row(
-                children: [
-                  Icon(items[i].icon),
-                  const SizedBox(width: AppDesign.space12),
-                  Expanded(child: Text(items[i].label)),
-                ],
+      for (final item in metrics.inlineItems) _inlineAction(context, item),
+      if (overflow.isNotEmpty)
+        PopupMenuButton<AppBarActionItem>(
+          tooltip: context.l10n.menu,
+          position: PopupMenuPosition.under,
+          icon: const Icon(Icons.menu),
+          onSelected: (item) => item.onPressed(),
+          itemBuilder: (context) => [
+            for (final item in overflow)
+              PopupMenuItem<AppBarActionItem>(
+                value: item,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: kMinInteractiveDimension,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(item.icon),
+                      const SizedBox(width: AppDesign.space12),
+                      Expanded(child: Text(item.label)),
+                    ],
+                  ),
+                ),
               ),
-            ),
-        ],
-      ),
+          ],
+        ),
     ];
   }
 
@@ -141,6 +158,7 @@ abstract final class AppBarActionBar {
     icon: Icons.volunteer_activism_outlined,
     tooltip: context.l10n.donations,
     filledInline: true,
+    isDonation: true,
     onPressed: () async {
       final links = context.read<ExternalLinks>();
       var opened = false;
@@ -160,6 +178,9 @@ abstract final class AppBarActionBar {
   );
 
   static Widget _inlineAction(BuildContext context, AppBarActionItem item) {
+    if (item.isDonation) {
+      return _DonateButton(item: item);
+    }
     if (item.filledInline) {
       return Padding(
         padding: AppDesign.appBarFilledActionMargin,
@@ -172,7 +193,7 @@ abstract final class AppBarActionBar {
               minimumSize: const Size(0, AppDesign.appBarFilledActionMinHeight),
               padding: AppDesign.appBarFilledActionPadding,
               tapTargetSize: MaterialTapTargetSize.padded,
-              visualDensity: VisualDensity.compact,
+              visualDensity: VisualDensity.standard,
             ),
             child: Text(item.label),
           ),
@@ -188,73 +209,93 @@ abstract final class AppBarActionBar {
   }
 }
 
-/// Width / collapse decision for a set of app-bar actions.
+/// The action placement and title width for one app bar.
 @immutable
 class AppBarActionsMetrics {
-  /// Records the space available to the title and whether actions move into a
-  /// menu.
-  const AppBarActionsMetrics({
-    required this.collapsed,
+  const AppBarActionsMetrics._({
+    required this.inlineItems,
+    required this.overflowItems,
     required this.actionsWidth,
     required this.titleMaxWidth,
   });
 
-  final bool collapsed;
+  /// Actions drawn in the banner, in display order.
+  final List<AppBarActionItem> inlineItems;
+
+  /// Actions available from the menu. Donate appears first if it cannot fit inline.
+  final List<AppBarActionItem> overflowItems;
+
   final double actionsWidth;
   final double titleMaxWidth;
 
-  /// Calculates banner action and title widths for the available layout.
+  /// Measures the actions at the current text scale and preserves room for branding.
   ///
-  /// Set [hasLeading] when a back or navigation control also needs space.
+  /// Set [hasTitleStatus] when the title needs room for a save indicator.
+  /// Pass the app bar's [titleSpacing] if it differs from the standard.
+  ///
+  /// If all actions cannot fit inline, tries keeping Donate beside the menu
+  /// before putting it in the menu with the other actions.
   factory AppBarActionsMetrics.of(
     BuildContext context, {
     required AppLayoutMetrics layout,
     required List<AppBarActionItem> items,
     bool hasLeading = false,
+    bool hasTitleStatus = false,
+    double titleSpacing = AppDesign.appBarTitleSpacing,
   }) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final leadingWidth = hasLeading ? kMinInteractiveDimension : 0.0;
-    final inlineWidth = _estimateInlineWidth(context, items);
-    final titleWithInline = (screenWidth - leadingWidth - inlineWidth).clamp(
-      0.0,
-      screenWidth,
-    );
-    final compact = layout.preferCompactChrome;
-
-    // Reserve room for the brand/title at every breakpoint, including tablets
-    // and enlarged text. Filled actions can otherwise crowd the toolbar.
-    final collapsed =
-        items.isNotEmpty &&
-        inlineWidth > AppBarActionBar.iconActionWidth &&
-        (inlineWidth > screenWidth / 2 ||
-            !_rowBrandTitleFits(titleWithInline, compact: compact));
-
-    final actionsWidth = collapsed
-        ? AppBarActionBar.iconActionWidth
-        : inlineWidth;
-    final titleMaxWidth = (screenWidth - leadingWidth - actionsWidth).clamp(
-      0.0,
-      screenWidth,
-    );
-
-    return AppBarActionsMetrics(
-      collapsed: collapsed,
-      actionsWidth: actionsWidth,
-      titleMaxWidth: titleMaxWidth,
-    );
-  }
-
-  /// Whether [titleWidth] can hold the logo beside a short single-line label.
-  static bool _rowBrandTitleFits(double titleWidth, {required bool compact}) {
-    final logoHeight = compact
-        ? AppDesign.appBarLogoHeightCompact
-        : AppDesign.appBarLogoHeight;
-    final gap = compact
+    final safeArea = MediaQuery.paddingOf(context).horizontal;
+    final screenWidth = layout.width - safeArea;
+    final leadingWidth = hasLeading ? kToolbarHeight : 0.0;
+    final fullWidth = _estimateInlineWidth(context, items);
+    final donate = items.where((item) => item.isDonation).toList();
+    final regular = items.where((item) => !item.isDonation).toList();
+    final menuWidth = AppBarActionBar.iconActionWidth;
+    final logoHeight = AppBrandAssets.heightFor(layout);
+    final logoWidth = layout.isMobile
+        ? logoHeight
+        : logoHeight * AppBrandAssets.bannerAspectRatio;
+    final statusWidth = hasTitleStatus
+        ? kMinInteractiveDimension + AppDesign.space8
+        : 0.0;
+    final gap = layout.isMobile
         ? AppDesign.appBarBrandTitleGapCompact
         : AppDesign.appBarBrandTitleGap;
-    // Compact logo is square at [logoHeight]; require a modest label slot too.
-    const minLabelSlot = 64.0;
-    return titleWidth >= logoHeight + gap + minLabelSlot;
+    final widthWithTitle = screenWidth - leadingWidth - 2 * titleSpacing;
+    final donateAndMenuWidth =
+        _estimateInlineWidth(context, donate) +
+        (regular.isEmpty ? 0 : menuWidth);
+
+    final List<AppBarActionItem> inline;
+    final List<AppBarActionItem> overflow;
+    if (fullWidth <= screenWidth / 2 &&
+        fullWidth <=
+            widthWithTitle -
+                logoWidth -
+                gap -
+                AppDesign.appBarMinimumTitleLabelWidth -
+                statusWidth) {
+      inline = [...donate, ...regular];
+      overflow = const [];
+    } else if (donate.isNotEmpty &&
+        donateAndMenuWidth <=
+            widthWithTitle -
+                logoHeight -
+                (hasTitleStatus ? gap + statusWidth : 0)) {
+      inline = donate;
+      overflow = regular;
+    } else {
+      inline = const [];
+      overflow = [...donate, ...regular];
+    }
+    final actionsWidth =
+        _estimateInlineWidth(context, inline) +
+        (overflow.isEmpty ? 0 : menuWidth);
+    return AppBarActionsMetrics._(
+      inlineItems: List.unmodifiable(inline),
+      overflowItems: List.unmodifiable(overflow),
+      actionsWidth: actionsWidth,
+      titleMaxWidth: (widthWithTitle - actionsWidth).clamp(0.0, layout.width),
+    );
   }
 
   static double _estimateInlineWidth(
@@ -265,26 +306,121 @@ class AppBarActionsMetrics {
     for (final item in items) {
       if (item.filledInline) {
         final painter = TextPainter(
-          text: TextSpan(
-            text: item.label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: AppDesign.labelWeight,
-              letterSpacing: AppDesign.labelTracking,
-            ),
-          ),
+          text: TextSpan(text: item.label, style: _actionLabelStyle(context)),
           textDirection: Directionality.of(context),
           textScaler: MediaQuery.textScalerOf(context),
           maxLines: 1,
         )..layout();
+        final padding = item.isDonation
+            ? AppDesign.donateActionPadding
+            : AppDesign.appBarFilledActionPadding;
+        final margin = item.isDonation
+            ? AppDesign.donateActionMargin
+            : AppDesign.appBarFilledActionMargin;
         total +=
-            painter.width +
-            AppDesign.appBarFilledActionPadding.horizontal +
-            AppDesign.appBarFilledActionMargin.horizontal;
+            (painter.width + padding.horizontal)
+                .clamp(AppBarActionBar.iconActionWidth, double.infinity)
+                .ceilToDouble() +
+            margin.horizontal;
         painter.dispose();
       } else {
         total += AppBarActionBar.iconActionWidth;
       }
     }
     return total;
+  }
+}
+
+TextStyle? _actionLabelStyle(BuildContext context) =>
+    Theme.of(context).textTheme.labelLarge?.copyWith(
+      fontWeight: AppDesign.labelWeight,
+      letterSpacing: AppDesign.labelTracking,
+    );
+
+/// A Material button with a sliding magenta and cyan background.
+class _DonateButton extends StatelessWidget {
+  const _DonateButton({required this.item});
+
+  final AppBarActionItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // Both ends of the gradient must stay readable under the white label.
+    final scrim = Colors.black.withValues(
+      alpha: AppDesign.donateGradientScrimOpacity,
+    );
+    final magenta = Color.alphaBlend(scrim, AppDesign.donateGradientMagenta);
+    final cyan = Color.alphaBlend(scrim, AppDesign.donateGradientCyan);
+    final silver = Color.alphaBlend(scrim, AppDesign.donateGradientSilver);
+    final radius = BorderRadius.circular(AppDesign.donateButtonRadius);
+    return Padding(
+      padding: AppDesign.donateActionMargin,
+      child: Tooltip(
+        message: item.tooltip ?? item.label,
+        excludeFromSemantics: true,
+        child: FilledButton(
+          onPressed: item.onPressed,
+          style:
+              FilledButton.styleFrom(
+                textStyle: _actionLabelStyle(context),
+                foregroundColor: Colors.white,
+                backgroundColor: magenta,
+                elevation: AppDesign.elevationFloating,
+                shadowColor: scheme.shadow,
+                minimumSize: const Size(
+                  kMinInteractiveDimension,
+                  kMinInteractiveDimension,
+                ),
+                padding: AppDesign.donateActionPadding,
+                visualDensity: VisualDensity.standard,
+                tapTargetSize: MaterialTapTargetSize.padded,
+                shape: RoundedRectangleBorder(borderRadius: radius),
+              ).copyWith(
+                backgroundBuilder: (context, states, child) {
+                  final highlighted =
+                      states.contains(WidgetState.hovered) ||
+                      states.contains(WidgetState.focused);
+                  return TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: highlighted ? 1 : 0),
+                    duration: reduceMotion
+                        ? Duration.zero
+                        : AppDesign.donateGradientDuration,
+                    curve: AppDesign.motionCurve,
+                    child: child,
+                    builder: (context, phase, child) {
+                      // The narrow highlight appears only during the sweep.
+                      final sheen = 4 * phase * (1 - phase);
+                      return Ink(
+                        decoration: BoxDecoration(
+                          borderRadius: radius,
+                          gradient: LinearGradient(
+                            begin: Alignment(-1 - 2 * phase, -1 - 2 * phase),
+                            end: Alignment(3 - 2 * phase, 3 - 2 * phase),
+                            colors: [
+                              magenta,
+                              Color.lerp(magenta, cyan, 0.88)!,
+                              Color.lerp(cyan, silver, sheen)!,
+                              Color.lerp(cyan, magenta, 0.12)!,
+                              magenta,
+                            ],
+                            stops: const [0, 0.47, 0.51, 0.55, 1],
+                          ),
+                        ),
+                        child: child,
+                      );
+                    },
+                  );
+                },
+              ),
+          child: Text(
+            item.label.toUpperCase(),
+            semanticsLabel: item.label,
+            maxLines: 1,
+          ),
+        ),
+      ),
+    );
   }
 }

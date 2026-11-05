@@ -61,6 +61,10 @@ class _ResultsViewState extends State<ResultsView> {
       builder: (context, layout) {
         final label = context.l10n.projectResults(project.displayName);
         final hasLeading = AppNavChrome.canPop(context);
+        final titleSpacing = AppBrandAssets.projectTitleSpacing(
+          layout,
+          hasLeading: hasLeading,
+        );
         final store = context.read<ProjectStore>();
         final actionItems = [
           AppBarActionBar.instructions(context),
@@ -79,12 +83,12 @@ class _ResultsViewState extends State<ResultsView> {
           layout: layout,
           items: actionItems,
           hasLeading: hasLeading,
+          titleSpacing: titleSpacing,
         );
         final titleMetrics = AppBrandTitleMetrics.of(
           context,
           label: label,
           titleMaxWidth: actionsMetrics.titleMaxWidth,
-          logoScale: 1.5,
         );
 
         return Scaffold(
@@ -92,6 +96,7 @@ class _ResultsViewState extends State<ResultsView> {
             label: label,
             layout: layout,
             hasLeading: hasLeading,
+            titleSpacing: titleSpacing,
             actionItems: actionItems,
             titleMetrics: titleMetrics,
           ),
@@ -205,6 +210,7 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.label,
     required this.layout,
     required this.hasLeading,
+    required this.titleSpacing,
     required this.actionItems,
     required this.titleMetrics,
   });
@@ -212,6 +218,7 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String label;
   final AppLayoutMetrics layout;
   final bool hasLeading;
+  final double titleSpacing;
   final List<AppBarActionItem> actionItems;
   final AppBrandTitleMetrics titleMetrics;
 
@@ -222,6 +229,7 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       toolbarHeight: titleMetrics.toolbarHeight,
+      titleSpacing: titleSpacing,
       automaticallyImplyLeading: false,
       leading: AppNavChrome.backLeading(context),
       title: AppBrandTitle(label: label, metrics: titleMetrics),
@@ -230,6 +238,7 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
         layout: layout,
         items: actionItems,
         hasLeading: hasLeading,
+        titleSpacing: titleSpacing,
       ),
     );
   }

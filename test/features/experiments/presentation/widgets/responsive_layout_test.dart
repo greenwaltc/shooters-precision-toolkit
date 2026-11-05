@@ -3,8 +3,10 @@ import 'dart:math';
 
 import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/range_entry_sheet.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/widgets/grid_scroll_cue.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/empty_results_state.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
@@ -288,6 +290,54 @@ void main() {
   }
 
   group('setup flow', () {
+    testWidgets('mobile keyboard gives the form all remaining space', (
+      tester,
+    ) async {
+      _configureViewport(tester, size: const Size(390, 844), textScale: 1);
+      await _pumpApp(tester);
+      await _tapText(
+        tester,
+        ProjectConfiguration.defaults.uiCopy.createProjectLabel,
+      );
+      final form = find.byType(ProjectForm);
+      final scroll = find.descendant(
+        of: form,
+        matching: find.byType(SingleChildScrollView),
+      );
+      final cues = find.descendant(
+        of: form,
+        matching: find.byType(GridScrollCue),
+      );
+      final title = find
+          .descendant(of: form, matching: find.byType(TextFormField))
+          .first;
+      final before = tester.getSize(scroll).height;
+      expect(find.text('Submit'), findsOneWidget);
+
+      await tester.enterText(title, 'Keyboard test');
+      const keyboardHeight = 330.0;
+      tester.view.viewInsets = const FakeViewPadding(bottom: keyboardHeight);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
+
+      expect(find.text('Submit'), findsNothing);
+      expect(cues, findsNothing);
+      expect(
+        tester.getSize(scroll).height,
+        greaterThan(before - keyboardHeight),
+      );
+      expect(find.text('Keyboard test'), findsWidgets);
+      _expectNoLayoutErrors(tester, 'Test Design with keyboard');
+
+      tester.view.resetViewInsets();
+      await tester.pump();
+      expect(find.text('Submit'), findsOneWidget);
+    });
+
     for (final entry in _viewports.entries) {
       for (final textScale in _textScales) {
         final label = '${entry.key} @ ${textScale}x';
@@ -329,17 +379,15 @@ void main() {
           _configureViewport(tester, size: entry.value, textScale: 2.0);
 
           await _pumpCompletedProject(tester, factorCount: factorCount);
+          final homeLogoHeight = tester
+              .getSize(find.byType(AppBrandTitleLogo))
+              .height;
           await _tapText(tester, 'Bench Rest Comparison');
           _expectNoLayoutErrors(tester, '$label — data matrix');
-          final matrixMetrics = tester
-              .widget<AppBrandTitle>(find.byType(AppBrandTitle))
-              .metrics;
-          final baseMetrics = AppBrandTitleMetrics.of(
-            tester.element(find.byType(AppBrandTitle)),
-            label: 'Bench Rest Comparison',
-            titleMaxWidth: entry.value.width / 2,
+          expect(
+            tester.getSize(find.byType(AppBrandTitleLogo)).height,
+            homeLogoHeight,
           );
-          expect(matrixMetrics.logoHeight, baseMetrics.logoHeight * 1.5);
 
           await _tapText(tester, 'Results');
           expect(
@@ -352,11 +400,8 @@ void main() {
             expect(find.text('Saved'), findsNothing);
           }
           expect(
-            tester
-                .widget<AppBrandTitle>(find.byType(AppBrandTitle))
-                .metrics
-                .logoHeight,
-            matrixMetrics.logoHeight,
+            tester.getSize(find.byType(AppBrandTitleLogo)).height,
+            homeLogoHeight,
           );
         });
       }

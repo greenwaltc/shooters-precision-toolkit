@@ -417,7 +417,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get instructions => 'Instructions';
 
   @override
-  String get donations => 'Donations';
+  String get donations => 'Donate';
 
   @override
   String get unableToOpenPayPalPleaseTryAgain =>

@@ -127,7 +127,11 @@ class ProjectSaveStatus extends StatelessWidget {
             child: TextButton.icon(
               onPressed: onPressed,
               icon: Icon(icon, size: 18),
-              label: Text(shortLabel, maxLines: 1),
+              label: Text(
+                shortLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               style: TextButton.styleFrom(
                 foregroundColor: color,
                 disabledForegroundColor: color,

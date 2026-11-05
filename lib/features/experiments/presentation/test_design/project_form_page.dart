@@ -41,7 +41,14 @@ class ProjectFormPage extends StatelessWidget {
 
           return AppLayoutBuilder(
             builder: (context, layout) {
+              final keyboardCoversBottom =
+                  layout.isMobile &&
+                  MediaQuery.viewInsetsOf(context).bottom > 0;
               final hasLeading = AppNavChrome.canPop(context);
+              final titleSpacing = AppBrandAssets.projectTitleSpacing(
+                layout,
+                hasLeading: hasLeading,
+              );
               final actionItems = [
                 AppBarActionBar.instructions(context),
                 AppBarActionBar.contact(context),
@@ -57,6 +64,8 @@ class ProjectFormPage extends StatelessWidget {
                 layout: layout,
                 items: actionItems,
                 hasLeading: hasLeading,
+                titleSpacing: titleSpacing,
+                hasTitleStatus: true,
               );
               final titleMetrics = AppBrandTitleMetrics.of(
                 context,
@@ -67,6 +76,7 @@ class ProjectFormPage extends StatelessWidget {
               return Scaffold(
                 appBar: AppBar(
                   toolbarHeight: titleMetrics.toolbarHeight,
+                  titleSpacing: titleSpacing,
                   automaticallyImplyLeading: false,
                   leading: AppNavChrome.backLeading(context),
                   title: AppBrandTitle(
@@ -82,12 +92,15 @@ class ProjectFormPage extends StatelessWidget {
                     layout: layout,
                     items: actionItems,
                     hasLeading: hasLeading,
+                    titleSpacing: titleSpacing,
+                    hasTitleStatus: true,
                   ),
                 ),
                 body: AppResponsiveBody(
                   maxWidth: (layout) => layout.formMaxWidth,
                   builder: (context, _) => ProjectForm(
                     formModel: formModel,
+                    showPinnedControls: !keyboardCoversBottom,
                     onSubmit: () => _goToMatrix(context, store),
                   ),
                 ),

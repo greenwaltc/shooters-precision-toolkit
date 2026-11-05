@@ -8,6 +8,9 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/p
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/results_view.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/app_back_button.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/app_brand_bar.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/theme/tokens/app_headings.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/workspace_exit.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +22,11 @@ import '../../support/fake_project_repository.dart';
 import '../../support/test_configuration.dart';
 
 void main() {
-  for (final size in [const Size(320, 568), const Size(1440, 900)]) {
+  for (final size in [
+    const Size(320, 568),
+    const Size(390, 844),
+    const Size(1440, 900),
+  ]) {
     testWidgets('workspace actions include sign-out on every page at $size', (
       tester,
     ) async {
@@ -76,8 +83,10 @@ void main() {
       );
       await _expectSignOut(tester);
       await _expectDonations(tester);
+      final logoHeight = tester.getSize(find.byType(AppBrandTitleLogo)).height;
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
+      expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
         find.textContaining('Engineered by Cameron Greenwalt'),
         findsWidgets,
@@ -97,10 +106,14 @@ void main() {
         const Duration(seconds: 5),
       );
       expect(find.byType(AnomrMatrix), findsOneWidget);
+      if (size.width == 390) {
+        _expectCompactProjectBanner(tester);
+      }
       await _expectSignOut(tester);
       await _expectDonations(tester);
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
+      expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
         find.textContaining('Engineered by Cameron Greenwalt'),
         findsWidgets,
@@ -114,10 +127,14 @@ void main() {
       );
       await _tapAction(tester, 'Test Design');
       expect(find.byType(ProjectFormPage), findsOneWidget);
+      if (size.width == 390) {
+        _expectCompactProjectBanner(tester);
+      }
       await _expectSignOut(tester);
       await _expectDonations(tester);
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
+      expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
         find.textContaining('Engineered by Cameron Greenwalt'),
         findsWidgets,
@@ -144,10 +161,14 @@ void main() {
         const Duration(seconds: 5),
       );
       expect(find.byType(ResultsView), findsOneWidget);
+      if (size.width == 390) {
+        _expectCompactProjectBanner(tester);
+      }
       await _expectSignOut(tester);
       await _expectDonations(tester);
       await _tapAction(tester, 'Contact');
       expect(find.byType(ContactPage), findsOneWidget);
+      expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
         find.textContaining('Engineered by Cameron Greenwalt'),
         findsWidgets,
@@ -210,8 +231,8 @@ Future<void> _tapAction(WidgetTester tester, String label) async {
 }
 
 Future<void> _expectDonations(WidgetTester tester) async {
-  if (find.byTooltip('Donations').evaluate().isNotEmpty) {
-    expect(find.byTooltip('Donations'), findsOneWidget);
+  if (find.byTooltip('Donate').evaluate().isNotEmpty) {
+    expect(find.byTooltip('Donate'), findsOneWidget);
   } else {
     await tester.tap(find.byTooltip('Menu'));
     await tester.pumpAndSettle(
@@ -219,12 +240,29 @@ Future<void> _expectDonations(WidgetTester tester) async {
       EnginePhase.sendSemanticsUpdate,
       const Duration(seconds: 5),
     );
-    expect(find.text('Donations'), findsOneWidget);
-    Navigator.of(tester.element(find.text('Donations'))).pop();
+    expect(find.text('Donate'), findsOneWidget);
+    Navigator.of(tester.element(find.text('Donate'))).pop();
     await tester.pumpAndSettle(
       const Duration(milliseconds: 100),
       EnginePhase.sendSemanticsUpdate,
       const Duration(seconds: 5),
     );
   }
+}
+
+void _expectCompactProjectBanner(WidgetTester tester) {
+  final brand = find.byType(AppBrandTitle);
+  final title = find.descendant(
+    of: brand,
+    matching: find.text(tester.widget<AppBrandTitle>(brand).label),
+  );
+  final context = tester.element(title);
+  expect(tester.widget<Text>(title).style, AppHeadings.h4(context));
+  expect(tester.widget<Text>(title).overflow, TextOverflow.ellipsis);
+
+  final back = tester.getRect(find.byType(AppBackButton));
+  final logo = tester.getRect(find.byType(AppBrandTitleLogo));
+  final donate = tester.getRect(find.widgetWithText(FilledButton, 'DONATE'));
+  expect(logo.left - back.right, inInclusiveRange(0, 12));
+  expect(tester.getRect(title).right, lessThan(donate.left));
 }

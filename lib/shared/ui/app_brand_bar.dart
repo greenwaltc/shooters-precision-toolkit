@@ -33,6 +33,19 @@ abstract final class AppBrandAssets {
   /// The intrinsic width divided by height of the banner logo.
   static double get bannerAspectRatio => _brand.bannerLogoAspectRatio;
 
+  /// The shared logo height in logical pixels for this viewport.
+  static double heightFor(AppLayoutMetrics layout) => layout.isMobile
+      ? AppDesign.appBarLogoHeightCompact
+      : AppDesign.appBarLogoHeight;
+
+  /// Title spacing for project pages that place their logo beside Back.
+  static double projectTitleSpacing(
+    AppLayoutMetrics layout, {
+    required bool hasLeading,
+  }) => layout.isMobile && hasLeading
+      ? AppDesign.appBarTitleSpacingCompact
+      : AppDesign.appBarTitleSpacing;
+
   /// Whether the projects banner is laid out at a mobile width.
   static bool isMobileBanner(BuildContext context) {
     return AppLayoutMetrics.of(context).isMobile;
@@ -54,10 +67,6 @@ abstract final class AppBrandAssets {
         ? AppDesign.homeBannerTaglineMaxLinesMobile
         : AppDesign.homeBannerTaglineMaxLines;
   }
-
-  /// Whether the projects banner should omit the tagline to reclaim height.
-  static bool hideBannerTagline(BuildContext context) =>
-      isMobileLandscapeBanner(context);
 
   /// Mobile width in landscape orientation.
   static bool isMobileLandscapeBanner(BuildContext context) {
@@ -91,23 +100,6 @@ abstract final class AppBrandAssets {
     final height = painter.height;
     painter.dispose();
     return height;
-  }
-
-  /// Width reserved for projects-banner actions when estimating tagline wrap.
-  static double bannerActionsReserve(
-    BuildContext context, {
-    bool includeHelpAction = true,
-  }) {
-    var reserve = 0.0;
-    if (includeHelpAction) {
-      reserve += AppDesign.homeBannerHelpActionsReserve;
-    }
-    if (ProjectConfigurationScope.of(
-      context,
-    ).featureFlags.isEnabled(FeatureFlag.themeModeToggle)) {
-      reserve += AppDesign.homeBannerThemeToggleActionsReserve;
-    }
-    return reserve;
   }
 
   /// Slot width for a logo laid out in [availableWidth] at [height].
@@ -172,79 +164,36 @@ class ProjectsBannerMetrics {
     this.showTagline = true,
   });
 
-  /// Measures the banner against the viewport in [context].
-  ///
-  /// The logo keeps its full [AppDesign.homeBannerLogoHeight] whenever the
-  /// viewport is tall enough; on shorter screens it shrinks (never past
-  /// [AppDesign.homeBannerMinLogoHeight]) so the page body keeps a workable
-  /// amount of room beneath the banner.
-  ///
-  /// Pass [includeHelpAction]: false when Instructions is shown as a FAB
-  /// instead of an app-bar action so the tagline can use the extra width.
+  /// Measures the banner using the same logo height as every other page.
   factory ProjectsBannerMetrics.of(
     BuildContext context, {
-    bool includeHelpAction = true,
     double? actionsWidth,
   }) {
-    final viewport = MediaQuery.sizeOf(context);
-    if (AppLayoutMetrics.of(context).isMobile) {
-      return const ProjectsBannerMetrics(
-        logoHeight: 40,
-        toolbarHeight: 64,
+    final layout = AppLayoutMetrics.of(context);
+    final logoHeight = AppBrandAssets.heightFor(layout);
+    if (layout.isMobile || layout.isDesktop) {
+      return ProjectsBannerMetrics(
+        logoHeight: logoHeight,
+        toolbarHeight: layout.isMobile
+            ? AppDesign.appBarBrandedHeightCompact
+            : AppDesign.appBarBrandedHeight,
         showTagline: false,
       );
     }
-    if (viewport.width >= AppLayoutMetrics.desktopBreakpoint) {
-      return const ProjectsBannerMetrics(
-        logoHeight: 48,
-        toolbarHeight: 72,
-        showTagline: false,
-      );
-    }
-    final compact = AppBrandAssets.isMobileLandscapeBanner(context);
-    final showTagline = !AppBrandAssets.hideBannerTagline(context);
-    final taglineHeight = showTagline
-        ? AppBrandAssets.measureTaglineHeight(
-            context: context,
-            maxWidth: math.max(
-              AppDesign.homeBannerMinTaglineWidth,
-              viewport.width -
-                  (actionsWidth ??
-                      AppBrandAssets.bannerActionsReserve(
-                        context,
-                        includeHelpAction: includeHelpAction,
-                      )),
-            ),
-          )
-        : 0.0;
 
-    // Everything in the toolbar other than the logo itself.
-    final chrome =
-        (showTagline ? AppDesign.homeBannerTaglineGap + taglineHeight : 0.0) +
-        AppDesign.appBarBrandingPadding * (compact ? 1 : 2);
-
-    final minLogo = compact
-        ? AppDesign.homeBannerMinLogoHeightLandscape
-        : AppDesign.homeBannerMinLogoHeight;
-    final minBody = compact
-        ? AppDesign.homeBannerMinBodyHeight / 2
-        : AppDesign.homeBannerMinBodyHeight;
-
-    final logoHeight =
-        !compact &&
-            viewport.height >= AppDesign.homeBannerFullSizeViewportHeight
-        ? AppDesign.homeBannerLogoHeight
-        : (viewport.height - chrome - minBody).clamp(
-            minLogo,
-            compact
-                ? AppDesign.homeBannerMinLogoHeight
-                : AppDesign.homeBannerLogoHeight,
-          );
-
+    final taglineHeight = AppBrandAssets.measureTaglineHeight(
+      context: context,
+      maxWidth: math.max(
+        AppDesign.homeBannerMinTaglineWidth,
+        layout.width - (actionsWidth ?? 0) - AppSpacing.xl * 2,
+      ),
+    );
     return ProjectsBannerMetrics(
       logoHeight: logoHeight,
-      toolbarHeight: logoHeight + chrome,
-      showTagline: showTagline,
+      toolbarHeight:
+          AppDesign.appBarBrandedHeight +
+          AppDesign.homeBannerTaglineGap +
+          taglineHeight,
     );
   }
 
@@ -271,9 +220,11 @@ class AppProjectsBannerTitle extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppBrandLogo(
-          height: logoHeight,
-          alignment: AlignmentDirectional.centerStart,
+        LayoutBuilder(
+          builder: (context, constraints) => AppBrandTitleLogo(
+            height: logoHeight,
+            maxWidth: constraints.maxWidth,
+          ),
         ),
         if (showTagline) ...[
           const SizedBox(height: AppDesign.homeBannerTaglineGap),
@@ -350,19 +301,12 @@ class AppBrandTitleLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (AppLayoutMetrics.of(context).isMobile) {
-      return Image.asset(
-        AppBrandAssets.compactIcon,
-        width: height,
-        height: height,
-        fit: BoxFit.contain,
-        semanticLabel: AppBrandAssets.logoSemanticLabel,
-      );
-    }
-    final slotWidth = AppBrandAssets.logoSlotWidth(
-      availableWidth: maxWidth,
-      height: height,
-    );
+    final slotWidth = AppLayoutMetrics.of(context).isMobile
+        ? height
+        : AppBrandAssets.logoSlotWidth(
+            availableWidth: maxWidth,
+            height: height,
+          );
 
     return SizedBox(
       width: slotWidth,
@@ -400,55 +344,16 @@ class AppBrandTitleMetrics {
 
   /// Decides whether [label] fits beside the logo in [titleMaxWidth].
   ///
-  /// On mobile landscape, prefers a compact single-row bar (with ellipsis if
-  /// needed) so the scaffold body keeps as much height as possible.
+  /// Compact layouts keep the logo and label in one row to leave more room
+  /// for the page content.
   factory AppBrandTitleMetrics.of(
     BuildContext context, {
     required String label,
     required double titleMaxWidth,
-    double logoScale = 1,
   }) {
-    final base = _base(context, label: label, titleMaxWidth: titleMaxWidth);
-    final height = base.logoHeight * logoScale;
-    return AppBrandTitleMetrics(
-      stacked: base.stacked,
-      toolbarHeight: base.stacked
-          ? base.toolbarHeight + height - base.logoHeight
-          : math.max(base.toolbarHeight, height + 2 * base.brandingPadding),
-      logoHeight: height,
-      brandTitleGap: base.brandTitleGap,
-      brandingPadding: base.brandingPadding,
-    );
-  }
-
-  static AppBrandTitleMetrics _base(
-    BuildContext context, {
-    required String label,
-    required double titleMaxWidth,
-  }) {
-    if (AppLayoutMetrics.of(context).isMobile) {
-      return const AppBrandTitleMetrics(
-        stacked: false,
-        toolbarHeight: 56,
-        logoHeight: 32,
-        brandTitleGap: 8,
-        brandingPadding: 4,
-      );
-    }
-    if (MediaQuery.sizeOf(context).width >=
-        AppLayoutMetrics.desktopBreakpoint) {
-      return const AppBrandTitleMetrics(
-        stacked: false,
-        toolbarHeight: 64,
-        logoHeight: 36,
-        brandTitleGap: 20,
-        brandingPadding: 8,
-      );
-    }
-    final compact = AppBrandAssets.isMobileLandscapeBanner(context);
-    final logoHeight = compact
-        ? AppDesign.appBarLogoHeightCompact
-        : AppDesign.appBarLogoHeight;
+    final layout = AppLayoutMetrics.of(context);
+    final logoHeight = AppBrandAssets.heightFor(layout);
+    final compact = layout.isMobile;
     final brandTitleGap = compact
         ? AppDesign.appBarBrandTitleGapCompact
         : AppDesign.appBarBrandTitleGap;
@@ -475,7 +380,7 @@ class AppBrandTitleMetrics {
         );
 
     // Compact chrome never stacks — a taller bar would defeat the purpose.
-    if (fitsBeside || compact) {
+    if (fitsBeside || compact || layout.isDesktop) {
       return AppBrandTitleMetrics(
         stacked: false,
         toolbarHeight: rowHeight,
@@ -598,7 +503,12 @@ class AppBrandTitle extends StatelessWidget {
         final logoWidth = AppLayoutMetrics.of(context).isMobile
             ? logoHeight
             : AppBrandAssets.logoSlotWidth(
-                availableWidth: maxWidth,
+                availableWidth: math.max(
+                  logoHeight,
+                  maxWidth -
+                      metrics.brandTitleGap -
+                      AppDesign.appBarMinimumTitleLabelWidth,
+                ),
                 height: logoHeight,
               );
         final labelMaxWidth = maxWidth - logoWidth - metrics.brandTitleGap;
@@ -622,20 +532,42 @@ class AppBrandTitle extends StatelessWidget {
   Widget _label(BuildContext context, {int maxLines = 1}) {
     final text = Text(
       label,
-      style: AppHeadings.h2(context),
+      style: AppLayoutMetrics.of(context).isMobile
+          ? AppHeadings.h4(context)
+          : AppHeadings.h2(context),
       maxLines: trailing == null ? maxLines : 1,
       overflow: TextOverflow.ellipsis,
     );
     if (trailing == null) {
       return text;
     }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(child: text),
-        const SizedBox(width: AppSpacing.md),
-        trailing!,
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < kMinInteractiveDimension + AppSpacing.md) {
+          return Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: trailing,
+          );
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: text),
+            const SizedBox(width: AppSpacing.md),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: math.max(
+                  kMinInteractiveDimension,
+                  constraints.maxWidth -
+                      AppDesign.appBarMinimumTitleLabelWidth -
+                      AppSpacing.md,
+                ),
+              ),
+              child: trailing,
+            ),
+          ],
+        );
+      },
     );
   }
 }

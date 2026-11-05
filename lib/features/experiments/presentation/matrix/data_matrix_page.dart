@@ -119,6 +119,10 @@ class _AnomrMatrixScaffold extends StatelessWidget {
     ProjectStore store,
   ) {
     final hasLeading = AppNavChrome.canPop(context);
+    final titleSpacing = AppBrandAssets.projectTitleSpacing(
+      layout,
+      hasLeading: hasLeading,
+    );
     final actionItems = [
       AppBarActionBar.instructions(context),
       AppBarActionBar.contact(context),
@@ -140,16 +144,18 @@ class _AnomrMatrixScaffold extends StatelessWidget {
       layout: layout,
       items: actionItems,
       hasLeading: hasLeading,
+      titleSpacing: titleSpacing,
+      hasTitleStatus: true,
     );
     final titleMetrics = AppBrandTitleMetrics.of(
       context,
       label: project.displayName,
       titleMaxWidth: actionsMetrics.titleMaxWidth,
-      logoScale: 1.5,
     );
 
     return AppBar(
       toolbarHeight: titleMetrics.toolbarHeight,
+      titleSpacing: titleSpacing,
       automaticallyImplyLeading: false,
       leading: AppNavChrome.backLeading(context),
       title: AppBrandTitle(
@@ -162,6 +168,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
         layout: layout,
         items: actionItems,
         hasLeading: hasLeading,
+        titleSpacing: titleSpacing,
+        hasTitleStatus: true,
       ),
     );
   }

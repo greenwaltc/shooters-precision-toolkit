@@ -251,6 +251,26 @@ class AppDesign {
     horizontal: space12,
   );
 
+  /// Minimum space left for a label before ordinary banner actions overflow.
+  static const double appBarMinimumTitleLabelWidth = 64;
+
+  /// Compact spacing keeps the donation action usable beside an overflow menu.
+  static const EdgeInsets donateActionPadding = EdgeInsets.symmetric(
+    horizontal: space12,
+    vertical: space8,
+  );
+  static const EdgeInsets donateActionMargin = EdgeInsets.symmetric(
+    horizontal: space4,
+  );
+
+  /// Accent colors and motion for the Donate button's sliding gradient.
+  static const Color donateGradientMagenta = Color(0xfffc00ff);
+  static const Color donateGradientCyan = Color(0xff00dbde);
+  static const Color donateGradientSilver = Color(0xffc0cad8);
+  static const double donateGradientScrimOpacity = 0.44;
+  static const double donateButtonRadius = 10;
+  static const Duration donateGradientDuration = Duration(milliseconds: 500);
+
   // ───────────────────────────── 9. Inputs ────────────────────────────────
 
   static const double inputRadius = radiusMd;
@@ -286,17 +306,23 @@ class AppDesign {
   /// modern productivity app.
   static const bool appBarCenterTitle = false;
 
-  /// Logo height in the standard (non-home) app bars.
-  static const double appBarLogoHeight = 72;
+  /// Space on either side of a banner title in a standard app bar.
+  static const double appBarTitleSpacing = space16;
 
-  /// Compact logo height for mobile landscape (short viewports).
+  /// Gap between the back button and title on compact project pages.
+  static const double appBarTitleSpacingCompact = space4;
+
+  /// Standard banner logo height, shared by all pages.
+  static const double appBarLogoHeight = 48;
+
+  /// Shared banner logo height for compact layouts.
   static const double appBarLogoHeightCompact = 40;
 
   /// Horizontal gap between the app-bar logo and its page label.
-  static const double appBarBrandTitleGap = space24;
+  static const double appBarBrandTitleGap = space20;
 
   /// Tighter logo/label gap used with [appBarLogoHeightCompact].
-  static const double appBarBrandTitleGapCompact = space12;
+  static const double appBarBrandTitleGapCompact = space8;
 
   /// Vertical gap when the app-bar logo stacks above the page label.
   static const double appBarBrandStackedGap = space4;
@@ -312,38 +338,13 @@ class AppDesign {
       appBarLogoHeight + appBarBrandingPadding * 2;
 
   /// Compact row app-bar height for mobile landscape.
-  static const double appBarBrandedHeightCompact =
-      appBarLogoHeightCompact + appBarBrandingPaddingCompact * 2;
+  static const double appBarBrandedHeightCompact = kToolbarHeight;
 
   /// Lines the stacked app-bar project label may wrap to.
   static const int appBarBrandLabelMaxLinesStacked = 2;
 
-  /// Logo height on the projects banner when the viewport has room for it.
-  static const double homeBannerLogoHeight = kToolbarHeight * 3;
-
-  /// Floor the projects banner logo shrinks to on short viewports.
-  static const double homeBannerMinLogoHeight = kToolbarHeight * 2;
-
-  /// Floor for the projects banner logo in mobile landscape.
-  static const double homeBannerMinLogoHeightLandscape = kToolbarHeight;
-
   /// Gap separating the projects banner logo from its tagline.
   static const double homeBannerTaglineGap = space4;
-
-  /// Viewport height at or above which the projects banner always uses
-  /// [homeBannerLogoHeight]. Below it the logo shrinks so the page body keeps
-  /// at least [homeBannerMinBodyHeight].
-  static const double homeBannerFullSizeViewportHeight = 700;
-
-  /// Body height preserved beneath the projects banner on short viewports.
-  static const double homeBannerMinBodyHeight = 260;
-
-  /// Horizontal space reserved for the Instructions control on the projects
-  /// banner when predicting how many lines the tagline will wrap to.
-  static const double homeBannerHelpActionsReserve = 120;
-
-  /// Extra horizontal reserve when the theme-mode toggle is shown beside help.
-  static const double homeBannerThemeToggleActionsReserve = 48;
 
   /// Lower bound for the predicted tagline width so the estimate stays
   /// meaningful on very narrow viewports.

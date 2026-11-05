@@ -841,7 +841,7 @@ abstract class AppLocalizations {
   /// No description provided for @donations.
   ///
   /// In en, this message translates to:
-  /// **'Donations'**
+  /// **'Donate'**
   String get donations;
 
   /// No description provided for @unableToOpenPayPalPleaseTryAgain.

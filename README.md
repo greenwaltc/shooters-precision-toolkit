@@ -2,7 +2,7 @@
 
 A statistical analysis app for testing firearm shot consistency, by Denton M. Bramwell.
 
-Built with Flutter and running on **web, Android, iOS, macOS, and Windows**, the app walks a shooter through designing a precision experiment, collecting two-shot group data, and reading statistically sound conclusions from an ANOMR (Analysis of Means for Ranges) chart — no statistics background required.
+Built with Flutter for **web, Android, iOS, and macOS**, the app walks a shooter through designing a precision experiment, collecting two-shot group data, and reading statistically sound conclusions from an ANOMR (Analysis of Means for Ranges) chart — no statistics background required. Windows has a runner scaffold but no configured Firebase environment.
 
 ## What it does
 
@@ -26,68 +26,139 @@ Full usage instructions live in the app under the **Instructions** button (sourc
 
 ## Getting started (development)
 
-Prerequisites: a recent [Flutter](https://docs.flutter.dev/get-started/install) stable release (Dart SDK ≥ 3.11, per `pubspec.yaml`).
+Prerequisites: [Flutter](https://docs.flutter.dev/get-started/install) **3.47.9** (bundled Dart **3.13.7**), Node.js **22+**, and [Task](https://taskfile.dev/docs/installation). The SDK pin is recorded in `.fvmrc` and `config/toolchain.json`. On macOS, install Task with `brew install go-task`. Infrastructure commands also use Terraform and the Google Cloud CLI.
 
 ```bash
-flutter pub get
-flutter run -d chrome     # web
-flutter run -d macos      # macOS desktop
-flutter run               # any connected device/emulator
+task deps
+task local                # Local emulators + Flutter in Chrome
+task                      # List all available commands
 ```
+
+### Local services
+
+`task local` starts the Auth and Standard Firestore emulators, waits for them, and launches Flutter in Chrome at `http://127.0.0.1:7357`. Use Flutter's `r`/`R` commands to reload/restart after changes, and `q` to quit. Ctrl+C also shuts down the session. The Emulator UI is at [127.0.0.1:4000](http://127.0.0.1:4000).
+
+The first start downloads the Firebase CLI and emulator binaries, so it needs internet access. Install Java 21 or newer; the launcher can use Android Studio's bundled Java when the default Java is older. No Firebase login, cloud deployment, or Terraform apply is needed. Local services use `demo-bramwellsprecisiontestkit`, with separate dummy SDK configuration. All emulator listeners are restricted to this computer.
+
+For separate terminals:
+
+```bash
+task emulators:start      # Terminal 1: leave running
+task local:run            # Terminal 2: Flutter with local services
+```
+
+Test the full local connection:
+
+```bash
+task emulators:test       # Starts fresh services, tests in headless Chrome, stops services
+task local:test           # Same tests when emulators are already running
+```
+
+Stop an existing emulator session before `emulators:test` because both use the same ports. `task emulators:check` checks the running services. Emulator Auth accounts and database data reset when the services stop. Browser Auth and Firestore persistence are disabled in local mode to avoid stale sessions/cache after a reset.
+
+The local app supports registration, email verification, sign-in, and cloud project storage against demo Auth/Firestore services. The smoke tests check account flows and database access rules. Use `task web:run` when you deliberately want local Flutter connected to **cloud dev** instead. Production emulator builds are rejected.
+
+See [Firebase's emulator connection guide](https://firebase.google.com/docs/emulator-suite/connect_firestore) for demo-project isolation and [Emulator Suite setup](https://firebase.google.com/docs/emulator-suite/install_and_configure) for emulator options.
 
 Run the checks:
 
 ```bash
-flutter analyze
-flutter test
+task check
 ```
 
-Release builds:
+Build and publish web releases:
 
 ```bash
-flutter build web --release
-flutter build apk --release        # Android
-flutter build ios --release        # iOS (requires Xcode + signing)
-flutter build macos --release
-flutter build windows --release    # requires a Windows host
+task web:build            # build/web-dev
+task web:build ENV=prod   # build/web-prod
+task web:check            # Verify the built bundle and destination
+task web:measure          # Fresh Chrome load and Spark traffic planning check
+task web:hosting:test     # Test built routes/headers with the Hosting emulator
+task web:preview CHANNEL=my-change # Publish a two-day dev preview
+task web:deploy           # Check, rebuild, and publish to dev Hosting
+task web:deploy ENV=prod  # Check, rebuild, and publish to production Hosting
 ```
+
+Environment commands default to `dev` and accept only `dev` or `prod`. Deploy/preview commands run checks, rebuild, measure transfer, and verify file hashes and the Hosting destination before uploading. Dev builds have indexing disabled. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates. Node 22+ and Google Chrome are required for web release checks; set `CHROME_EXECUTABLE` if Chrome is installed elsewhere.
+
+An open `dev` → `main` PR deploys each pushed dev commit to the dev live site at `https://dev.bramwelltest.com`. Other same-repository PRs deploy dev previews. Production uses a manual workflow from `main` and the GitHub `production` environment. Configure its reviewer/branch protections before the first production run. See [web release instructions](docs/guides/web_releases.md) for setup, retention, and Spark traffic limits.
+
+### Native dev and production apps
+
+Android, iOS, and macOS support `dev` and `prod` flavors. Dev app IDs end in `.dev` and the app is named Precision Test Kit Dev. Production retains its original IDs. Firebase service files and Dart options select the same environment; Apple builds validate the selected plist before bundling it.
+
+```bash
+task native:check
+task native:run DEVICE=macos                 # requires Apple development signing
+task native:run DEVICE=macos ENV=prod
+task android:build                          # dev debug APK
+task android:build ENV=prod                  # production backend, debug APK
+task ios:build                              # unsigned dev simulator app
+task ios:build ENV=prod
+task macos:build                            # unsigned dev macOS app
+task macos:build ENV=prod
+```
+
+For a native dev app with local Firebase, start `task emulators:start` in one terminal and run `task native:local DEVICE=macos` in another. Use `flutter devices` for other device IDs. Android emulators use `task native:local DEVICE=YOUR_DEVICE_ID LOCAL_PROFILE=local-android`. Apple signed runs require a development certificate/team configured in Xcode; unsigned builds do not need one. Android production release signing uses the private `android/key.properties` file; see its checked-in example. Production releases fail if that file is absent.
+
+If Xcode reports “Found no destinations” or “iOS 26.5 is not installed,” install the matching iOS platform in Xcode > Settings > Components, then rerun `task ios:build`. A simulator runtime is also needed to run the app in a simulator.
+
+`task native:config` retrieves SDK config using Terraform output app IDs and regenerates native Dart options while preserving web options. It never creates Firebase apps. `task native:check` checks environment identity and transport policy. `task verify` runs regular Flutter, native config, rules, and browser emulator checks sequentially on macOS; stop interactive emulators first or run `task local:test` against the running instance. See the [engineering standards](docs/README.md) and [verification commands](docs/verification/testing_evidence.md).
+
+The application is cloud-native. Its signed-in workspace retains only session drafts, and persistent Firestore caching is disabled. Legacy import and durable offline replay are outside scope; unsaved changes do not survive a refresh/restart. Existing cloud revision guards remain in place. Steps 10–11 are marked skipped in the [migration guide](docs/guides/firebase_migration_guide.md).
+
+For first-time authentication, run `task login:firebase` for Firebase CLI deployments, `task login:terraform` for Terraform, and `task login:gcloud` for billing inspection. These maintain separate credentials.
+
+To change infrastructure:
+
+```bash
+task infra:plan           # Initialize, validate, and save the dev plan
+task infra:show           # Review the saved changes
+task infra:apply          # Apply that exact plan
+task infra:output         # Show app IDs and Hosting URL
+task billing:check        # Expect False for Spark
+```
+
+Add `ENV=prod` to each command for production. `infra:apply` changes cloud resources and applies the saved plan without an additional confirmation prompt. Plans and local state stay out of Git; back up state privately after applies and use one infrastructure operator. Do not run competing applies or builds in the same checkout.
+
+Auth settings are separate: `task auth:deploy` deploys only the selected provider configuration. It does not complete the Console checklist, disable omitted providers, or downgrade Identity Platform. Email/password is already enabled in both projects, so this task is only needed for deliberate configuration changes. See [infra/README.md](infra/README.md) and each environment's Auth checklist before changing it. Terraform continues to own Firestore rules; web deployment uploads Hosting content only.
 
 ## Project structure
 
 ```
 lib/
-├── main.dart                  # App bootstrap, routing, theme wiring
-├── config/                    # Feature flags and build configuration
-├── help/                      # In-app instructions sheet
-├── model/                     # ProjectStore, form model, theme controller
-├── navigation/                # Route names
-├── sample_size_catalog.dart   # Sample-size options per factor count / risk
-├── storage/                   # SharedPreferences persistence boundary
-├── styles/
-│   ├── app_design.dart        # ← Central design config: every visual "knob"
-│   ├── app_theme.dart         # Material 3 theme built from AppDesign
-│   ├── tokens/                # Spacing, radius, color, border, opacity facets
-│   ├── components/            # Reusable styled widgets (cards, pills, panels)
-│   ├── layout/                # Responsive breakpoints and viewport helpers
-│   └── chart/                 # Chart scaling and layout rules
-└── widgets/
-    ├── project_home_page.dart # Project list + create
-    ├── project_form.dart      # Experiment setup form
-    ├── anomr_matrix.dart      # Data-entry grid (PlutoGrid)
-    └── anomr_results/         # ANOMR calculation, chart, export
+├── main.dart       # Entry point
+├── app/            # Validated configuration, startup, routing, composition
+├── features/
+│   ├── auth/       # Account lifecycle and Firebase Auth adapter
+│   ├── contact/    # Contact page
+│   └── experiments/ # Projects, Test Design, matrix, results, and persistence
+└── shared/         # Contracts, platform adapters, localization, and UI
 ```
+
+See the [architecture map](docs/reference/architecture_map.md) for dependencies and state
+lifetimes.
 
 ### Theming and design knobs
 
-All visual configuration — brand color, spacing scale, radii, typography, button geometry, motion — lives in **`lib/styles/app_design.dart`** as documented constants. Change a value there and it propagates through the theme and every token. Light and dark themes are generated from the same knobs, so they stay consistent automatically.
+Common visual settings live in `lib/shared/ui/theme/app_design.dart` and its
+theme tokens. Responsive layout adapts those values to the viewport. User-facing
+copy lives in `lib/shared/l10n/app_en.arb`.
 
 ## Testing
 
-Tests live in `test/` and cover the form model (factor persistence across structure changes), range-value parsing, grid undo/redo history, theme controller persistence, text-scale clamping, and end-to-end widget flows (project creation → setup → matrix → results).
+Tests mirror the app under `test/`. They cover form validation, numeric parsing,
+matrix selection and history, accessible layouts, and account isolation. The
+assembled browser journey covers project creation → Test Design → matrix → results.
+See [test commands and evidence](docs/verification/testing_evidence.md).
 
 ```bash
-flutter test
+task check               # Locked dependencies, analysis, tests and coverage
+task emulators:test      # Fresh emulators and browser Auth/Firestore tests
+task local:test          # Browser tests against already-running emulators
 ```
+
+The browser suite applies a real emulator verification code and signs out from a private workspace route. It creates uniquely named test accounts and deletes only those accounts; it does not clear existing emulator users. Stop other emulator sessions before running `emulators:test`.
 
 ## App icons
 
@@ -103,7 +174,7 @@ Configuration is in `pubspec.yaml` under `flutter_launcher_icons` (Android adapt
 
 The web app deploys to Firebase Hosting (project `bramwells-precision-test-kit`), serving `build/web` as a single-page app (`firebase.json`).
 
-- **CI/CD** — GitHub Actions build and deploy automatically: pull requests get preview channels, merges to `main` deploy to the live channel (`.github/workflows/firebase-hosting-*.yml`). Requires the `FIREBASE_SERVICE_ACCOUNT_BRAMWELLS_PRECISION_TEST_KIT` repository secret.
+- **CI/CD** — GitHub Actions validate every PR. Same-repository `dev` → `main` PRs publish to dev live; other same-repository PRs get preview channels. Production uses a manual release from `main` (`.github/workflows/firebase-hosting-*.yml`). Requires separate dev and production Firebase service-account secrets; see [web release setup](docs/guides/web_releases.md#configure-github-once).
 - **Manual deploy:**
 
 ```bash
@@ -118,3 +189,8 @@ npx -y firebase-tools@latest deploy --only hosting --project bramwells-precision
 Copyright © 2026 Denton M. Bramwell. All rights reserved.
 
 This is **proprietary software** — see [LICENSE](LICENSE). No part of the software may be reproduced, modified, or distributed without the prior express written consent of the owner.
+
+
+### Contact page
+
+The Contact page is a placeholder until a private contact form is implemented. It does not reveal an email address or send messages.

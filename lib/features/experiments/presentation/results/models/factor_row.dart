@@ -1,0 +1,45 @@
+// Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
+// Use of this source code is governed by a proprietary license that can be
+// found in the LICENSE file at the root of this project.
+// Unauthorized use or reproduction of this source code is prohibited.
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show Color;
+
+import '../../../api/factor_stats.dart';
+import '../../test_design/project_form_model.dart';
+import 'effect_status.dart';
+
+/// All data needed to render a single factor's line segment, label set, and
+/// conclusion within the combined results chart.
+@immutable
+class FactorRow {
+  /// Combines one factor's statistics with the labels, color, and positions
+  /// used to draw it.
+  const FactorRow({
+    required this.index,
+    required this.factor,
+    required this.stats,
+    required this.color,
+    required this.status,
+    required this.firstX,
+    required this.secondX,
+    required this.firstLabel,
+    required this.secondLabel,
+    required this.displayName,
+  });
+
+  final int index;
+  final FactorDefinition factor;
+  final FactorStats stats;
+  final Color color;
+  final EffectStatus status;
+  final double firstX;
+  final double secondX;
+  final String firstLabel;
+  final String secondLabel;
+  final String displayName;
+
+  /// The horizontal chart position halfway between the factor's two states.
+  double get midpointX => (firstX + secondX) / 2;
+}

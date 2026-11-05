@@ -1,0 +1,4 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Local Firebase emulators use HTTP; production keeps Android's HTTPS policy. -->
+    <application android:usesCleartextTraffic="true" />
+</manifest>

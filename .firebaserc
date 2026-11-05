@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "bramwells-precision-test-kit"
+    "default": "bramwellsprecisiontestkitdev",
+    "dev": "bramwellsprecisiontestkitdev",
+    "prod": "bramwells-precision-test-kit"
   }
 }

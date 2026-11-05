@@ -1,0 +1,23 @@
+{
+  "canonicalOrigin": "https://bramwelltest.com",
+  "previewExpires": "2d",
+  "trafficBudget": {
+    "dailyHostingBytes": 250000000,
+    "monthlyHostingBytes": 8000000000,
+    "sessionReserveBytes": 1000000,
+    "coldSessionsPerDay": 40,
+    "planningDaysPerMonth": 31
+  },
+  "environments": {
+    "dev": {
+      "projectId": "bramwellsprecisiontestkitdev",
+      "siteId": "bramwellsprecisiontestkitdev",
+      "publicOrigin": "https://dev.bramwelltest.com"
+    },
+    "prod": {
+      "projectId": "bramwells-precision-test-kit",
+      "siteId": "bramwells-precision-test-kit",
+      "publicOrigin": "https://bramwelltest.com"
+    }
+  }
+}

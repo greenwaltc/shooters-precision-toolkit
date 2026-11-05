@@ -1,0 +1,73 @@
+name: Native validation
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/native-validation.yml'
+      - 'android/**'
+      - 'ios/**'
+      - 'macos/**'
+      - 'assets/**'
+      - 'config/**'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'pubspec.*'
+      - 'l10n.yaml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: native-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.9'
+      - run: flutter pub get --enforce-lockfile
+      - name: Generate Dart localizations from the checked-out ARB
+        run: flutter gen-l10n
+      - run: node scripts/flutter.mjs dev build apk --debug --flavor dev --no-pub
+      - run: node scripts/flutter.mjs prod build apk --debug --flavor prod --no-pub
+
+  apple:
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod]
+    env:
+      APP_PROFILE: ${{ matrix.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.9'
+      - run: xcodebuild -version
+      - run: flutter pub get --enforce-lockfile
+      - name: Generate Dart localizations from the checked-out ARB
+        run: flutter gen-l10n
+      - run: node scripts/check_native_config.mjs
+      - run: node scripts/flutter.mjs "$APP_PROFILE" build ios --simulator --debug --no-codesign --flavor "$APP_PROFILE" --no-pub
+      - run: node scripts/flutter.mjs "$APP_PROFILE" build macos --debug --config-only --flavor "$APP_PROFILE" --no-pub
+      - run: >-
+          xcodebuild -quiet -workspace macos/Runner.xcworkspace
+          -scheme "$APP_PROFILE" -configuration "Debug-$APP_PROFILE"
+          -derivedDataPath build/macos-unsigned CODE_SIGNING_ALLOWED=NO build

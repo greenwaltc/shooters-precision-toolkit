@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "653363090089",
+    "project_id": "bramwells-precision-test-kit",
+    "storage_bucket": "bramwells-precision-test-kit.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653363090089:android:231c811e0f166474de0fb8",
+        "android_client_info": {
+          "package_name": "com.bramwell.bramwells_precision_test_kit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV9keB9SQH5RGV71bTNbnKYAFUQMblbTI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

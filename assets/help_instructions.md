@@ -22,7 +22,7 @@ Bramwell’s Precision Test Kit is designed to compare firearm (or other project
 2. **Configuration:** Select your preferred 𝛂 risk and the sample size appropriate for your required test resolution.
 3. **Submission:** Click **Submit** to generate the data matrix.
 4. **Data Input:** Enter your two-shot group sizes into the **Group Size** column. For tests of multiple factors, shoot groups according to the combinations of factor states in the left columns. You must pair Shot 1 with Shot 2, then Shot 3 with Shot 4, and so on. Do not pair Shot 2 with Shot 3, as the pairs must be independent.
-5. **Results:** Once entries are complete, click **Show Results**.
+5. **Results:** Once entries are complete, click **Results**.
    - The resulting chart displays a centerline with upper and lower decision limits.
    - If the average for a state falls outside these limits, that state is statistically different from the overall average at your chosen level of risk.
    - Use **Export** to save the results as a PNG, JPEG, or PDF (optionally including the data matrix).
@@ -32,7 +32,7 @@ Bramwell’s Precision Test Kit is designed to compare firearm (or other project
 - Values can be entered as decimals or fractions — typing `1/4` records `0.25`.
 - Enter and Tab advance to the next cell, spreadsheet-style, and Cmd/Ctrl+Z undoes changes.
 - Switch on **Randomize order?** to shuffle the shooting sequence, which guards against drift (barrel heating, fatigue, changing light) biasing one factor state.
-- **Clear All Group Sizes** erases every entry if you need to start the data over.
+- **Clear** erases every group size entry if you need to start the data over.
 - Your project saves automatically, so you can leave the app mid-test and pick up where you left off.
 
 **Pro-tip:** To establish a reliable basis for comparison, shoot a set of two-shot groups with a setup you already prefer.

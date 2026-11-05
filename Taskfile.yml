@@ -1,0 +1,309 @@
+version: '3'
+
+# Defaults to dev. Select production explicitly with ENV=prod.
+# Task runs these commands from the repository root, even from a subdirectory.
+vars:
+  ENV: dev
+  DEVICE: macos
+  LOCAL_PROFILE: local
+  PROJECT_ID: '{{if eq .ENV "prod"}}bramwells-precision-test-kit{{else}}bramwellsprecisiontestkitdev{{end}}'
+
+tasks:
+  default:
+    desc: List available commands
+    cmds:
+      - task --list
+
+  deps:
+    desc: Install the locked Flutter dependencies
+    cmds:
+      - flutter pub get --enforce-lockfile
+
+  architecture:check:
+    desc: Check feature boundaries and pure contracts
+    cmds:
+      - node scripts/check_architecture.mjs
+
+  project-schema:update:
+    desc: Increment the project file schema version when its contract changes
+    cmds:
+      - node scripts/project_file_schema.mjs --update{{if .BASE}} --base {{shellQuote .BASE}}{{end}}
+
+  check:
+    desc: Check generated code, architecture, repository hygiene, tests, and coverage
+    cmds:
+      - task: deps
+      - node scripts/check_generated.mjs
+      - node scripts/project_file_schema.mjs
+      - node scripts/check_architecture.mjs
+      - node scripts/check_repository.mjs
+      - dart format --output=none --set-exit-if-changed lib test integration_test test_driver
+      - flutter analyze --no-pub --fatal-infos --fatal-warnings
+      - flutter test --no-pub --coverage --test-randomize-ordering-seed=4729
+      - node scripts/check_coverage.mjs
+      - node --test scripts/tests/*_test.mjs
+
+  test:browser:
+    desc: Verify native browser clipboard events
+    cmds:
+      - flutter test --platform chrome test/browser/matrix_browser_clipboard_test.dart
+
+  test:integration:web:
+    desc: Run the assembled project journey with ChromeDriver (set CHROMEDRIVER)
+    cmds:
+      - node scripts/run_web_integration.mjs
+
+  web:test:
+    desc: Test web environment isolation and release validation
+    cmds:
+      - node --test scripts/tests/web_release_test.mjs
+
+  local:
+    desc: Start local emulators and Flutter in Chrome; Ctrl+C stops both
+    requires: &local_environment
+      vars:
+        - name: ENV
+          enum: [dev]
+    cmds:
+      - sh scripts/firebase_emulators.sh emulators:exec --ui --config firebase.emulators.json --only auth,firestore --project demo-bramwellsprecisiontestkit 'task local:run'
+
+  local:run:
+    desc: Run Flutter against already-running emulators (second terminal)
+    requires: *local_environment
+    cmds:
+      - node scripts/check_emulators.mjs
+      - node scripts/flutter.mjs local run -d chrome --web-hostname=127.0.0.1 --web-port=7357
+
+  emulators:start:
+    desc: Start local Auth, Firestore, and Emulator UI; Ctrl+C stops them
+    requires: *local_environment
+    cmds:
+      - sh scripts/firebase_emulators.sh emulators:start --config firebase.emulators.json --only auth,firestore --project demo-bramwellsprecisiontestkit
+
+  emulators:check:
+    desc: Check that local Auth and Firestore services are listening
+    cmds:
+      - node scripts/check_emulators.mjs
+
+  emulators:test:
+    desc: Start fresh emulators, test Flutter in headless Chrome, and stop services
+    requires: *local_environment
+    cmds:
+      - sh scripts/firebase_emulators.sh emulators:exec --config firebase.emulators.json --only auth,firestore --project demo-bramwellsprecisiontestkit 'task local:test'
+
+  local:test:
+    desc: Run browser Firebase connection and auth-flow tests against running services
+    requires: *local_environment
+    cmds:
+      - node scripts/check_emulators.mjs
+      - node scripts/flutter.mjs local test --platform chrome test/emulators/firebase_emulators_test.dart
+
+  web:run:
+    desc: Run in Chrome (ENV=dev or prod; default dev)
+    requires: &environment
+      vars:
+        - name: ENV
+          enum: [dev, prod]
+    cmds:
+      - node scripts/flutter.mjs {{.ENV}} run -d chrome
+
+  native:config:
+    desc: Fetch native Firebase configs from Terraform outputs and refresh Dart options
+    cmds:
+      - node scripts/sync_firebase_native.mjs
+      - dart format lib/app/firebase/firebase_options_dev.dart lib/app/firebase/firebase_options_prod.dart
+
+  native:check:
+    desc: Check native environment files, schemes, and Firebase plist selection
+    cmds:
+      - node scripts/check_native_config.mjs
+
+  native:run:
+    desc: Run a native flavor (ENV=dev/prod, DEVICE=macos or a device ID)
+    requires: *environment
+    cmds:
+      - node scripts/flutter.mjs {{.ENV}} run -d '{{.DEVICE}}' --flavor {{.ENV}}
+
+  native:local:
+    desc: Run a dev native flavor against running emulators (DEVICE=macos or device ID)
+    requires: *local_environment
+    cmds:
+      - node scripts/check_emulators.mjs
+      - node scripts/flutter.mjs {{.LOCAL_PROFILE}} run -d '{{.DEVICE}}' --flavor dev
+
+  android:build:
+    desc: Build an Android debug APK for the selected Firebase environment
+    requires: *environment
+    cmds:
+      - node scripts/flutter.mjs {{.ENV}} build apk --debug --flavor {{.ENV}}
+
+  ios:build:
+    desc: Build an unsigned iOS simulator app for the selected Firebase environment
+    requires: *environment
+    cmds:
+      - node scripts/flutter.mjs {{.ENV}} build ios --simulator --debug --no-codesign --flavor {{.ENV}}
+
+  macos:build:
+    desc: Build an unsigned macOS debug app for the selected Firebase environment
+    requires: *environment
+    cmds:
+      - node scripts/flutter.mjs {{.ENV}} build macos --debug --config-only --flavor {{.ENV}}
+      - xcodebuild -quiet -workspace macos/Runner.xcworkspace -scheme {{.ENV}} -configuration Debug-{{.ENV}} -derivedDataPath build/macos-unsigned-{{.ENV}} CODE_SIGNING_ALLOWED=NO build
+
+  verify:
+    desc: Run Flutter, native/web config, rules, and browser emulator checks sequentially
+    cmds:
+      - task: check
+      - task: native:check
+      - task: web:test
+      - task: rules:test
+      - task: emulators:test
+
+  web:build:
+    desc: Build and verify a release with environment-specific search metadata
+    requires: *environment
+    cmds:
+      - node scripts/build_web.mjs {{.ENV}}
+
+  web:check:
+    desc: Verify the selected build matches its Hosting site and has not changed
+    requires: *environment
+    cmds:
+      - node scripts/check_web_release.mjs {{.ENV}}
+
+  web:measure:
+    desc: Measure a cold Chrome load and check the Spark traffic planning budget
+    requires: *environment
+    cmds:
+      - node scripts/measure_web.mjs {{.ENV}}
+
+  web:preview:
+    desc: Check, build, measure, and publish a two-day dev preview (CHANNEL=my-change)
+    requires:
+      vars:
+        - name: ENV
+          enum: [dev]
+        - CHANNEL
+    env:
+      PREVIEW_CHANNEL: '{{.CHANNEL}}'
+    cmds:
+      - task: check
+      - task: web:test
+      - task: web:build
+      - task: web:measure
+      - node scripts/deploy_web.mjs dev
+
+  web:hosting:test:
+    desc: Check built SPA routes and headers using the Hosting emulator
+    requires: *environment
+    cmds:
+      - node scripts/run_hosting_test.mjs {{.ENV}}
+
+  web:deploy:
+    desc: Check, rebuild, and publish the selected environment's live Hosting site
+    requires: *environment
+    cmds:
+      - task: check
+      - task: web:test
+      - task: web:build
+      - task: web:measure
+      - node scripts/deploy_web.mjs {{.ENV}}
+
+  web:channels:
+    desc: List Hosting channels and expiration dates for the selected project
+    requires: *environment
+    cmds:
+      - npx -y firebase-tools@latest hosting:channel:list --project {{.PROJECT_ID}}
+
+  login:firebase:
+    desc: Sign in to Firebase CLI for Hosting and Auth deployments
+    cmds:
+      - npx -y firebase-tools@latest login
+
+  login:terraform:
+    desc: Sign in with application-default credentials for Terraform
+    cmds:
+      - gcloud auth application-default login
+
+  login:gcloud:
+    desc: Sign in to gcloud for billing and project inspection
+    cmds:
+      - gcloud auth login
+
+  infra:init:
+    desc: Initialize the selected environment's local Terraform backend
+    requires: *environment
+    cmds:
+      - terraform -chdir=infra/environments/{{.ENV}} init -input=false -lockfile=readonly
+
+  infra:fmt:
+    desc: Format all Terraform configuration
+    cmds:
+      - terraform fmt -recursive infra
+
+  infra:validate:
+    desc: Initialize and validate the selected environment; check formatting
+    requires: *environment
+    cmds:
+      - task: infra:init
+      - terraform fmt -check -recursive infra
+      - terraform -chdir=infra/environments/{{.ENV}} validate
+
+  infra:plan:
+    desc: Validate and save a plan for review (does not apply changes)
+    requires: *environment
+    cmds:
+      - task: infra:validate
+      # Remove an old plan first so a failed plan cannot leave it available to apply.
+      - rm -f infra/environments/{{.ENV}}/{{.ENV}}.tfplan
+      - terraform -chdir=infra/environments/{{.ENV}} plan -input=false -var-file={{.ENV}}.tfvars -out={{.ENV}}.tfplan
+
+  infra:show:
+    desc: Show the saved plan for the selected environment
+    requires: *environment
+    preconditions: &saved_plan
+      - sh: test -f infra/environments/{{.ENV}}/{{.ENV}}.tfplan
+        msg: 'No saved plan. Run task infra:plan ENV={{.ENV}} first.'
+    cmds:
+      - terraform -chdir=infra/environments/{{.ENV}} show -no-color {{.ENV}}.tfplan
+
+  infra:apply:
+    desc: Apply the previously reviewed saved plan (changes cloud resources)
+    requires: *environment
+    preconditions: *saved_plan
+    cmds:
+      # Applying a saved plan is explicit approval; Terraform does not prompt again.
+      - terraform -chdir=infra/environments/{{.ENV}} apply -input=false {{.ENV}}.tfplan
+      - rm -f infra/environments/{{.ENV}}/{{.ENV}}.tfplan
+
+  infra:output:
+    desc: Show Firebase app IDs and infrastructure outputs
+    requires: *environment
+    cmds:
+      - terraform -chdir=infra/environments/{{.ENV}} output
+
+  firebase:inspect:
+    desc: List app registrations and inspect the default Firestore database
+    requires: *environment
+    cmds:
+      - npx -y firebase-tools@latest apps:list --project {{.PROJECT_ID}}
+      - npx -y firebase-tools@latest firestore:databases:get '(default)' --project {{.PROJECT_ID}}
+
+  billing:check:
+    desc: Show whether Cloud Billing is enabled (expect false for Spark)
+    requires: *environment
+    cmds:
+      - gcloud billing projects describe {{.PROJECT_ID}} --format='value(billingEnabled)'
+
+  auth:deploy:
+    desc: Deploy the selected Auth provider configuration (review Auth subtype first)
+    requires: *environment
+    cmds:
+      - npx -y firebase-tools@latest deploy --only auth --config firebase.auth.{{.ENV}}.json --project {{.PROJECT_ID}}
+
+  rules:test:
+    desc: Test Firestore permissions using a local demo project
+    requires: *local_environment
+    cmds:
+      - npm --prefix security-tests ci --ignore-scripts
+      - node scripts/run_rules_tests.mjs

@@ -1,6 +1,9 @@
 /// Shipped product policy. Owner: application maintainer. Public, reviewed values;
 /// changes take effect with the next artifact. These are not remote flags.
 abstract final class BehaviorPolicy {
+  /// Maximum project title length accepted by the project storage rules.
+  static const maxProjectTitleLength = 200;
+
   static const initialCloudLoadTimeout = Duration(seconds: 15);
   static const saveDebounce = Duration(seconds: 2);
   static const emailCooldown = Duration(seconds: 60);

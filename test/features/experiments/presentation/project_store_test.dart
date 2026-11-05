@@ -61,6 +61,82 @@ void main() {
     await backend.dispose();
   });
 
+  test(
+    'cloning saves a separate design and matrix without changing selection',
+    () async {
+      final original = await store.createProject();
+      original.formModel.setProjectTitle('Precision trial');
+      original.formModel.setFactorDefinition(
+        index: 0,
+        name: 'Primer',
+        firstState: 'A',
+        secondState: 'B',
+      );
+      expect(await store.completeProjectSetup(), isTrue);
+      original.randomizeOrder = true;
+      original.randomizeSequence = [1, 0];
+      original.matrixState['range_0'] = '1.25';
+      await store.saveSelectedProject();
+      final selected = await store.createProject();
+
+      final copy = await store.cloneProject(
+        original.id,
+        title: 'Clone of Precision trial',
+      );
+      expect(store.projects, contains(copy));
+      expect(copy.id, isNot(original.id));
+      expect(copy.displayName, 'Clone of Precision trial');
+      expect(store.selectedProject, same(selected));
+      expect(copy.setupComplete, isTrue);
+      expect(copy.randomizeOrder, isTrue);
+      expect(copy.randomizeSequence, [1, 0]);
+      expect(
+        copy.formModel.toJson(),
+        original.formModel.toJson()
+          ..['projectTitle'] = 'Clone of Precision trial',
+      );
+      expect(copy.matrixState, original.matrixState);
+      final persisted = await repository.watchProject(copy.id).first;
+      expect(persisted!.revision, 1);
+      expect(persisted.project.matrixState['range_0'], '1.25');
+      copy.matrixState['range_0'] = '2';
+      copy.randomizeSequence![0] = 0;
+      copy.formModel.setProjectTitle('Renamed');
+      expect(original.matrixState['range_0'], '1.25');
+      expect(original.randomizeSequence, [1, 0]);
+      expect(original.displayName, 'Precision trial');
+    },
+  );
+
+  test('a rejected clone does not add a draft or change selection', () async {
+    final original = await store.createProject();
+    repository.saveFailure = StateError('offline');
+    await expectLater(
+      store.cloneProject(original.id, title: 'Clone of Untitled Project'),
+      throwsStateError,
+    );
+    expect(store.projects, [original]);
+    expect(store.selectedProject, same(original));
+    expect(await store.draftStorage.readAll(), isEmpty);
+  });
+
+  test(
+    'a clone title is shortened only when it exceeds 200 characters',
+    () async {
+      final original = await store.createProject();
+      final fullTitle = 'Clone of ${'a' * 190}🎯';
+
+      final exact = await store.cloneProject(original.id, title: fullTitle);
+      final overLimit = await store.cloneProject(
+        original.id,
+        title: '${fullTitle}a',
+      );
+
+      expect(exact.displayName, fullTitle);
+      expect(overLimit.displayName, 'Clone of ${'a' * 190}…');
+    },
+  );
+
   test('edit state captures metadata independently for each project', () async {
     final first = await store.createProject();
     final second = await store.createProject();

@@ -27,13 +27,13 @@ class ProjectForm extends StatefulWidget {
   /// Creates the experiment-design form around [formModel].
   ///
   /// [onSubmit], when supplied, lets the parent decide what happens when the
-  /// user submits it. Set [showPinnedControls] to false while a mobile
-  /// keyboard covers the bottom of the screen.
+  /// user submits it from the bottom of the form. Set [showScrollCues] to
+  /// false while a mobile keyboard covers the bottom of the screen.
   const ProjectForm({
     super.key,
     required this.formModel,
     this.onSubmit,
-    this.showPinnedControls = true,
+    this.showScrollCues = true,
   });
 
   /// Mutable setup state shared with the selected project.
@@ -42,8 +42,8 @@ class ProjectForm extends StatefulWidget {
   /// Called after validation succeeds.
   final Future<void> Function()? onSubmit;
 
-  /// Whether to show the pinned submit button and scroll cues.
-  final bool showPinnedControls;
+  /// Whether to show the indicators for more scrollable content.
+  final bool showScrollCues;
 
   @override
   State<ProjectForm> createState() => _ProjectFormState();
@@ -231,24 +231,13 @@ class _ProjectFormState extends State<ProjectForm> {
         key: _formKey,
         autovalidateMode: AutovalidateMode.onUserInteraction,
         child: AppLayoutBuilder(
-          builder: (context, layout) => _buildFormLayout(context, layout),
+          builder: (context, layout) => _buildScrollableForm(context, layout),
         ),
       ),
     );
   }
 
-  /// Lets the field list use the whole available area while typing on mobile.
-  Widget _buildFormLayout(BuildContext context, AppLayoutMetrics layout) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: _buildScrollableFields(context, layout)),
-        if (widget.showPinnedControls) _buildSubmitButton(layout),
-      ],
-    );
-  }
-
-  Widget _buildScrollableFields(BuildContext context, AppLayoutMetrics layout) {
+  Widget _buildScrollableForm(BuildContext context, AppLayoutMetrics layout) {
     final scheme = Theme.of(context).colorScheme;
 
     return Stack(
@@ -272,19 +261,20 @@ class _ProjectFormState extends State<ProjectForm> {
                   _buildFormTitle(context),
                   const SizedBox(height: AppSpacing.md),
                   _buildResponsiveFieldGroups(layout),
+                  _buildSubmitButton(layout),
                 ],
               ),
             ),
           ),
         ),
-        if (_showTopScrollCue && widget.showPinnedControls)
+        if (_showTopScrollCue && widget.showScrollCues)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: GridScrollCue(edge: ScrollCueEdge.top, scheme: scheme),
           ),
-        if (_showBottomScrollCue && widget.showPinnedControls)
+        if (_showBottomScrollCue && widget.showScrollCues)
           Positioned(
             bottom: 0,
             left: 0,
@@ -587,7 +577,7 @@ class _ProjectFormState extends State<ProjectForm> {
       child: layout.useStackedActions
           ? SizedBox(width: double.infinity, child: button)
           : Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minWidth: 160),
                 child: button,

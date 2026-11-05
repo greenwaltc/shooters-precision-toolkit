@@ -313,9 +313,10 @@ class _MyAppState extends State<MyApp> {
                   settings: settings,
                   builder: (context) {
                     final page = builder(context);
-                    // Editors show status in their banners; Results needs no
-                    // floating footer status.
-                    if (settings.name == AppRoutes.projectForm ||
+                    // Editors show status in their banners. The project list
+                    // and Results do not use the floating footer status.
+                    if (settings.name == AppRoutes.projects ||
+                        settings.name == AppRoutes.projectForm ||
                         settings.name == AppRoutes.anomrMatrix ||
                         settings.name == AppRoutes.anomrResults) {
                       return page;

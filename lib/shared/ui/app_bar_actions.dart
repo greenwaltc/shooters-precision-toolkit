@@ -51,8 +51,14 @@ class AppBarActionItem {
 
 /// App bar actions that move into a menu when the title needs more room.
 abstract final class AppBarActionBar {
-  /// Estimated width of a standard [IconButton] app-bar action.
+  /// Touch target width of an icon action or the overflow menu button.
   static const double iconActionWidth = kMinInteractiveDimension;
+
+  static final _iconActionStyle = IconButton.styleFrom(
+    fixedSize: const Size.square(iconActionWidth),
+    iconSize: AppDesign.appBarActionIconSize,
+    visualDensity: VisualDensity.standard,
+  );
 
   /// Authenticated app bars share the same save-and-sign-out operation.
   /// Standalone workspace previews/tests can omit the session provider.
@@ -98,12 +104,22 @@ abstract final class AppBarActionBar {
 
     final overflow = metrics.overflowItems;
     return [
-      for (final item in metrics.inlineItems) _inlineAction(context, item),
+      for (final item in metrics.inlineItems)
+        if (item.filledInline)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDesign.appBarActionGap / 2,
+            ),
+            child: _inlineAction(context, item),
+          )
+        else
+          _inlineAction(context, item),
       if (overflow.isNotEmpty)
         PopupMenuButton<AppBarActionItem>(
           tooltip: context.l10n.menu,
           position: PopupMenuPosition.under,
           icon: const Icon(Icons.menu),
+          style: _iconActionStyle,
           onSelected: (item) => item.onPressed(),
           itemBuilder: (context) => [
             for (final item in overflow)
@@ -182,21 +198,22 @@ abstract final class AppBarActionBar {
       return _DonateButton(item: item);
     }
     if (item.filledInline) {
-      return Padding(
-        padding: AppDesign.appBarFilledActionMargin,
-        child: Tooltip(
-          message: item.tooltip ?? item.label,
-          excludeFromSemantics: true,
-          child: FilledButton(
-            onPressed: item.onPressed,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, AppDesign.appBarFilledActionMinHeight),
-              padding: AppDesign.appBarFilledActionPadding,
-              tapTargetSize: MaterialTapTargetSize.padded,
-              visualDensity: VisualDensity.standard,
+      return Tooltip(
+        message: item.tooltip ?? item.label,
+        excludeFromSemantics: true,
+        child: FilledButton(
+          onPressed: item.onPressed,
+          style: FilledButton.styleFrom(
+            textStyle: _actionLabelStyle(context),
+            minimumSize: const Size(
+              iconActionWidth,
+              AppDesign.appBarFilledActionMinHeight,
             ),
-            child: Text(item.label),
+            padding: AppDesign.appBarFilledActionPadding,
+            tapTargetSize: MaterialTapTargetSize.padded,
+            visualDensity: VisualDensity.standard,
           ),
+          child: Text(item.label),
         ),
       );
     }
@@ -205,6 +222,7 @@ abstract final class AppBarActionBar {
       tooltip: item.tooltip ?? item.label,
       onPressed: item.onPressed,
       icon: Icon(item.icon),
+      style: _iconActionStyle,
     );
   }
 }
@@ -249,7 +267,6 @@ class AppBarActionsMetrics {
     final fullWidth = _estimateInlineWidth(context, items);
     final donate = items.where((item) => item.isDonation).toList();
     final regular = items.where((item) => !item.isDonation).toList();
-    final menuWidth = AppBarActionBar.iconActionWidth;
     final logoHeight = AppBrandAssets.heightFor(layout);
     final logoWidth = layout.isMobile
         ? logoHeight
@@ -261,9 +278,11 @@ class AppBarActionsMetrics {
         ? AppDesign.appBarBrandTitleGapCompact
         : AppDesign.appBarBrandTitleGap;
     final widthWithTitle = screenWidth - leadingWidth - 2 * titleSpacing;
-    final donateAndMenuWidth =
-        _estimateInlineWidth(context, donate) +
-        (regular.isEmpty ? 0 : menuWidth);
+    final donateAndMenuWidth = _estimateInlineWidth(
+      context,
+      donate,
+      hasMenu: regular.isNotEmpty,
+    );
 
     final List<AppBarActionItem> inline;
     final List<AppBarActionItem> overflow;
@@ -287,9 +306,11 @@ class AppBarActionsMetrics {
       inline = const [];
       overflow = [...donate, ...regular];
     }
-    final actionsWidth =
-        _estimateInlineWidth(context, inline) +
-        (overflow.isEmpty ? 0 : menuWidth);
+    final actionsWidth = _estimateInlineWidth(
+      context,
+      inline,
+      hasMenu: overflow.isNotEmpty,
+    );
     return AppBarActionsMetrics._(
       inlineItems: List.unmodifiable(inline),
       overflowItems: List.unmodifiable(overflow),
@@ -300,13 +321,17 @@ class AppBarActionsMetrics {
 
   static double _estimateInlineWidth(
     BuildContext context,
-    List<AppBarActionItem> items,
-  ) {
-    var total = 0.0;
+    List<AppBarActionItem> items, {
+    bool hasMenu = false,
+  }) {
+    var total = hasMenu ? AppBarActionBar.iconActionWidth : 0.0;
     for (final item in items) {
       if (item.filledInline) {
         final painter = TextPainter(
-          text: TextSpan(text: item.label, style: _actionLabelStyle(context)),
+          text: TextSpan(
+            text: item.isDonation ? item.label.toUpperCase() : item.label,
+            style: _actionLabelStyle(context),
+          ),
           textDirection: Directionality.of(context),
           textScaler: MediaQuery.textScalerOf(context),
           maxLines: 1,
@@ -314,14 +339,11 @@ class AppBarActionsMetrics {
         final padding = item.isDonation
             ? AppDesign.donateActionPadding
             : AppDesign.appBarFilledActionPadding;
-        final margin = item.isDonation
-            ? AppDesign.donateActionMargin
-            : AppDesign.appBarFilledActionMargin;
         total +=
             (painter.width + padding.horizontal)
                 .clamp(AppBarActionBar.iconActionWidth, double.infinity)
                 .ceilToDouble() +
-            margin.horizontal;
+            AppDesign.appBarActionGap;
         painter.dispose();
       } else {
         total += AppBarActionBar.iconActionWidth;
@@ -355,70 +377,67 @@ class _DonateButton extends StatelessWidget {
     final cyan = Color.alphaBlend(scrim, AppDesign.donateGradientCyan);
     final silver = Color.alphaBlend(scrim, AppDesign.donateGradientSilver);
     final radius = BorderRadius.circular(AppDesign.donateButtonRadius);
-    return Padding(
-      padding: AppDesign.donateActionMargin,
-      child: Tooltip(
-        message: item.tooltip ?? item.label,
-        excludeFromSemantics: true,
-        child: FilledButton(
-          onPressed: item.onPressed,
-          style:
-              FilledButton.styleFrom(
-                textStyle: _actionLabelStyle(context),
-                foregroundColor: Colors.white,
-                backgroundColor: magenta,
-                elevation: AppDesign.elevationFloating,
-                shadowColor: scheme.shadow,
-                minimumSize: const Size(
-                  kMinInteractiveDimension,
-                  kMinInteractiveDimension,
-                ),
-                padding: AppDesign.donateActionPadding,
-                visualDensity: VisualDensity.standard,
-                tapTargetSize: MaterialTapTargetSize.padded,
-                shape: RoundedRectangleBorder(borderRadius: radius),
-              ).copyWith(
-                backgroundBuilder: (context, states, child) {
-                  final highlighted =
-                      states.contains(WidgetState.hovered) ||
-                      states.contains(WidgetState.focused);
-                  return TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: highlighted ? 1 : 0),
-                    duration: reduceMotion
-                        ? Duration.zero
-                        : AppDesign.donateGradientDuration,
-                    curve: AppDesign.motionCurve,
-                    child: child,
-                    builder: (context, phase, child) {
-                      // The narrow highlight appears only during the sweep.
-                      final sheen = 4 * phase * (1 - phase);
-                      return Ink(
-                        decoration: BoxDecoration(
-                          borderRadius: radius,
-                          gradient: LinearGradient(
-                            begin: Alignment(-1 - 2 * phase, -1 - 2 * phase),
-                            end: Alignment(3 - 2 * phase, 3 - 2 * phase),
-                            colors: [
-                              magenta,
-                              Color.lerp(magenta, cyan, 0.88)!,
-                              Color.lerp(cyan, silver, sheen)!,
-                              Color.lerp(cyan, magenta, 0.12)!,
-                              magenta,
-                            ],
-                            stops: const [0, 0.47, 0.51, 0.55, 1],
-                          ),
-                        ),
-                        child: child,
-                      );
-                    },
-                  );
-                },
+    return Tooltip(
+      message: item.tooltip ?? item.label,
+      excludeFromSemantics: true,
+      child: FilledButton(
+        onPressed: item.onPressed,
+        style:
+            FilledButton.styleFrom(
+              textStyle: _actionLabelStyle(context),
+              foregroundColor: Colors.white,
+              backgroundColor: magenta,
+              elevation: AppDesign.elevationFloating,
+              shadowColor: scheme.shadow,
+              minimumSize: const Size(
+                kMinInteractiveDimension,
+                kMinInteractiveDimension,
               ),
-          child: Text(
-            item.label.toUpperCase(),
-            semanticsLabel: item.label,
-            maxLines: 1,
-          ),
+              padding: AppDesign.donateActionPadding,
+              visualDensity: VisualDensity.standard,
+              tapTargetSize: MaterialTapTargetSize.padded,
+              shape: RoundedRectangleBorder(borderRadius: radius),
+            ).copyWith(
+              backgroundBuilder: (context, states, child) {
+                final highlighted =
+                    states.contains(WidgetState.hovered) ||
+                    states.contains(WidgetState.focused);
+                return TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: highlighted ? 1 : 0),
+                  duration: reduceMotion
+                      ? Duration.zero
+                      : AppDesign.donateGradientDuration,
+                  curve: AppDesign.motionCurve,
+                  child: child,
+                  builder: (context, phase, child) {
+                    // The narrow highlight appears only during the sweep.
+                    final sheen = 4 * phase * (1 - phase);
+                    return Ink(
+                      decoration: BoxDecoration(
+                        borderRadius: radius,
+                        gradient: LinearGradient(
+                          begin: Alignment(-1 - 2 * phase, -1 - 2 * phase),
+                          end: Alignment(3 - 2 * phase, 3 - 2 * phase),
+                          colors: [
+                            magenta,
+                            Color.lerp(magenta, cyan, 0.88)!,
+                            Color.lerp(cyan, silver, sheen)!,
+                            Color.lerp(cyan, magenta, 0.12)!,
+                            magenta,
+                          ],
+                          stops: const [0, 0.47, 0.51, 0.55, 1],
+                        ),
+                      ),
+                      child: child,
+                    );
+                  },
+                );
+              },
+            ),
+        child: Text(
+          item.label.toUpperCase(),
+          semanticsLabel: item.label,
+          maxLines: 1,
         ),
       ),
     );

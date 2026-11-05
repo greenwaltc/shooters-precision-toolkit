@@ -637,6 +637,18 @@ class AppLocalizationsEn extends AppLocalizations {
       '© 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt';
 
   @override
+  String get cloneProjectAction => 'Clone project';
+
+  @override
+  String cloneOfProject(String projectName) {
+    return 'Clone of $projectName';
+  }
+
+  @override
+  String get unableToCloneProject =>
+      'Could not confirm the copy. Check the project list before trying again.';
+
+  @override
   String get deleteProjectAction => 'Delete project';
 
   @override

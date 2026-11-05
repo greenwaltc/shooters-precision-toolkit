@@ -33,6 +33,7 @@ class ProjectHomePage extends StatefulWidget {
 }
 
 class _ProjectHomePageState extends State<ProjectHomePage> {
+  final _cloningProjects = <String>{};
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ProjectStore>();
@@ -97,7 +98,7 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                     clearFloatingAction: false,
                   ),
           ),
-          bottomNavigationBar: const WorkspaceFooter(),
+          bottomNavigationBar: const WorkspaceFooter(showSaveStatus: false),
         );
       },
     );
@@ -247,7 +248,13 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                   separatorBuilder: (_, _) =>
                       const SizedBox(height: AppSpacing.md),
                   itemBuilder: (context, index) {
-                    return _ProjectListTile(project: projects[index]);
+                    final project = projects[index];
+                    return _ProjectListTile(
+                      key: ValueKey(project.id),
+                      project: project,
+                      cloning: _cloningProjects.contains(project.id),
+                      onClone: () => _cloneProject(store, project),
+                    );
                   },
                 ),
                 if (store.olderProjectsError != null) ...[
@@ -277,6 +284,26 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
     );
   }
 
+  /// Clones this row's project without changing the current route or selection.
+  Future<void> _cloneProject(ProjectStore store, SavedProject project) async {
+    if (_cloningProjects.contains(project.id)) return;
+    final title = context.l10n.cloneOfProject(project.displayName);
+    setState(() => _cloningProjects.add(project.id));
+    try {
+      await store.cloneProject(project.id, title: title);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.l10n.unableToCloneProject)),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _cloningProjects.remove(project.id));
+      }
+    }
+  }
+
   Future<void> _createProject(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
     await store.createProject();
@@ -288,9 +315,16 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
 }
 
 class _ProjectListTile extends StatelessWidget {
-  const _ProjectListTile({required this.project});
+  const _ProjectListTile({
+    super.key,
+    required this.project,
+    required this.cloning,
+    required this.onClone,
+  });
 
   final SavedProject project;
+  final bool cloning;
+  final VoidCallback onClone;
 
   @override
   Widget build(BuildContext context) {
@@ -348,6 +382,16 @@ class _ProjectListTile extends StatelessWidget {
               tooltip: context.l10n.deleteProjectAction,
               onPressed: () => _deleteProject(context),
               icon: const Icon(Icons.delete_outline),
+            ),
+            IconButton(
+              tooltip: context.l10n.cloneProjectAction,
+              onPressed: cloning ? null : onClone,
+              icon: cloning
+                  ? const SizedBox.square(
+                      dimension: AppDesign.space20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.content_copy_outlined),
             ),
             Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
           ],

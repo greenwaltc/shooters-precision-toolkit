@@ -458,6 +458,7 @@ void main() {
       ProjectStore? store;
       String? id;
       String? copyId;
+      String? cloneId;
       try {
         await auth.register(email, 'Local-test-password-123!');
         final response = await web.window
@@ -611,10 +612,39 @@ void main() {
               as Map<String, Object?>)['projectTitle'],
           'Other tab owns revision six',
         );
+        copy.matrixState['range_0'] = '1.25';
+        final clone = await workspace.cloneProject(
+          copy.id,
+          title: 'Clone of ${copy.displayName}',
+        );
+        cloneId = clone.id;
+        expect(workspace.selectedProject!.id, copy.id);
+        expect(
+          workspace.projects.map((project) => project.id),
+          contains(cloneId),
+        );
+        final cloned = await repository
+            .watchProject(clone.id)
+            .firstWhere((record) => record != null && !record.isFromCache)
+            .timeout(const Duration(seconds: 10));
+        expect(cloned!.revision, 1);
+        expect(
+          cloned.project.displayName,
+          'Clone of Recover as separate project',
+        );
+        expect(cloned.project.matrixState['range_0'], '1.25');
       } finally {
         store?.dispose();
         final user = services.auth.currentUser;
         if (user != null) {
+          if (cloneId != null) {
+            await services.db
+                .collection('users')
+                .doc(user.uid)
+                .collection('projects')
+                .doc(cloneId)
+                .delete();
+          }
           if (copyId != null) {
             await services.db
                 .collection('users')

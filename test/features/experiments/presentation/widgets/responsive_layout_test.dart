@@ -14,8 +14,10 @@ import 'package:bramwells_precision_test_kit/shared/ui/app_brand_bar.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_copyright_footer.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/product_configuration.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/theme/chart/chart_scale.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/theme/tokens/app_headings.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pluto_grid/pluto_grid.dart';
@@ -121,8 +123,9 @@ void main() {
         final originalValues = Map.of(store.selectedProject!.matrixState);
         expect(manager.columns.map((column) => column.field).toList(), [
           'row',
-          for (var index = 0; index < factorCount; index++) 'factor_$index',
           if (factorCount > 1) 'group',
+          for (var index = factorCount - 1; index >= 0; index--)
+            'factor_$index',
           'range',
         ]);
         for (final width in [
@@ -151,7 +154,12 @@ void main() {
           if (width >= 1024) {
             final gridBounds = tester.getRect(grid);
             final results = find.widgetWithText(FilledButton, 'Results');
-            final clear = find.widgetWithText(TextButton, 'Clear');
+            final clear = find.ancestor(
+              of: find.text('Clear'),
+              matching: find.byWidgetPredicate(
+                (widget) => widget is OutlinedButton,
+              ),
+            );
             expect(
               tester.getTopRight(results).dx,
               closeTo(gridBounds.right, 1),
@@ -312,7 +320,9 @@ void main() {
           .descendant(of: form, matching: find.byType(TextFormField))
           .first;
       final before = tester.getSize(scroll).height;
-      expect(find.text('Submit'), findsOneWidget);
+      final submit = find.descendant(of: scroll, matching: find.text('Submit'));
+      expect(submit, findsOneWidget);
+      expect(submit.hitTestable(), findsNothing);
 
       await tester.enterText(title, 'Keyboard test');
       const keyboardHeight = 330.0;
@@ -324,7 +334,7 @@ void main() {
         const Duration(seconds: 5),
       );
 
-      expect(find.text('Submit'), findsNothing);
+      expect(submit.hitTestable(), findsNothing);
       expect(cues, findsNothing);
       expect(
         tester.getSize(scroll).height,
@@ -335,7 +345,9 @@ void main() {
 
       tester.view.resetViewInsets();
       await tester.pump();
-      expect(find.text('Submit'), findsOneWidget);
+      await tester.ensureVisible(submit);
+      await tester.pump();
+      expect(submit.hitTestable(), findsOneWidget);
     });
 
     for (final entry in _viewports.entries) {
@@ -368,6 +380,42 @@ void main() {
     }
   });
 
+  testWidgets('desktop project title switches artwork before shortening', (
+    tester,
+  ) async {
+    const name = 'Comparing several loads in variable conditions';
+    _configureViewport(tester, size: const Size(2400, 900), textScale: 1);
+    await _pumpCompletedProject(tester, projectName: name);
+    await _tapText(tester, name);
+    final brand = find.byType(AppBrandTitle);
+    final title = find.descendant(of: brand, matching: find.text(name));
+    final image = find.descendant(of: brand, matching: find.byType(Image));
+    String asset() =>
+        (tester.widget<Image>(image).image as AssetImage).assetName;
+    double fontSize() => tester.widget<Text>(title).style!.fontSize!;
+    bool isTruncated() =>
+        tester.renderObject<RenderParagraph>(title).didExceedMaxLines;
+    final headingSize = AppHeadings.h2(tester.element(title))!.fontSize!;
+
+    expect(asset(), AppBrandAssets.bannerLogo);
+    expect(fontSize(), headingSize);
+    expect(isTruncated(), isFalse);
+
+    tester.view.physicalSize = const Size(2100, 900);
+    await tester.pump();
+    expect(asset(), AppBrandAssets.compactIcon);
+    expect(fontSize(), headingSize);
+    expect(isTruncated(), isFalse);
+
+    tester.view.physicalSize = const Size(1024, 900);
+    await tester.pump();
+    expect(asset(), AppBrandAssets.compactIcon);
+    expect(fontSize(), lessThan(headingSize));
+    expect(tester.widget<Text>(title).overflow, TextOverflow.ellipsis);
+    expect(isTruncated(), isTrue);
+    _expectNoLayoutErrors(tester, 'constrained desktop project banner');
+  });
+
   group('matrix and results', () {
     for (final entry in _viewports.entries) {
       for (final factorCount in <int>[1, 4]) {
@@ -382,8 +430,23 @@ void main() {
           final homeLogoHeight = tester
               .getSize(find.byType(AppBrandTitleLogo))
               .height;
+          if (entry.value.width >= 1024) {
+            expect(homeLogoHeight, 72);
+          }
           await _tapText(tester, 'Bench Rest Comparison');
           _expectNoLayoutErrors(tester, '$label — data matrix');
+          final clear = tester.widget<OutlinedButton>(
+            find.ancestor(
+              of: find.text('Clear'),
+              matching: find.byWidgetPredicate(
+                (widget) => widget is OutlinedButton,
+              ),
+            ),
+          );
+          expect(
+            clear.style?.side?.resolve({})?.color,
+            clear.style?.foregroundColor?.resolve({}),
+          );
           expect(
             tester.getSize(find.byType(AppBrandTitleLogo)).height,
             homeLogoHeight,
@@ -686,6 +749,7 @@ Future<void> _pumpApp(WidgetTester tester) async {
 Future<void> _pumpCompletedProject(
   WidgetTester tester, {
   int factorCount = 1,
+  String projectName = 'Bench Rest Comparison',
 }) async {
   final store = ProjectStore(
     clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
@@ -698,7 +762,7 @@ Future<void> _pumpCompletedProject(
 
   final project = await store.createProject();
   final model = project.formModel;
-  model.setProjectTitle('Bench Rest Comparison');
+  model.setProjectTitle(projectName);
   model.setExperimentStructure(
     ExperimentStructure.values.firstWhere(
       (structure) => structure.factorCount == factorCount,

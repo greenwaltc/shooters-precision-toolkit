@@ -9,6 +9,7 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/s
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/widgets/project_save_status.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/navigation/app_routes.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -180,6 +181,7 @@ void main() {
         EnginePhase.sendSemanticsUpdate,
         const Duration(seconds: 5),
       );
+      await _openEditor(tester);
       await tester.tap(find.text('Review conflict'));
       await tester.pumpAndSettle(
         const Duration(milliseconds: 100),
@@ -196,7 +198,8 @@ void main() {
       expect(store.selectedProject!.id, isNot(originalId));
       expect(store.selectedProject!.displayName, 'Recovered draft');
       expect(store.projects.length, 1);
-      expect(find.text('Saved'), findsOneWidget);
+      expect(find.byType(ProjectHomePage), findsOneWidget);
+      expect(find.byType(ProjectSaveStatus), findsNothing);
       await pumpConfiguredWidget(tester, const SizedBox.shrink());
       store.dispose();
     },
@@ -242,7 +245,7 @@ void main() {
         EnginePhase.sendSemanticsUpdate,
         const Duration(seconds: 5),
       );
-      expect(find.text('Save conflict. Your draft is kept.'), findsOneWidget);
+      await _openEditor(tester);
       await tester.tap(find.text('Review conflict'));
       await tester.pumpAndSettle(
         const Duration(milliseconds: 100),
@@ -270,7 +273,8 @@ void main() {
         const Duration(seconds: 5),
       );
       expect(store.selectedProject!.displayName, 'Cloud');
-      expect(find.text('Saved'), findsOneWidget);
+      expect(find.byType(ProjectHomePage), findsOneWidget);
+      expect(find.byType(ProjectSaveStatus), findsNothing);
       await pumpConfiguredWidget(tester, const SizedBox.shrink());
       store.dispose();
     },
@@ -322,6 +326,16 @@ void main() {
     await pumpConfiguredWidget(tester, const SizedBox.shrink());
     store.dispose();
   });
+}
+
+Future<void> _openEditor(WidgetTester tester) async {
+  final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+  unawaited(navigator.pushNamed<void>(AppRoutes.projectForm));
+  await tester.pumpAndSettle(
+    const Duration(milliseconds: 100),
+    EnginePhase.sendSemanticsUpdate,
+    const Duration(seconds: 5),
+  );
 }
 
 Future<void> _pumpStatus(WidgetTester tester, ProjectStore store) =>

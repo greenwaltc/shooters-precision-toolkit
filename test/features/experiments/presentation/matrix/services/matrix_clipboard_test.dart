@@ -71,13 +71,13 @@ void main() {
       );
       expect(selectedBackground.color, manager.style.activatedColor);
       final expected = [
-        'Run Order\tFactor 0\tFactor 1\tReplicate\tGroup Size',
+        'Run Order\tReplicate\tFactor 1\tFactor 0\tGroup Size',
         for (var i = 0; i < 4; i++)
           [
             'row',
-            'factor_0',
-            'factor_1',
             'group',
+            'factor_1',
+            'factor_0',
             'range',
           ].map((field) => '${manager.rows[i].cells[field]!.value}').join('\t'),
       ].join('\n');
@@ -100,7 +100,7 @@ void main() {
         tester.getCenter(matrixCell(3, 'range')),
         kind: PointerDeviceKind.mouse,
       );
-      await reverse.moveTo(tester.getCenter(matrixCell(1, 'factor_0')));
+      await reverse.moveTo(tester.getCenter(matrixCell(1, 'group')));
       await tester.pump();
       await reverse.up();
       await tester.pumpAndSettle(
@@ -112,7 +112,7 @@ void main() {
       expect(rectangle.split('\n'), hasLength(4));
       expect(
         rectangle.split('\n').first,
-        'Factor 0\tFactor 1\tReplicate\tGroup Size',
+        'Replicate\tFactor 1\tFactor 0\tGroup Size',
       );
       expect(rectangle.split('\n').first.split('\t'), hasLength(4));
       expect(manager.isEditing, isFalse);
@@ -143,9 +143,10 @@ void main() {
     expect(forward.split('\n').first.split('\t'), hasLength(5));
     expect(
       forward.split('\n').first,
-      'Run Order\tFactor 0\tFactor 1\tReplicate\tGroup Size',
+      'Run Order\tReplicate\tFactor 1\tFactor 0\tGroup Size',
     );
-    expect(forward.split('\n')[1], startsWith('1\tLow 0\tLow 1\t1\t'));
+    expect(forward.split('\n')[1], startsWith('1\t1\tLow 1\tLow 0\t'));
+    expect(forward.split('\n')[2], startsWith('2\t1\tHigh 1\tLow 0\t'));
     manager.setCurrentCell(manager.rows[2].cells['range'], 2);
     manager.setCurrentSelectingPosition(
       cellPosition: const PlutoGridCellPosition(columnIdx: 0, rowIdx: 0),
@@ -184,8 +185,8 @@ void main() {
     manager.setCurrentSelectingRowsByRange(0, 1);
     final rows = MatrixGridClipboard.copyTextForSelection(manager)!.split('\n');
     expect(rows, hasLength(3));
-    expect(rows.first, 'Run Order\tFactor 0\tFactor 1\tReplicate\tGroup Size');
-    expect(rows[1], startsWith('1\tLow 0\tLow 1\t1\t'));
+    expect(rows.first, 'Run Order\tReplicate\tFactor 1\tFactor 0\tGroup Size');
+    expect(rows[1], startsWith('1\t1\tLow 1\tLow 0\t'));
   });
 
   testWidgets(

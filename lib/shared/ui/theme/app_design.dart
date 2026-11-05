@@ -247,9 +247,13 @@ class AppDesign {
     horizontal: space24,
     vertical: space16,
   );
-  static const EdgeInsets appBarFilledActionMargin = EdgeInsets.symmetric(
-    horizontal: space12,
-  );
+
+  /// Glyph size for banner actions that use an icon instead of a label.
+  static const double appBarActionIconSize = space24;
+
+  /// Visible gap between banner actions, matching two centered icon insets.
+  static const double appBarActionGap =
+      kMinInteractiveDimension - appBarActionIconSize;
 
   /// Minimum space left for a label before ordinary banner actions overflow.
   static const double appBarMinimumTitleLabelWidth = 64;
@@ -258,9 +262,6 @@ class AppDesign {
   static const EdgeInsets donateActionPadding = EdgeInsets.symmetric(
     horizontal: space12,
     vertical: space8,
-  );
-  static const EdgeInsets donateActionMargin = EdgeInsets.symmetric(
-    horizontal: space4,
   );
 
   /// Accent colors and motion for the Donate button's sliding gradient.
@@ -314,6 +315,9 @@ class AppDesign {
 
   /// Standard banner logo height, shared by all pages.
   static const double appBarLogoHeight = 48;
+
+  /// Desktop logo height across all page banners.
+  static const double appBarLogoHeightDesktop = appBarLogoHeight * 1.5;
 
   /// Shared banner logo height for compact layouts.
   static const double appBarLogoHeightCompact = 40;

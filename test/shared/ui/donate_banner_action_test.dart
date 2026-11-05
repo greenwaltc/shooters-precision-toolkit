@@ -29,6 +29,11 @@ Future<void> _pumpBanner(WidgetTester tester) => pumpConfiguredWidget(
               AppBarActionBar.instructions(context),
               AppBarActionBar.donations(context),
               AppBarActionBar.contact(context),
+              AppBarActionItem(
+                label: 'Projects',
+                icon: Icons.home_outlined,
+                onPressed: () {},
+              ),
             ],
           ),
         ),
@@ -46,10 +51,18 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
     await _pumpBanner(tester);
-    expect(
-      tester.getTopLeft(find.text('DONATE')).dx,
-      lessThan(tester.getTopLeft(find.text('Instructions')).dx),
-    );
+    final controls = [
+      find.widgetWithText(FilledButton, 'DONATE'),
+      find.widgetWithText(FilledButton, 'Instructions'),
+      find.widgetWithText(FilledButton, 'Contact'),
+      find.byIcon(Icons.home_outlined),
+    ].map(tester.getRect).toList();
+    for (var index = 1; index < controls.length; index++) {
+      expect(
+        controls[index].left - controls[index - 1].right,
+        AppDesign.appBarActionGap,
+      );
+    }
     expect(find.byTooltip('Menu'), findsNothing);
   });
 
@@ -67,6 +80,11 @@ void main() {
     expect(donate, findsOneWidget);
     expect(find.byTooltip('Menu'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Instructions'), findsNothing);
+    expect(
+      tester.getTopLeft(find.byIcon(Icons.menu)).dx -
+          tester.getTopRight(donate).dx,
+      AppDesign.appBarActionGap,
+    );
 
     tester.view.physicalSize = const Size(280, 653);
     tester.platformDispatcher.textScaleFactorTestValue = 2;
@@ -83,6 +101,7 @@ void main() {
       'Donate',
       'Instructions',
       'Contact',
+      'Projects',
     ]);
     expect(tester.takeException(), isNull);
   });

@@ -1162,6 +1162,24 @@ abstract class AppLocalizations {
   /// **'© 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt'**
   String get copyrightCredit;
 
+  /// No description provided for @cloneProjectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Clone project'**
+  String get cloneProjectAction;
+
+  /// No description provided for @cloneOfProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Clone of {projectName}'**
+  String cloneOfProject(String projectName);
+
+  /// No description provided for @unableToCloneProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not confirm the copy. Check the project list before trying again.'**
+  String get unableToCloneProject;
+
   /// No description provided for @deleteProjectAction.
   ///
   /// In en, this message translates to:

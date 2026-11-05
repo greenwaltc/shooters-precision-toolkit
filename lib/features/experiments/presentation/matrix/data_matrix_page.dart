@@ -1162,9 +1162,15 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final ordered = _initialRowOrder(List.of(gridData.rows));
     _renumberRunOrder(ordered);
 
+    final factorColumns = _buildFactorColumns(formModel);
     _rows = ordered;
-    _columns = _buildColumns(formModel, gridData.totalSamples);
-    _columnGroups = _buildColumnGroups(formModel);
+    _columns = _buildColumns(formModel, gridData.totalSamples, factorColumns);
+    _columnGroups = [
+      PlutoColumnGroup(
+        title: AppCopy.english.factors,
+        fields: [for (final column in factorColumns) column.field],
+      ),
+    ];
   }
 
   /// Resolves the row order for the first paint, honoring any persisted
@@ -1194,6 +1200,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   List<PlutoColumn> _buildColumns(
     ProjectFormModel formModel,
     int totalSamples,
+    List<PlutoColumn> factorColumns,
   ) {
     final isOneFactor =
         formModel.experimentStructure == ExperimentStructure.simpleABComparison;
@@ -1204,7 +1211,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         field: 'row',
         maxValue: totalSamples,
       ),
-      ..._buildFactorColumns(formModel),
       // One-factor designs collapse to a single state per row, so the
       // replicate index is meaningless and the column is omitted.
       if (!isOneFactor)
@@ -1213,14 +1219,18 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           field: 'group',
           maxValue: formModel.sampleSizeOption.rangesPerGroup.toInt(),
         ),
+      ...factorColumns,
       _buildRangeColumn(),
     ];
   }
 
   List<PlutoColumn> _buildFactorColumns(ProjectFormModel formModel) {
+    final factors = formModel.factorDefinitions;
+    // The last factor changes on every canonical row. Keep its field index
+    // so display order does not alter saved measurements or analysis.
     return [
-      for (final entry in formModel.factorDefinitions.asMap().entries)
-        _buildFactorColumn(index: entry.key, factor: entry.value),
+      for (var index = factors.length - 1; index >= 0; index--)
+        _buildFactorColumn(index: index, factor: factors[index]),
     ];
   }
 
@@ -1276,22 +1286,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               ),
       ),
     );
-  }
-
-  List<PlutoColumnGroup> _buildColumnGroups(ProjectFormModel formModel) {
-    return [
-      PlutoColumnGroup(
-        title: AppCopy.english.factors,
-        fields: [
-          for (
-            var index = 0;
-            index < formModel.factorDefinitions.length;
-            index++
-          )
-            'factor_$index',
-        ],
-      ),
-    ];
   }
 
   Widget _mobileRangeCellRenderer(PlutoColumnRendererContext rendererContext) {
@@ -1646,11 +1640,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                         : _onRandomizeToggled,
                   ),
                   const SizedBox(width: AppSpacing.lg),
-                  TextButton.icon(
+                  OutlinedButton.icon(
                     onPressed: _clearRanges,
                     icon: const Icon(Icons.clear_all),
                     label: Text(AppCopy.english.clear),
-                    style: TextButton.styleFrom(foregroundColor: scheme.error),
+                    style: _clearButtonStyle(scheme),
                   ),
                   const SizedBox(width: AppSpacing.lg),
                   FilledButton.icon(
@@ -1676,13 +1670,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                     spacing: AppSpacing.lg,
                     runSpacing: AppSpacing.md,
                     children: [
-                      TextButton.icon(
+                      OutlinedButton.icon(
                         onPressed: _clearRanges,
                         icon: const Icon(Icons.clear_all),
                         label: Text(AppCopy.english.clear),
-                        style: TextButton.styleFrom(
-                          foregroundColor: scheme.error,
-                        ),
+                        style: _clearButtonStyle(scheme),
                       ),
                       FilledButton.icon(
                         onPressed: _stateManager == null
@@ -1872,6 +1864,11 @@ class _RandomizeOrderToggle extends StatelessWidget {
   }
 }
 
+ButtonStyle _clearButtonStyle(ColorScheme scheme) => OutlinedButton.styleFrom(
+  foregroundColor: scheme.error,
+  side: BorderSide(color: scheme.error),
+);
+
 class _MatrixActions extends StatelessWidget {
   const _MatrixActions({
     required this.layout,
@@ -1888,6 +1885,7 @@ class _MatrixActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final clearStyle = _clearButtonStyle(scheme);
     final showResults = FilledButton.icon(
       onPressed: canShowResults ? onShowResults : null,
       icon: const Icon(Icons.analytics),
@@ -1897,7 +1895,7 @@ class _MatrixActions extends StatelessWidget {
       onPressed: onClearRanges,
       icon: const Icon(Icons.clear_all),
       label: Text(AppCopy.english.clear),
-      style: OutlinedButton.styleFrom(foregroundColor: scheme.error),
+      style: clearStyle,
     );
 
     if (layout.isMobile) {
@@ -1917,9 +1915,7 @@ class _MatrixActions extends StatelessWidget {
                 flex: 4,
                 child: OutlinedButton(
                   onPressed: onClearRanges,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: scheme.error,
-                  ).merge(style),
+                  style: clearStyle.merge(style),
                   child: Text(
                     AppCopy.english.clear,
                     textAlign: TextAlign.center,

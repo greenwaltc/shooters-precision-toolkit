@@ -381,6 +381,14 @@
     }
   },
   "copyrightCredit": "© 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt",
+  "cloneProjectAction": "Clone project",
+  "cloneOfProject": "Clone of {projectName}",
+  "@cloneOfProject": {
+    "placeholders": {
+      "projectName": { "type": "String" }
+    }
+  },
+  "unableToCloneProject": "Could not confirm the copy. Check the project list before trying again.",
   "deleteProjectAction": "Delete project",
   "chartDescription": "Results chart. Grand mean {mean}. Risk interval {lower} to {upper}. Numerical results for every factor state follow the chart.",
   "@chartDescription": {

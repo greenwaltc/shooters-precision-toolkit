@@ -242,12 +242,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     _captureChanges(original);
     final originalCounter = _editVersions[id];
-    final now = clock.now().toUtc().toIso8601String();
-    final json = decodeJsonObject(jsonEncode(original.toJson()));
-    json['id'] = repository.newProjectId();
-    json['createdAt'] = now;
-    json['updatedAt'] = now;
-    final copy = SavedProject.fromJson(json);
+    final copy = _newProjectCopy(original);
     _projects[copy.id] = copy;
     _revisions[copy.id] = 0;
     _attachProjectListener(copy);
@@ -533,6 +528,66 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _notifyIfActive();
     await _queueSave(project.id);
     return project;
+  }
+
+  /// Saves an independent copy of the current design and matrix for [id].
+  ///
+  /// The copy receives a fresh ID and a title derived from [title], shortened
+  /// if needed to fit storage. The selected project does not change. The
+  /// future returns the saved copy or reports a write error. No local draft
+  /// is added on failure.
+  /// Throws [StateError] if the workspace or source project is unavailable.
+  Future<SavedProject> cloneProject(String id, {required String title}) async {
+    _requireLoaded();
+    final original = _projects[id];
+    if (original == null || _deleting.contains(id)) {
+      throw StateError('This project is no longer available to clone.');
+    }
+    final copy = _newProjectCopy(original);
+    final limit = BehaviorPolicy.maxProjectTitleLength;
+    final characters = title.runes.take(limit + 1).toList();
+    copy.formModel.setProjectTitle(
+      characters.length <= limit
+          ? title
+          : '${String.fromCharCodes(characters.take(limit - 1))}…',
+    );
+    await _enqueue(() async {
+      if (_disposed) {
+        throw StateError('Workspace is disposed.');
+      }
+      try {
+        final revision = await repository.saveProject(
+          copy,
+          expectedRevision: 0,
+        );
+        // The list subscription can deliver the server copy before the write
+        // returns. In that case it already has the authoritative timestamps.
+        if (!_disposed && revisionFor(copy.id) < revision) {
+          _acceptRemote(CloudProject(copy, revision, false));
+          _notifyIfActive();
+        }
+      } catch (error, stack) {
+        diagnostics.record(
+          DiagnosticEvent.workspaceSaveFailed,
+          error: error,
+          stack: stack,
+        );
+        rethrow;
+      }
+    });
+    return _projects[copy.id] ?? copy;
+  }
+
+  /// Copies persisted fields into a new editable model with its own identity.
+  SavedProject _newProjectCopy(SavedProject original) {
+    final now = clock.now().toUtc().toIso8601String();
+    final json = decodeJsonObject(jsonEncode(original.toJson()))
+      ..['id'] = repository.newProjectId()
+      ..['createdAt'] = now
+      ..['updatedAt'] = now;
+    final copy = SavedProject.fromJson(json);
+    copy.formModel.featureFlags = featureFlags;
+    return copy;
   }
 
   /// Selects a known project and listens for updates to it.

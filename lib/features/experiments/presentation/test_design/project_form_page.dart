@@ -100,7 +100,7 @@ class ProjectFormPage extends StatelessWidget {
                   maxWidth: (layout) => layout.formMaxWidth,
                   builder: (context, _) => ProjectForm(
                     formModel: formModel,
-                    showPinnedControls: !keyboardCoversBottom,
+                    showScrollCues: !keyboardCoversBottom,
                     onSubmit: () => _goToMatrix(context, store),
                   ),
                 ),

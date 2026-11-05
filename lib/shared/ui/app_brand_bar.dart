@@ -36,7 +36,14 @@ abstract final class AppBrandAssets {
   /// The shared logo height in logical pixels for this viewport.
   static double heightFor(AppLayoutMetrics layout) => layout.isMobile
       ? AppDesign.appBarLogoHeightCompact
+      : layout.isDesktop
+      ? AppDesign.appBarLogoHeightDesktop
       : AppDesign.appBarLogoHeight;
+
+  /// Toolbar height for a single row of branding at this viewport.
+  static double rowHeightFor(AppLayoutMetrics layout) => layout.isMobile
+      ? AppDesign.appBarBrandedHeightCompact
+      : heightFor(layout) + AppDesign.appBarBrandingPadding * 2;
 
   /// Title spacing for project pages that place their logo beside Back.
   static double projectTitleSpacing(
@@ -174,9 +181,7 @@ class ProjectsBannerMetrics {
     if (layout.isMobile || layout.isDesktop) {
       return ProjectsBannerMetrics(
         logoHeight: logoHeight,
-        toolbarHeight: layout.isMobile
-            ? AppDesign.appBarBrandedHeightCompact
-            : AppDesign.appBarBrandedHeight,
+        toolbarHeight: AppBrandAssets.rowHeightFor(layout),
         showTagline: false,
       );
     }
@@ -342,7 +347,7 @@ class AppBrandTitleMetrics {
   /// App-bar height that fits the logo in the default horizontal layout.
   static const double rowToolbarHeight = AppDesign.appBarBrandedHeight;
 
-  /// Decides whether [label] fits beside the logo in [titleMaxWidth].
+  /// Decides whether [label] fits beside the compact icon in [titleMaxWidth].
   ///
   /// Compact layouts keep the logo and label in one row to leave more room
   /// for the page content.
@@ -360,27 +365,13 @@ class AppBrandTitleMetrics {
     final brandingPadding = compact
         ? AppDesign.appBarBrandingPaddingCompact
         : AppDesign.appBarBrandingPadding;
-    final rowHeight = compact
-        ? AppDesign.appBarBrandedHeightCompact
-        : AppDesign.appBarBrandedHeight;
-
-    final logoWidth = AppBrandAssets.logoSlotWidth(
-      availableWidth: titleMaxWidth,
-      height: logoHeight,
-    );
-    final labelMaxWidth = titleMaxWidth - logoWidth - brandTitleGap;
-
-    final fitsBeside =
-        labelMaxWidth > 0 &&
-        !_labelExceedsWidth(
-          context: context,
-          label: label,
-          maxWidth: labelMaxWidth,
-          style: AppHeadings.h2(context),
-        );
+    final rowHeight = AppBrandAssets.rowHeightFor(layout);
 
     // Compact chrome never stacks — a taller bar would defeat the purpose.
-    if (fitsBeside || compact || layout.isDesktop) {
+    if (compact ||
+        layout.isDesktop ||
+        _measureTitleWidth(context, label, AppHeadings.h2(context)) <=
+            titleMaxWidth - logoHeight - brandTitleGap) {
       return AppBrandTitleMetrics(
         stacked: false,
         toolbarHeight: rowHeight,
@@ -413,24 +404,6 @@ class AppBrandTitleMetrics {
     );
   }
 
-  static bool _labelExceedsWidth({
-    required BuildContext context,
-    required String label,
-    required double maxWidth,
-    required TextStyle? style,
-  }) {
-    final painter = TextPainter(
-      text: TextSpan(text: label, style: style),
-      textDirection: Directionality.of(context),
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 1,
-      ellipsis: '…',
-    )..layout(maxWidth: maxWidth);
-    final exceeds = painter.didExceedMaxLines;
-    painter.dispose();
-    return exceeds;
-  }
-
   static double _measureLabelHeight({
     required BuildContext context,
     required String label,
@@ -450,8 +423,26 @@ class AppBrandTitleMetrics {
   }
 }
 
+double _measureTitleWidth(
+  BuildContext context,
+  String label,
+  TextStyle? style,
+) {
+  final painter = TextPainter(
+    text: TextSpan(text: label, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
 /// An app bar title with a brand mark and a page label.
 ///
+/// A single-row title uses the compact icon if the full logo would crowd the
+/// label. On desktop the label can also use a smaller heading size.
 /// In a stacked layout, the logo sits above the label so the label has the
 /// full title width.
 class AppBrandTitle extends StatelessWidget {
@@ -485,6 +476,32 @@ class AppBrandTitle extends StatelessWidget {
             : MediaQuery.sizeOf(context).width;
         final logoHeight = metrics.logoHeight;
 
+        final title = _buildRowTitle(context);
+        final status = trailing;
+        final titleWithStatus = status == null
+            ? title
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(child: title),
+                  const SizedBox(width: AppSpacing.md),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: math.max(
+                        kMinInteractiveDimension,
+                        maxWidth -
+                            (metrics.stacked
+                                ? 0
+                                : logoHeight + metrics.brandTitleGap) -
+                            AppDesign.appBarMinimumTitleLabelWidth -
+                            AppSpacing.md,
+                      ),
+                    ),
+                    child: status,
+                  ),
+                ],
+              );
+
         if (metrics.stacked) {
           return Column(
             mainAxisSize: MainAxisSize.min,
@@ -492,78 +509,66 @@ class AppBrandTitle extends StatelessWidget {
             children: [
               AppBrandTitleLogo(height: logoHeight, maxWidth: maxWidth),
               const SizedBox(height: AppDesign.appBarBrandStackedGap),
-              _label(
-                context,
-                maxLines: AppDesign.appBarBrandLabelMaxLinesStacked,
-              ),
+              titleWithStatus,
             ],
           );
         }
 
-        final logoWidth = AppLayoutMetrics.of(context).isMobile
-            ? logoHeight
-            : AppBrandAssets.logoSlotWidth(
-                availableWidth: math.max(
-                  logoHeight,
-                  maxWidth -
-                      metrics.brandTitleGap -
-                      AppDesign.appBarMinimumTitleLabelWidth,
-                ),
-                height: logoHeight,
-              );
-        final labelMaxWidth = maxWidth - logoWidth - metrics.brandTitleGap;
-
-        if (labelMaxWidth <= 0) {
-          return AppBrandTitleLogo(height: logoHeight, maxWidth: maxWidth);
-        }
-
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            AppBrandTitleLogo(height: logoHeight, maxWidth: logoWidth),
-            SizedBox(width: metrics.brandTitleGap),
-            Expanded(child: _label(context)),
-          ],
-        );
+        return titleWithStatus;
       },
     );
   }
 
-  Widget _label(BuildContext context, {int maxLines = 1}) {
-    final text = Text(
-      label,
-      style: AppLayoutMetrics.of(context).isMobile
-          ? AppHeadings.h4(context)
-          : AppHeadings.h2(context),
-      maxLines: trailing == null ? maxLines : 1,
-      overflow: TextOverflow.ellipsis,
-    );
-    if (trailing == null) {
-      return text;
+  Widget _buildRowTitle(BuildContext context) {
+    final layout = AppLayoutMetrics.of(context);
+    final compactStyle = AppHeadings.h4(context);
+    final regularStyle = layout.isMobile
+        ? compactStyle
+        : AppHeadings.h2(context);
+    if (metrics.stacked) {
+      return Text(
+        label,
+        style: regularStyle,
+        maxLines: trailing == null
+            ? AppDesign.appBarBrandLabelMaxLinesStacked
+            : 1,
+        overflow: TextOverflow.ellipsis,
+      );
     }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < kMinInteractiveDimension + AppSpacing.md) {
-          return Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: trailing,
+        final height = metrics.logoHeight;
+        final availableWidth = constraints.maxWidth - metrics.brandTitleGap;
+        final labelWidth = _measureTitleWidth(context, label, regularStyle);
+        final logoWidth = layout.isMobile
+            ? height
+            : AppBrandAssets.logoSlotWidth(
+                availableWidth: math.max(height, availableWidth - labelWidth),
+                height: height,
+              );
+        final labelSpace = availableWidth - logoWidth;
+        if (labelSpace <= 0) {
+          return AppBrandTitleLogo(
+            height: height,
+            maxWidth: math.min(height, constraints.maxWidth),
           );
         }
+        final style = layout.isDesktop && labelWidth > labelSpace
+            ? regularStyle?.copyWith(fontSize: compactStyle?.fontSize)
+            : regularStyle;
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Flexible(child: text),
-            const SizedBox(width: AppSpacing.md),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: math.max(
-                  kMinInteractiveDimension,
-                  constraints.maxWidth -
-                      AppDesign.appBarMinimumTitleLabelWidth -
-                      AppSpacing.md,
-                ),
+            AppBrandTitleLogo(height: height, maxWidth: logoWidth),
+            SizedBox(width: metrics.brandTitleGap),
+            Flexible(
+              child: Text(
+                label,
+                style: style,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              child: trailing,
             ),
           ],
         );

@@ -25,6 +25,11 @@ and testing documents during implementation, and the workflow checklist before
 review. Each specialist document owns its subject; cross-links avoid competing
 definitions of the same rule.
 
+Implementation and evidence: [adoption status](standards_adoption.md),
+[application architecture](architecture_map.md), [configuration](app_configuration.md),
+[test execution](testing_evidence.md), [security operations](security_operations.md),
+and [UI acceptance](ui_acceptance.md).
+
 ## Requirement language and decisions
 
 - **MUST / MUST NOT**: required for work claiming compliance with this baseline.

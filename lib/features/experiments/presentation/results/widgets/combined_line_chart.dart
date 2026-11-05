@@ -1,0 +1,212 @@
+// Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
+// Use of this source code is governed by a proprietary license that can be
+// found in the LICENSE file at the root of this project.
+// Unauthorized use or reproduction of this source code is prohibited.
+
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+
+import '../../../../../shared/l10n/app_copy.dart';
+import '../../../../../shared/ui/theme/app_design.dart';
+import '../../../../../shared/ui/theme/chart/chart_layout.dart';
+import '../../../../../shared/ui/theme/chart/chart_scale.dart';
+import '../../../../../shared/ui/theme/theme_extensions/anomr_chart_theme.dart';
+import '../models/factor_row.dart';
+import '../services/factor_row_locator.dart';
+import 'chart_reference_lines.dart';
+import 'chart_x_axis.dart';
+import 'chart_y_axis.dart';
+import 'chart_y_range.dart';
+
+/// Single fl_chart `LineChart` rendering one colored line segment per factor
+/// over a shared grand-mean / risk-bound reference frame.
+class CombinedLineChart extends StatelessWidget {
+  const CombinedLineChart({
+    super.key,
+    required this.factorRows,
+    required this.grandMean,
+    required this.lowerBound,
+    required this.upperBound,
+    required this.detectableDiffPercent,
+    required this.scale,
+  });
+
+  final List<FactorRow> factorRows;
+  final double grandMean;
+  final double lowerBound;
+  final double upperBound;
+  final double detectableDiffPercent;
+  final ChartScale scale;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => Semantics(
+        label: context.l10n.chartDescription(
+          context.decimal(grandMean),
+          context.decimal(lowerBound),
+          context.decimal(upperBound),
+        ),
+        child: ExcludeSemantics(
+          child: LineChart(
+            _chartData(context, constraints.maxWidth),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : AppDesign.motionFast,
+          ),
+        ),
+      ),
+    );
+  }
+
+  LineChartData _chartData(BuildContext context, double width) {
+    final scheme = Theme.of(context).colorScheme;
+    final locator = FactorRowLocator(factorRows);
+
+    final xBounds = _xBounds();
+    final yRange = _yRange();
+
+    return LineChartData(
+      minX: xBounds.$1,
+      maxX: xBounds.$2,
+      minY: yRange.min,
+      maxY: yRange.max,
+      clipData: const FlClipData.all(),
+      lineTouchData: _tooltip(context, locator),
+      gridData: _grid(context, yRange),
+      borderData: _border(scheme),
+      titlesData: _titles(context, locator, width),
+      extraLinesData: ChartReferenceLines.build(
+        context: context,
+        scale: scale,
+        grandMean: grandMean,
+        lowerBound: lowerBound,
+        upperBound: upperBound,
+        detectableDiffPercent: detectableDiffPercent,
+      ),
+      lineBarsData: _lineBars(context),
+    );
+  }
+
+  (double, double) _xBounds() {
+    final lastSecondX = factorRows.isEmpty
+        ? ChartLayout.segmentSpan
+        : factorRows.last.secondX;
+    return (-ChartLayout.edgePad, lastSecondX + ChartLayout.edgePad);
+  }
+
+  ChartYRangeValues _yRange() {
+    return ChartYRange.compute([
+      grandMean,
+      upperBound,
+      lowerBound,
+      for (final row in factorRows) ...[
+        if (row.stats.hasFirst) row.stats.firstMean,
+        if (row.stats.hasSecond) row.stats.secondMean,
+      ],
+    ]);
+  }
+
+  FlBorderData _border(ColorScheme scheme) {
+    return FlBorderData(
+      show: true,
+      border: Border(
+        bottom: BorderSide(color: scheme.outline),
+        left: BorderSide(color: scheme.outline),
+      ),
+    );
+  }
+
+  FlTitlesData _titles(
+    BuildContext context,
+    FactorRowLocator locator,
+    double width,
+  ) {
+    return FlTitlesData(
+      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      bottomTitles: ChartXAxis.build(
+        context: context,
+        locator: locator,
+        scale: scale,
+        plotWidth: width - scale.leftAxisReserve - scale.yAxisNameReserve,
+      ),
+      leftTitles: ChartYAxis.build(context: context, scale: scale),
+    );
+  }
+
+  LineTouchData _tooltip(BuildContext context, FactorRowLocator locator) {
+    final scheme = Theme.of(context).colorScheme;
+    return LineTouchData(
+      touchTooltipData: LineTouchTooltipData(
+        getTooltipColor: (_) => scheme.inverseSurface,
+        getTooltipItems: (spots) => spots.map((spot) {
+          final match = locator.nearestFactor(spot.x);
+          final label = match == null
+              ? context.decimal(spot.y)
+              : context.l10n.chartTooltip(
+                  match.displayName,
+                  locator.stateLabelNearest(spot.x, match),
+                  context.decimal(spot.y),
+                );
+          return LineTooltipItem(
+            label,
+            TextStyle(
+              color: scheme.onInverseSurface,
+              fontWeight: FontWeight.w600,
+              fontSize: scale.axisLabelFontSize,
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  FlGridData _grid(BuildContext context, ChartYRangeValues yRange) {
+    final scheme = Theme.of(context).colorScheme;
+    final chartTheme =
+        Theme.of(context).extension<AnomrChartTheme>() ??
+        const AnomrChartTheme.standard();
+    return FlGridData(
+      show: true,
+      drawVerticalLine: false,
+      horizontalInterval: ((yRange.max - yRange.min) / 4).abs(),
+      getDrawingHorizontalLine: (_) => FlLine(
+        color: scheme.outlineVariant.withValues(
+          alpha: chartTheme.gridLineOpacity,
+        ),
+        strokeWidth: 1,
+        dashArray: chartTheme.gridLineDashArray,
+      ),
+    );
+  }
+
+  List<LineChartBarData> _lineBars(BuildContext context) {
+    final chartTheme =
+        Theme.of(context).extension<AnomrChartTheme>() ??
+        const AnomrChartTheme.standard();
+    return [
+      for (final row in factorRows)
+        if (row.stats.hasBoth)
+          LineChartBarData(
+            spots: [
+              FlSpot(row.firstX, row.stats.firstMean),
+              FlSpot(row.secondX, row.stats.secondMean),
+            ],
+            isCurved: false,
+            color: row.color,
+            barWidth: scale.lineWidth,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, _, _, _) => FlDotCirclePainter(
+                radius: scale.dotRadius,
+                color: row.color,
+                strokeWidth: scale.dotStroke,
+                strokeColor: chartTheme.dotOutlineColor,
+              ),
+            ),
+          ),
+    ];
+  }
+}

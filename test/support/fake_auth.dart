@@ -1,20 +1,27 @@
 import 'dart:async';
 
-import 'package:bramwells_precision_test_kit/firebase/firebase_bootstrap.dart';
+import 'package:bramwells_precision_test_kit/app/firebase/firebase_bootstrap.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'test_configuration.dart';
+
 /// A controllable Auth boundary for error cases that emulators cannot inject.
 class FakeAuth extends Fake implements FirebaseAuth {
   FakeAuth({FakeAuthUser? initialUser}) {
-    if (initialUser != null) users[initialUser.email!] = initialUser;
+    // A fake belongs to one test scope; callers may also dispose it earlier.
+    addTearDown(dispose);
+    if (initialUser != null) {
+      users[initialUser.email!] = initialUser;
+    }
     switchUser(initialUser);
   }
 
   final users = <String, FakeAuthUser>{};
   final _changes = StreamController<User?>.broadcast(sync: true);
+  bool _disposed = false;
   FakeAuthUser? _user;
   int registrations = 0;
   int newUserVerificationFailures = 0;
@@ -23,8 +30,12 @@ class FakeAuth extends Fake implements FirebaseAuth {
   @override
   final FirebaseApp app = _App();
 
-  FirebaseServices get services =>
-      FirebaseServices(app: app, auth: this, db: _Firestore());
+  FirebaseServices get services => FirebaseServices(
+    config: testConfig(),
+    app: app,
+    auth: this,
+    db: _Firestore(),
+  );
 
   @override
   FakeAuthUser? get currentUser => _user;
@@ -62,7 +73,9 @@ class FakeAuth extends Fake implements FirebaseAuth {
     required String password,
   }) async {
     final user = users[email];
-    if (user == null) throw FirebaseAuthException(code: 'invalid-credential');
+    if (user == null) {
+      throw FirebaseAuthException(code: 'invalid-credential');
+    }
     switchUser(user);
     return _Credential(user);
   }
@@ -81,7 +94,13 @@ class FakeAuth extends Fake implements FirebaseAuth {
   @override
   Future<void> signOut() async => switchUser(null);
 
-  Future<void> dispose() => _changes.close();
+  Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    await _changes.close();
+  }
 }
 
 class FakeAuthUser extends Fake implements User {
@@ -112,14 +131,20 @@ class FakeAuthUser extends Fake implements User {
 
   @override
   Future<String?> getIdToken([bool forceRefresh = false]) async {
-    if (forceRefresh) forcedTokenRefreshes++;
+    if (forceRefresh) {
+      forcedTokenRefreshes++;
+    }
     return 'fake-token';
   }
 
   @override
   Future<IdTokenResult> getIdTokenResult([bool forceRefresh = false]) async {
-    if (forceRefresh) forcedTokenRefreshes++;
-    if (tokenRefresh != null) return tokenRefresh!.future;
+    if (forceRefresh) {
+      forcedTokenRefreshes++;
+    }
+    if (tokenRefresh != null) {
+      return tokenRefresh!.future;
+    }
     return FakeTokenResult(serverVerified);
   }
 

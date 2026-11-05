@@ -5,30 +5,37 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
 
-import 'package:bramwells_precision_test_kit/auth/auth_page.dart';
-import 'package:bramwells_precision_test_kit/auth/auth_service.dart';
-import 'package:bramwells_precision_test_kit/auth/workspace_sign_out.dart';
-import 'package:bramwells_precision_test_kit/firebase/firebase_bootstrap.dart';
+import 'package:bramwells_precision_test_kit/app/firebase/firebase_bootstrap.dart';
+import 'package:bramwells_precision_test_kit/features/auth/data/auth_service.dart';
+import 'package:bramwells_precision_test_kit/features/auth/presentation/auth_page.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/api/project_repository.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/data/firestore_project_repository.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/projects/project_home_page.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/saved_project.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
-import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
-import 'package:bramwells_precision_test_kit/model/project_store.dart';
-import 'package:bramwells_precision_test_kit/model/saved_project.dart';
-import 'package:bramwells_precision_test_kit/storage/firestore_project_repository.dart';
-import 'package:bramwells_precision_test_kit/widgets/project_form_page.dart';
-import 'package:bramwells_precision_test_kit/widgets/project_home_page.dart';
+import 'package:bramwells_precision_test_kit/shared/foundation/json_object.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/workspace_exit.dart';
+import 'package:clock/clock.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_firestore_web/cloud_firestore_web.dart';
-import 'package:firebase_auth_web/firebase_auth_web.dart';
-import 'package:firebase_core_web/firebase_core_web.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth_web/firebase_auth_web.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core_web/firebase_core_web.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web/web.dart' as web;
+
+import '../support/project_repository_contract.dart';
+import '../support/test_configuration.dart';
 
 void main() {
   // Browser widget tests don't run the application's generated plugin registrant.
@@ -50,6 +57,34 @@ void main() {
   });
 
   setUp(rootBundle.clear);
+
+  projectRepositoryContract('Firestore emulator', () async {
+    final services = emulatorServices;
+    final email =
+        'contract-${DateTime.now().microsecondsSinceEpoch}@example.test';
+    await _registerVerified(services, email, 'Local-contract-password-123!');
+    final user = services.auth.currentUser!;
+    addTearDown(() async {
+      // Use the same bounded list contract as the app's owner-only rules.
+      for (var page = 0; page < 3; page++) {
+        final docs = await services.db
+            .collection('users')
+            .doc(user.uid)
+            .collection('projects')
+            .limit(ProjectRepository.pageSize)
+            .get();
+        if (docs.docs.isEmpty) {
+          break;
+        }
+        for (final doc in docs.docs) {
+          await doc.reference.delete();
+        }
+      }
+      await user.delete();
+      await services.auth.signOut();
+    });
+    return FirestoreProjectRepository(db: services.db, uid: user.uid);
+  });
 
   testWidgets('stale hot-restart hint cannot skip Auth emulator connection', (
     tester,
@@ -90,7 +125,9 @@ void main() {
         expect(claims['aud'], localFirebaseProjectId);
       } finally {
         // Delete only this test's unique account; keep interactive users intact.
-        if (auth.currentUser?.email == email) await auth.currentUser!.delete();
+        if (auth.currentUser?.email == email) {
+          await auth.currentUser!.delete();
+        }
         await auth.signOut();
         web.window.sessionStorage.removeItem(getOriginName(name));
         await app.delete();
@@ -156,8 +193,13 @@ void main() {
       return services;
     });
 
-    if (services == null) return; // runAsync already reports the failure.
-    await tester.pumpWidget(FirebaseApplication(services: services));
+    if (services == null) {
+      return;
+    } // runAsync already reports the failure.
+    await pumpConfiguredWidget(
+      tester,
+      FirebaseApplication(clock: clock, services: services),
+    );
     // Firebase's initial JS auth callback needs a real browser event turn;
     // pumpAndSettle only advances the widget test's fake clock.
     await tester.runAsync(() async {
@@ -166,11 +208,15 @@ void main() {
       );
       expect(user, isNull);
     });
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 100),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 5),
+    );
     expect(find.byType(AuthPage), findsOneWidget);
     expect(find.byType(ProjectHomePage), findsNothing);
     expect(find.textContaining('Unable to start the app'), findsNothing);
-    await tester.pumpWidget(const SizedBox.shrink());
+    await pumpConfiguredWidget(tester, const SizedBox.shrink());
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   testWidgets('emulator verification opens workspace; logout removes private routes', (
@@ -187,7 +233,12 @@ void main() {
     };
     addTearDown(() => FlutterError.onError = previousErrorHandler);
     final services = emulatorServices;
-    final auth = AuthService(services.auth);
+    final auth = AuthService(
+      services.auth,
+      returnOrigin: Uri.parse('http://127.0.0.1:7357'),
+      emailCooldown: const Duration(seconds: 60),
+      clock: const Clock(),
+    );
     final email = 'gate-${DateTime.now().microsecondsSinceEpoch}@example.test';
     const password = 'Local-test-password-123!';
     String? createdProjectId;
@@ -197,7 +248,10 @@ void main() {
             auth.register(email, password).timeout(const Duration(seconds: 15)),
       );
       expect(services.auth.currentUser!.emailVerified, isFalse);
-      await tester.pumpWidget(FirebaseApplication(services: services));
+      await pumpConfiguredWidget(
+        tester,
+        FirebaseApplication(clock: clock, services: services),
+      );
       await _waitForAuth(tester, services, signedIn: true);
       expect(find.text('Verify your email'), findsOneWidget);
       expect(find.byType(ProjectHomePage), findsNothing);
@@ -212,11 +266,14 @@ void main() {
             .toDart
             .timeout(const Duration(seconds: 5));
         expect(response.ok, isTrue);
-        final data = (await response.json().toDart).dartify() as Map;
-        final codes = (data['oobCodes'] as List).cast<Map>().where(
-          (code) =>
-              code['email'] == email && code['requestType'] == 'VERIFY_EMAIL',
-        );
+        final data = decodeJsonObject((await response.text().toDart).toDart);
+        final codes = (data['oobCodes']! as List<Object?>)
+            .map(jsonObject)
+            .where(
+              (code) =>
+                  code['email'] == email &&
+                  code['requestType'] == 'VERIFY_EMAIL',
+            );
         expect(codes, isNotEmpty);
         await services.auth.applyActionCode(codes.last['oobCode'] as String);
         // Simulate returning from the external verification page: refresh the
@@ -248,7 +305,11 @@ void main() {
                 ProjectSaveState.saved,
         'project creation was not acknowledged by Firestore',
       );
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
       expect(find.byType(ProjectFormPage), findsOneWidget);
       final oldNavigator = Navigator.of(
         tester.element(find.byType(ProjectFormPage)),
@@ -261,7 +322,7 @@ void main() {
       // cover that wiring; exercise the shared operation here without the
       // browser runner's unavailable InkSparkle shader/menu pointer path.
       final pageContext = tester.element(find.byType(ProjectFormPage));
-      final signOut = pageContext.read<WorkspaceSignOut>().run(pageContext);
+      final signOut = pageContext.read<WorkspaceExit>().run(pageContext);
       await tester.pump();
       await _waitForAuth(tester, services, signedIn: false);
       await signOut;
@@ -275,10 +336,14 @@ void main() {
       );
       expect(loginNavigator.canPop(), isFalse);
       await loginNavigator.maybePop();
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
       expect(find.byType(AuthPage), findsOneWidget);
     } finally {
-      await tester.pumpWidget(const SizedBox.shrink());
+      await pumpConfiguredWidget(tester, const SizedBox.shrink());
       await tester.runAsync(() async {
         // Never flush the emulator globally: interactive users may be testing too.
         try {
@@ -365,7 +430,8 @@ void main() {
           const GetOptions(source: Source.server),
         );
         expect(
-          (restored.data()!['formModel'] as Map)['projectTitle'],
+          (restored.data()!['formModel']
+              as Map<String, Object?>)['projectTitle'],
           'Alice cloud project',
         );
         await alice.deleteProject(experiment.id, expectedRevision: 1);
@@ -381,7 +447,12 @@ void main() {
     'store preserves newer edits across real Firestore acknowledgements and conflicts',
     () async {
       final services = emulatorServices;
-      final auth = AuthService(services.auth);
+      final auth = AuthService(
+        services.auth,
+        returnOrigin: Uri.parse('http://127.0.0.1:7357'),
+        emailCooldown: const Duration(seconds: 60),
+        clock: const Clock(),
+      );
       final email =
           'save-state-${DateTime.now().microsecondsSinceEpoch}@example.test';
       ProjectStore? store;
@@ -396,11 +467,14 @@ void main() {
             )
             .toDart;
         expect(response.ok, isTrue);
-        final data = (await response.json().toDart).dartify() as Map;
-        final code = (data['oobCodes'] as List).cast<Map>().lastWhere(
-          (code) =>
-              code['email'] == email && code['requestType'] == 'VERIFY_EMAIL',
-        );
+        final data = decodeJsonObject((await response.text().toDart).toDart);
+        final code = (data['oobCodes']! as List<Object?>)
+            .map(jsonObject)
+            .lastWhere(
+              (code) =>
+                  code['email'] == email &&
+                  code['requestType'] == 'VERIFY_EMAIL',
+            );
         await services.auth.applyActionCode(code['oobCode'] as String);
         expect(await auth.refreshVerification(), isTrue);
         final repository = FirestoreProjectRepository(
@@ -409,6 +483,8 @@ void main() {
         );
         final delayed = _DelayedAcknowledgementRepository(repository);
         final workspace = ProjectStore(
+          clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
+          draftStorage: InMemoryProjectDraftStorage(),
           repository: delayed,
           saveDebounce: const Duration(seconds: 2),
         );
@@ -456,7 +532,7 @@ void main() {
           const GetOptions(source: Source.server),
         )).data()!;
         expect(
-          (saved['formModel'] as Map)['projectTitle'],
+          (saved['formModel'] as Map<String, Object?>)['projectTitle'],
           'Newer unsaved edit',
         );
         expect(saved['revision'], 3);
@@ -507,7 +583,7 @@ void main() {
           const GetOptions(source: Source.server),
         )).data()!;
         expect(
-          (afterUpload['formModel'] as Map)['projectTitle'],
+          (afterUpload['formModel'] as Map<String, Object?>)['projectTitle'],
           'Debounced cloud edit',
         );
         expect(await workspace.draftStorage.readAll(), isEmpty);
@@ -531,7 +607,8 @@ void main() {
         )).data()!;
         expect(originalAfterCopy['revision'], 6);
         expect(
-          (originalAfterCopy['formModel'] as Map)['projectTitle'],
+          (originalAfterCopy['formModel']
+              as Map<String, Object?>)['projectTitle'],
           'Other tab owns revision six',
         );
       } finally {
@@ -568,7 +645,12 @@ Future<void> _registerVerified(
   String email,
   String password,
 ) async {
-  final auth = AuthService(services.auth);
+  final auth = AuthService(
+    services.auth,
+    returnOrigin: Uri.parse('http://127.0.0.1:7357'),
+    emailCooldown: const Duration(seconds: 60),
+    clock: const Clock(),
+  );
   await auth.register(email, password);
   final response = await web.window
       .fetch(
@@ -577,11 +659,13 @@ Future<void> _registerVerified(
       )
       .toDart;
   expect(response.ok, isTrue);
-  final data = (await response.json().toDart).dartify() as Map;
-  final code = (data['oobCodes'] as List).cast<Map>().lastWhere(
-    (entry) =>
-        entry['email'] == email && entry['requestType'] == 'VERIFY_EMAIL',
-  );
+  final data = decodeJsonObject((await response.text().toDart).toDart);
+  final code = (data['oobCodes']! as List<Object?>)
+      .map(jsonObject)
+      .lastWhere(
+        (entry) =>
+            entry['email'] == email && entry['requestType'] == 'VERIFY_EMAIL',
+      );
   await services.auth.applyActionCode(code['oobCode'] as String);
   expect(await auth.refreshVerification(), isTrue);
 }
@@ -612,7 +696,7 @@ class _DelayedAcknowledgementRepository implements ProjectRepository {
   @override
   String newProjectId() => delegate.newProjectId();
   @override
-  Stream<List<CloudProject>> watchProjects() => delegate.watchProjects();
+  Stream<ProjectPage> watchProjects() => delegate.watchProjects();
   @override
   Future<List<CloudProject>> fetchOlderProjects({
     required CloudProject after,
@@ -624,7 +708,7 @@ class _DelayedAcknowledgementRepository implements ProjectRepository {
       delegate.deleteProject(id, expectedRevision: expectedRevision);
   @override
   Future<int> saveProject(
-    SavedProject project, {
+    ProjectDocument project, {
     required int expectedRevision,
   }) async {
     final hold = holdNextAcknowledgement;
@@ -648,7 +732,9 @@ Future<void> _waitForAuth(
 }) async {
   await _pumpUntil(tester, () {
     final user = services.auth.currentUser;
-    if ((user != null) != signedIn) return false;
+    if ((user != null) != signedIn) {
+      return false;
+    }
     if (signedIn && user!.emailVerified) {
       return find.byType(ProjectHomePage).evaluate().isNotEmpty;
     }
@@ -669,7 +755,11 @@ Future<void> _waitForAuth(
       expect(store.loadError, isNull);
     }
   }
-  await tester.pumpAndSettle();
+  await tester.pumpAndSettle(
+    const Duration(milliseconds: 100),
+    EnginePhase.sendSemanticsUpdate,
+    const Duration(seconds: 5),
+  );
 }
 
 Future<void> _pumpUntil(

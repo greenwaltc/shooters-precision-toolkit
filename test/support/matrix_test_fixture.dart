@@ -1,12 +1,17 @@
+import 'dart:math';
+
+import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
-import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
-import 'package:bramwells_precision_test_kit/model/project_store.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 
 import 'fake_project_repository.dart';
+import 'test_configuration.dart';
 
 Future<(ProjectStore, PlutoGridStateManager)> pumpMatrixFixture(
   WidgetTester tester, {
@@ -18,6 +23,8 @@ Future<(ProjectStore, PlutoGridStateManager)> pumpMatrixFixture(
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
   final store = ProjectStore(
+    clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
+    draftStorage: InMemoryProjectDraftStorage(),
     repository: FakeProjectRepository(),
     saveDebounce: saveDebounce,
   );
@@ -41,17 +48,37 @@ Future<(ProjectStore, PlutoGridStateManager)> pumpMatrixFixture(
   for (var i = 0; i < model.sampleSizeOption.totalSamples; i++) {
     project.matrixState['range_$i'] = '${i + 1}';
   }
-  await tester.pumpWidget(MyApp(projectStore: store));
-  await tester.pumpAndSettle();
+  await pumpConfiguredWidget(
+    tester,
+    MyApp(
+      clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
+      config: testConfig(),
+      random: Random(4729),
+      projectStore: store,
+    ),
+  );
+  await tester.pumpAndSettle(
+    const Duration(milliseconds: 100),
+    EnginePhase.sendSemanticsUpdate,
+    const Duration(seconds: 5),
+  );
   await tester.tap(find.text('Clipboard fixture'));
-  await tester.pumpAndSettle();
+  await tester.pumpAndSettle(
+    const Duration(milliseconds: 100),
+    EnginePhase.sendSemanticsUpdate,
+    const Duration(seconds: 5),
+  );
   final manager = tester
       .state<PlutoGridState>(find.byType(PlutoGrid))
       .stateManager;
   manager.setCurrentCell(manager.rows.first.cells['range'], 0);
   manager.setKeepFocus(true);
   manager.gridFocusNode.requestFocus();
-  await tester.pumpAndSettle();
+  await tester.pumpAndSettle(
+    const Duration(milliseconds: 100),
+    EnginePhase.sendSemanticsUpdate,
+    const Duration(seconds: 5),
+  );
   return (store, manager);
 }
 

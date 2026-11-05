@@ -24,14 +24,17 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 
-const projectId = 'demo-precision-rules';
+const projectId = process.env.PRECISION_RULES_TEST_PROJECT;
+const port = Number(process.env.PRECISION_RULES_TEST_PORT);
 let environment;
 
 // This suite must run through the local emulator command.
 before(async () => {
+  assert.match(projectId ?? '', /^demo-precision-rules-[a-z0-9]+$/, 'Use the isolated rules-test runner.');
+  assert(Number.isInteger(port) && port > 1024 && port <= 65535);
   assert.equal(
     process.env.FIRESTORE_EMULATOR_HOST,
-    '127.0.0.1:8080',
+    `127.0.0.1:${port}`,
     'Run this suite through task rules:test.',
   );
 
@@ -39,7 +42,7 @@ before(async () => {
     projectId,
     firestore: {
       host: '127.0.0.1',
-      port: 8080,
+      port,
       rules: await readFile(
         new URL('../firestore.rules', import.meta.url),
         'utf8',

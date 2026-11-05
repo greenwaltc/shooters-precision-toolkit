@@ -1,11 +1,18 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:bramwells_precision_test_kit/model/saved_project.dart';
-import 'package:bramwells_precision_test_kit/storage/project_repository.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/api/project_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 /// An account-scoped, revision-aware backend with no Firebase initialization.
 class FakeProjectRepository implements ProjectRepository {
+  /// Test-only fake: registers stream cleanup when allocated. Explicit early
+  /// disposal is supported and idempotent. Each instance has its own fixed clock.
+  FakeProjectRepository() {
+    addTearDown(dispose);
+  }
+
+  bool _disposed = false;
+  int _writeSequence = 0;
   final _records = <String, CloudProject>{};
   final _changes = StreamController<void>.broadcast(sync: true);
   int _nextId = 0;
@@ -18,9 +25,7 @@ class FakeProjectRepository implements ProjectRepository {
   @override
   String newProjectId() => 'project_${++_nextId}';
 
-  SavedProject _copy(SavedProject project) => SavedProject.fromJson(
-    jsonDecode(jsonEncode(project.toJson())) as Map<String, dynamic>,
-  );
+  ProjectSnapshot _copy(ProjectDocument project) => project.freeze();
 
   CloudProject _copyRecord(CloudProject record) =>
       CloudProject(_copy(record.project), record.revision, false);
@@ -36,13 +41,15 @@ class FakeProjectRepository implements ProjectRepository {
   });
 
   @override
-  Stream<List<CloudProject>> watchProjects() => _watch(() {
+  Stream<ProjectPage> watchProjects() => _watch(() {
     final records = _records.values.toList()
       ..sort((a, b) {
         final date = b.project.updatedAt.compareTo(a.project.updatedAt);
         return date != 0 ? date : b.project.id.compareTo(a.project.id);
       });
-    return records.take(25).map(_copyRecord).toList();
+    return ProjectPage(
+      records.take(ProjectRepository.pageSize).map(_copyRecord),
+    );
   });
 
   @override
@@ -75,21 +82,27 @@ class FakeProjectRepository implements ProjectRepository {
 
   @override
   Future<int> saveProject(
-    SavedProject project, {
+    ProjectDocument project, {
     required int expectedRevision,
   }) async {
     final snapshot = _copy(project);
     await saveBarrier;
-    if (saveFailure != null) throw saveFailure!;
+    if (saveFailure != null) {
+      throw saveFailure!;
+    }
     final current = _records[project.id];
     if ((current?.revision ?? 0) != expectedRevision) {
       throw ProjectConflict(project.id);
     }
-    final saved = SavedProject.fromJson(
+    final saved = ProjectSnapshot.fromJson(
       snapshot.toJson()
         ..['createdAt'] = (current?.project.createdAt ?? snapshot.createdAt)
             .toIso8601String()
-        ..['updatedAt'] = DateTime.now().toUtc().toIso8601String(),
+        ..['updatedAt'] = DateTime.utc(
+          2026,
+          11,
+          4,
+        ).add(Duration(microseconds: ++_writeSequence)).toIso8601String(),
     );
     final revision = expectedRevision + 1;
     _records[project.id] = CloudProject(saved, revision, false);
@@ -100,7 +113,9 @@ class FakeProjectRepository implements ProjectRepository {
 
   @override
   Future<void> deleteProject(String id, {required int expectedRevision}) async {
-    if (deleteFailure != null) throw deleteFailure!;
+    if (deleteFailure != null) {
+      throw deleteFailure!;
+    }
     final current = _records[id];
     if (current != null && current.revision != expectedRevision) {
       throw ProjectConflict(id);
@@ -111,5 +126,11 @@ class FakeProjectRepository implements ProjectRepository {
   }
 
   void emitError(Object error) => _changes.addError(error);
-  Future<void> dispose() => _changes.close();
+  Future<void> dispose() async {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    await _changes.close();
+  }
 }

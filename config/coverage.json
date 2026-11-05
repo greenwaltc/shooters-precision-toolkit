@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "minimumPercent": 80,
+  "generatedFiles": [
+    "lib/app/firebase/firebase_options_dev.dart",
+    "lib/app/firebase/firebase_options_prod.dart",
+    "lib/shared/l10n/generated/app_localizations.dart",
+    "lib/shared/l10n/generated/app_localizations_en.dart"
+  ]
+}

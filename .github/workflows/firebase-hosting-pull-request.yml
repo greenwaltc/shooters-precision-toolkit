@@ -24,12 +24,57 @@ jobs:
         with:
           channel: stable
           flutter-version: '3.47.9'
-      - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
-      - run: node --test scripts/tests/web_release_test.mjs
+      - run: flutter pub get --enforce-lockfile
+      - run: node scripts/check_generated.mjs --tracked
+      - run: node scripts/check_repository.mjs
+      - run: node scripts/check_architecture.mjs
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver
+      - run: flutter analyze --fatal-infos --fatal-warnings
+      - run: flutter test --coverage --test-randomize-ordering-seed=4729
+      - run: node scripts/check_coverage.mjs
+      - run: node --test scripts/tests/*_test.mjs
+      - run: flutter test --platform chrome test/browser/matrix_browser_clipboard_test.dart
+      - name: Install matching browser test driver
+        run: |
+          CHROME_VERSION=$(google-chrome --product-version)
+          DRIVER=$(npx --yes @puppeteer/browsers@3.2.6 install "chromedriver@$CHROME_VERSION" --path build/browser | tail -n 1)
+          echo "CHROMEDRIVER=${DRIVER#* }" >> "$GITHUB_ENV"
+      - run: node scripts/run_web_integration.mjs
+      - run: node scripts/run_web_integration.mjs
+        env:
+          BROWSER_DIMENSION: '390x844'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm --prefix security-tests ci --ignore-scripts
+      - run: npm --prefix security-tests audit --audit-level=high
+      - run: node scripts/run_rules_tests.mjs
+      - name: Verify Firebase SDK contracts on isolated emulators
+        run: >-
+          sh scripts/firebase_emulators.sh emulators:exec
+          --config firebase.emulators.json --only auth,firestore
+          --project demo-bramwellsprecisiontestkit
+          'node scripts/flutter.mjs local test --platform chrome test/emulators/firebase_emulators_test.dart'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-evidence
+          path: |
+            coverage/lcov.info
+            build/coverage-report.json
+            build/test-results
+          retention-days: 7
       - run: node scripts/build_web.mjs dev
+      - run: node scripts/run_hosting_test.mjs dev
       - run: node scripts/measure_web.mjs dev
+      - uses: actions/upload-artifact@v4
+        if: github.event.repository.private
+        with:
+          name: private-symbols-dev
+          path: build/private-symbols/dev
+          retention-days: 30
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: web-dev

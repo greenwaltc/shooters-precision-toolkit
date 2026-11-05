@@ -4,6 +4,8 @@ Status and requirement language: [engineering standards](README.md).
 
 This document defines the target workflow. It does not claim that CI, coverage
 gates, release automation, or a migration plan have already been implemented.
+See [current adoption](standards_adoption.md) and [test commands](testing_evidence.md)
+for the gates in use and the manual checks still required.
 
 ## Toolchain and dependencies
 
@@ -46,6 +48,14 @@ Keep build products, local credentials, machine-specific paths, caches, and edit
 temporary files out of source control. Commit intentional public configuration
 templates with instructions. Remove dead code, obsolete flags, and unused
 dependencies as part of the relevant change.
+
+For this repository, run `flutter gen-l10n` with the pinned SDK after changing
+the ARB resources and commit the generated Dart files. CI checks regeneration
+against the checkout. `task native:config` refreshes public FlutterFire native
+snapshots using the existing Terraform app IDs and operator credentials; review
+and commit the generated snapshots. `task native:check` verifies their environment
+mapping without fetching cloud configuration. See [release tooling](web_releases.md)
+for artifact and private symbol retention.
 
 ## Change design and review
 

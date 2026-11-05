@@ -1,9 +1,11 @@
+import { releaseIdentity } from '../build_identity.mjs';
+import { loadManifest } from '../app_config.mjs';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { artifactHashes, environmentConfig, prepareMetadata, root, settings, verifyRelease } from '../web_release.mjs';
+import { artifactHashes, environmentConfig, prepareMetadata, root, settings, stripSourceMapDirectives, verifyRelease } from '../web_release.mjs';
 
 const source = await readFile(path.join(root, 'web/index.html'), 'utf8');
 
@@ -40,7 +42,9 @@ test('wrong-environment and modified artifacts cannot pass deployment validation
     await writeFile(path.join(directory, 'robots.txt'), 'User-agent: *\nDisallow: /\n');
     await writeFile(path.join(directory, 'main.dart.js'), 'compiled dev application');
     await writeFile(path.join(directory, '.last_build_id'), 'Flutter build marker, not a public asset');
-    const release = { ...environmentConfig('dev'), canonicalOrigin: settings.canonicalOrigin,
+    const manifest = await loadManifest('dev');
+    const identity = await releaseIdentity();
+    const release = { ...identity, buildId: `${identity.sourceRevision.slice(0, 12)}-testbuild`, sourceDirty: false, target: 'web', configChecksum: manifest.checksum, configurationSchema: manifest.values.CONFIG_SCHEMA_VERSION, ...environmentConfig('dev'), canonicalOrigin: settings.canonicalOrigin,
       files: await artifactHashes(directory) };
     await writeFile(path.join(directory, 'release.json'), JSON.stringify(release));
     assert.equal((await verifyRelease('dev', directory)).environment, 'dev');
@@ -57,6 +61,14 @@ test('wrong-environment and modified artifacts cannot pass deployment validation
     await writeFile(path.join(directory, 'installer.apk'), 'not a web asset');
     await assert.rejects(verifyRelease('dev', directory), /Release projectId does not match/);
     await assert.rejects(artifactHashes(directory), /outside Hosting/);
+    await rm(path.join(directory, 'installer.apk'));
+    await writeFile(path.join(directory, 'main.dart.js.map'), '{}');
+    await assert.rejects(artifactHashes(directory), /symbols must remain private/);
+    await rm(path.join(directory, 'main.dart.js.map'));
+    const inline = 'compiled app;/*# sourceMappingURL=data:application/json;base64,e30= */';
+    await writeFile(path.join(directory, 'main.dart.js'), inline);
+    await assert.rejects(artifactHashes(directory), /directives must remain private/);
+    assert.equal(stripSourceMapDirectives(inline), 'compiled app;');
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

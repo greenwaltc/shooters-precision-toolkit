@@ -14,13 +14,31 @@ task web:hosting:test
 
 These default to dev. Repeat with `ENV=prod` to validate production locally. The Hosting emulator uses a demo project and stops automatically; the test discovers its assigned port from the Emulator Hub. It tests response headers and deep-link SPA rewrites without publishing. The compiled release still selects its cloud backend; use `task local` for an application connected to emulated Auth/Firestore.
 
-The build hook compiles the chosen `APP_ENV`, keeps renderer resources on the same Hosting site, prepares search metadata, drops debug symbol/map files, and writes a hash manifest to `build/web-ENV/release.json`. The deployment hook refuses missing, altered, or mismatched releases. Use these hooks instead of raw `flutter build web` for publishable bundles. Hosting content deployments do not publish Auth, rules, or indexes.
+The build hook compiles the chosen profile, keeps renderer resources on the same
+Hosting site, and prepares search metadata. `build/web-ENV/release.json` records
+the Git revision, dirty-tree flag, app version/build, Flutter/Dart versions,
+dependency lockfile hash, configuration schema/hash, target, build ID, and file
+hashes. The deployment hook refuses missing, altered, or mismatched releases.
+Use these hooks for publishable bundles. Hosting content deployments do not
+publish Auth, rules, or indexes.
+
+Private source maps and renderer symbols are retained under
+`build/private-symbols/ENV/BUILD_ID`, outside the Hosting artifact. Private
+repositories also retain them as access-controlled Actions artifacts for 30 days.
+Public repository CI skips the upload. For those releases, preserve the
+matching maps in an approved private release store if configured, or record
+that symbol recovery is unavailable for the CI build. Never attach maps to a
+public release. Match a reported build ID to the artifact's `identity.json`.
 
 `firebase.dev.json` explicitly selects `bramwellsprecisiontestkitdev` and `build/web-dev`. Dev responses carry `X-Robots-Tag: noindex, nofollow, noarchive` and `Cache-Control: no-store`; HTML has matching robot metadata, dev social URLs, no production structured data/canonical/sitemap, and a disallow-all robots file. The dev installable web manifest is labelled Dev.
 
 `firebase.prod.json` explicitly selects `bramwells-precision-test-kit` and `build/web-prod`. Production uses the confirmed canonical origin `https://bramwelltest.com`, including the sitemap, social metadata, and `BrandConfiguration.publicSiteUrl`. Runtime Auth return URLs retain `https://dev.bramwelltest.com` / `https://bramwelltest.com`; emulators use localhost. The origin values in `config/web_environments.json` and Dart are checked together by a Flutter test. A future canonical-domain change should update all of these sources together.
 
-Both sites retain SPA rewrites. Stable filenames revalidate in production (`max-age=0, must-revalidate`); no stable filename receives immutable caching. The existing Flutter service worker manages its versioned code cache. Its caching is independent of Auth/Firestore document persistence, which remains disabled. The small UI icon reuses the existing 192px launcher image; the full-resolution source remains available for native icon generation.
+Both sites retain SPA rewrites. Stable filenames revalidate in production
+(`max-age=0, must-revalidate`); no stable filename receives immutable caching.
+Keep the CDN configured to honor the origin cache policy. Static resource
+caching is separate from Firestore document persistence, which remains disabled.
+The small UI icon reuses the 192px launcher image.
 
 ## Spark traffic planning
 
@@ -62,3 +80,12 @@ Previews isolate Hosting files, while all dev previews connect to dev Auth/Fires
 5. After merging to `main`, open **Actions > Release Firebase production > Run workflow**, choosing **main**. The workflow builds/tests/measures prod, then waits for the production environment's configured approval before uploading that exact verified artifact to prod live. Other branches do not run the production build/deploy jobs. Merging alone no longer publishes production.
 
 The workflow files implement the build/deploy gates; repository administrator settings and secrets must be configured on GitHub. Local validation cannot establish that these remote settings exist. [GitHub environments and protection rules](https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments), [Firebase preview action](https://github.com/FirebaseExtended/action-hosting-deploy)
+
+After publishing, check the deployed `/release.json` build ID and open the site
+in a fresh browser. Verify sign-in and the project → design → matrix → results
+journey with a designated account. Check transfer use and the diagnostic signals
+in [security operations](security_operations.md). On regression, select the
+last verified live release in Firebase Console → Hosting → Release history and
+roll back. Confirm the build ID and smoke test again. This app refactor did not
+change the Firestore schema; a future release with schema changes needs its own
+compatibility and rollback review.

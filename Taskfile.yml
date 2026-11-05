@@ -5,7 +5,7 @@ version: '3'
 vars:
   ENV: dev
   DEVICE: macos
-  EMULATOR_HOST: 127.0.0.1
+  LOCAL_PROFILE: local
   PROJECT_ID: '{{if eq .ENV "prod"}}bramwells-precision-test-kit{{else}}bramwellsprecisiontestkitdev{{end}}'
 
 tasks:
@@ -15,15 +15,37 @@ tasks:
       - task --list
 
   deps:
-    desc: Install Flutter dependencies
+    desc: Install the locked Flutter dependencies
     cmds:
-      - flutter pub get
+      - flutter pub get --enforce-lockfile
+
+  architecture:check:
+    desc: Check feature boundaries and pure contracts
+    cmds:
+      - node scripts/check_architecture.mjs
 
   check:
-    desc: Analyze Flutter code and run all tests
+    desc: Check generated code, architecture, repository hygiene, tests, and coverage
     cmds:
-      - flutter analyze
-      - flutter test
+      - task: deps
+      - node scripts/check_generated.mjs
+      - node scripts/check_architecture.mjs
+      - node scripts/check_repository.mjs
+      - dart format --output=none --set-exit-if-changed lib test integration_test test_driver
+      - flutter analyze --no-pub --fatal-infos --fatal-warnings
+      - flutter test --no-pub --coverage --test-randomize-ordering-seed=4729
+      - node scripts/check_coverage.mjs
+      - node --test scripts/tests/*_test.mjs
+
+  test:browser:
+    desc: Verify native browser clipboard events
+    cmds:
+      - flutter test --platform chrome test/browser/matrix_browser_clipboard_test.dart
+
+  test:integration:web:
+    desc: Run the assembled project journey with ChromeDriver (set CHROMEDRIVER)
+    cmds:
+      - node scripts/run_web_integration.mjs
 
   web:test:
     desc: Test web environment isolation and release validation
@@ -44,7 +66,7 @@ tasks:
     requires: *local_environment
     cmds:
       - node scripts/check_emulators.mjs
-      - flutter run -d chrome --web-hostname=127.0.0.1 --web-port=7357 --dart-define=APP_ENV=dev --dart-define=USE_FIREBASE_EMULATORS=true
+      - node scripts/flutter.mjs local run -d chrome --web-hostname=127.0.0.1 --web-port=7357
 
   emulators:start:
     desc: Start local Auth, Firestore, and Emulator UI; Ctrl+C stops them
@@ -68,7 +90,7 @@ tasks:
     requires: *local_environment
     cmds:
       - node scripts/check_emulators.mjs
-      - flutter test --platform chrome test/emulators/firebase_emulators_test.dart --dart-define=APP_ENV=dev --dart-define=USE_FIREBASE_EMULATORS=true
+      - node scripts/flutter.mjs local test --platform chrome test/emulators/firebase_emulators_test.dart
 
   web:run:
     desc: Run in Chrome (ENV=dev or prod; default dev)
@@ -77,13 +99,13 @@ tasks:
         - name: ENV
           enum: [dev, prod]
     cmds:
-      - flutter run -d chrome --dart-define=APP_ENV={{.ENV}}
+      - node scripts/flutter.mjs {{.ENV}} run -d chrome
 
   native:config:
     desc: Fetch native Firebase configs from Terraform outputs and refresh Dart options
     cmds:
       - node scripts/sync_firebase_native.mjs
-      - dart format lib/firebase/firebase_options_dev.dart lib/firebase/firebase_options_prod.dart
+      - dart format lib/app/firebase/firebase_options_dev.dart lib/app/firebase/firebase_options_prod.dart
 
   native:check:
     desc: Check native environment files, schemes, and Firebase plist selection
@@ -94,33 +116,33 @@ tasks:
     desc: Run a native flavor (ENV=dev/prod, DEVICE=macos or a device ID)
     requires: *environment
     cmds:
-      - flutter run -d '{{.DEVICE}}' --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
+      - node scripts/flutter.mjs {{.ENV}} run -d '{{.DEVICE}}' --flavor {{.ENV}}
 
   native:local:
     desc: Run a dev native flavor against running emulators (DEVICE=macos or device ID)
     requires: *local_environment
     cmds:
       - node scripts/check_emulators.mjs
-      - flutter run -d '{{.DEVICE}}' --flavor dev --dart-define=APP_ENV=dev --dart-define=USE_FIREBASE_EMULATORS=true --dart-define=FIREBASE_EMULATOR_HOST={{.EMULATOR_HOST}}
+      - node scripts/flutter.mjs {{.LOCAL_PROFILE}} run -d '{{.DEVICE}}' --flavor dev
 
   android:build:
     desc: Build an Android debug APK for the selected Firebase environment
     requires: *environment
     cmds:
-      - flutter build apk --debug --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
+      - node scripts/flutter.mjs {{.ENV}} build apk --debug --flavor {{.ENV}}
 
   ios:build:
     desc: Build an unsigned iOS simulator app for the selected Firebase environment
     requires: *environment
     cmds:
-      - flutter build ios --simulator --debug --no-codesign --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
+      - node scripts/flutter.mjs {{.ENV}} build ios --simulator --debug --no-codesign --flavor {{.ENV}}
 
   macos:build:
     desc: Build an unsigned macOS debug app for the selected Firebase environment
     requires: *environment
     cmds:
-      - flutter build macos --debug --config-only --flavor {{.ENV}} --dart-define=APP_ENV={{.ENV}}
-      - xcodebuild -workspace macos/Runner.xcworkspace -scheme {{.ENV}} -configuration Debug-{{.ENV}} -derivedDataPath build/macos-unsigned-{{.ENV}} CODE_SIGNING_ALLOWED=NO build
+      - node scripts/flutter.mjs {{.ENV}} build macos --debug --config-only --flavor {{.ENV}}
+      - xcodebuild -quiet -workspace macos/Runner.xcworkspace -scheme {{.ENV}} -configuration Debug-{{.ENV}} -derivedDataPath build/macos-unsigned-{{.ENV}} CODE_SIGNING_ALLOWED=NO build
 
   verify:
     desc: Run Flutter, native/web config, rules, and browser emulator checks sequentially
@@ -169,8 +191,7 @@ tasks:
     desc: Check built SPA routes and headers using the Hosting emulator
     requires: *environment
     cmds:
-      - task: web:check
-      - npx -y firebase-tools@latest emulators:exec --only hosting --config firebase.{{.ENV}}.json --project demo-bramwellsprecisiontestkit 'node scripts/tests/hosting_smoke.mjs {{.ENV}}'
+      - node scripts/run_hosting_test.mjs {{.ENV}}
 
   web:deploy:
     desc: Check, rebuild, and publish the selected environment's live Hosting site
@@ -278,4 +299,5 @@ tasks:
     desc: Test Firestore permissions using a local demo project
     requires: *local_environment
     cmds:
-      - sh scripts/firebase_emulators.sh emulators:exec --config firebase.emulators.json --only firestore --project demo-precision-rules 'npm --prefix security-tests test'
+      - npm --prefix security-tests ci --ignore-scripts
+      - node scripts/run_rules_tests.mjs

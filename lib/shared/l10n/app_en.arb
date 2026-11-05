@@ -1,0 +1,390 @@
+{
+  "@@locale": "en",
+  "contact": "Contact",
+  "contactDentonBramwell": "Contact Denton Bramwell",
+  "aContactFormForQuestionsAndFeedbackWill": "A contact form for questions and feedback will be available here soon.",
+  "bramwellSPrecisionTestKit": "Bramwell''s Precision Test Kit",
+  "theModernToolForComparingProjectileConsistency": "The modern tool for comparing projectile consistency",
+  "createANewProject": "Create a New Project",
+  "enterYourEmailAddress": "Enter your email address.",
+  "unableToCompleteThatActionPleaseTryAgain": "Unable to complete that action. Please try again.",
+  "enterYourEmailAddressFirst": "Enter your email address first.",
+  "ifThatAddressHasAnAccountAReset": "If that address has an account, a reset email has been sent.",
+  "signOut": "Sign out",
+  "verifyYourEmail": "Verify your email",
+  "createAnAccount": "Create an account",
+  "signIn": "Sign in",
+  "verificationEmailRequested": "Verification email requested.",
+  "sendVerificationEmail": "Send verification email",
+  "notVerifiedYetOpenTheEmailLinkAnd": "Not verified yet. Open the email link and try again.",
+  "iHaveVerifiedMyEmail": "I have verified my email",
+  "useADifferentAccount": "Use a different account",
+  "email": "Email",
+  "password": "Password",
+  "enterYourPassword": "Enter your password.",
+  "passwordRequirementsMustBeAtLeast10Characters": "Password requirements: Must be at least 10 characters",
+  "confirmPassword": "Confirm password",
+  "thePasswordsDoNotMatch": "The passwords do not match.",
+  "createAccount": "Create account",
+  "alreadyHaveAnAccountSignIn": "Already have an account? Sign in",
+  "forgotPassword": "Forgot password?",
+  "enterAValidEmailAddress": "Enter a valid email address.",
+  "chooseAPasswordThatMeetsThePasswordRequirements": "Choose a password that meets the password requirements.",
+  "unableToCreateThisAccountTrySigningIn": "Unable to create this account. Try signing in or resetting your password.",
+  "unableToSignInWithThoseDetails": "Unable to sign in with those details.",
+  "tooManyAttemptsWaitAWhileBeforeTrying": "Too many attempts. Wait a while before trying again.",
+  "checkYourConnectionAndTryAgain": "Check your connection and try again.",
+  "savingAndSigningOut": "Saving and signing out…",
+  "unableToSignOutPleaseTryAgain": "Unable to sign out. Please try again.",
+  "yourChangesCouldNotBeSavedYouAre": "Your changes could not be saved. You are still signed in. Please try again.",
+  "unableToRestoreYourSession": "Unable to restore your session.",
+  "unableToConfirmYourSession": "Unable to confirm your session.",
+  "retry": "Retry",
+  "unableToStartTheAppCheckYourConnection": "Unable to start the app. Check your connection and restart the app. If this continues, contact support.",
+  "untitledProject": "Untitled Project",
+  "testHowOneFactorTwoStatesInfluencesPrecision": "Test how one factor (two states) influences precision",
+  "testHowTwoFactorsInfluencePrecision": "Test how two factors influence precision",
+  "testHowThreeFactorsInfluencePrecision": "Test how three factors influence precision",
+  "testHowFourFactorsInfluencePrecision": "Test how four factors influence precision",
+  "unableToSaveTheLocalDraftKeepThis": "Unable to save the local draft. Keep this window open.",
+  "saved": "Saved",
+  "unsavedChanges": "Unsaved changes",
+  "saving": "Saving…",
+  "saveConflictYourDraftIsKept": "Save conflict. Your draft is kept.",
+  "unableToSaveYourChangesAreKept": "Unable to save. Your changes are kept.",
+  "retrySave": "Retry save",
+  "save": "Save",
+  "reviewConflict": "Review conflict",
+  "resolveSaveConflict": "Resolve save conflict",
+  "anotherSessionChangedOrDeletedThisProjectKeep": "Another session changed or deleted this project. Keep editing your draft, save it as a new project, or discard it and load the latest received cloud version. Loading the cloud version discards your local edits.",
+  "keepEditing": "Keep editing",
+  "saveAsANewProject": "Save as a new project",
+  "discardDraftAndReload": "Discard draft and reload",
+  "projects": "Projects",
+  "results": "Results",
+  "testDesign": "Test Design",
+  "enterGroupSize": "Enter Group Size",
+  "runOrder": "Run Order",
+  "replicate": "Replicate",
+  "groupSize": "Group Size",
+  "enterGroupSizeMessage": "Enter group size",
+  "groupSizeValuesMustBeNumbersPleaseCorrect": "Group size values must be numbers. Please correct any invalid cells.",
+  "pasteIsOnlyPermittedToTheGroupSize": "Paste is only permitted to the Group Size column.",
+  "chooseTheStructureOfYourExperiment": "Choose the Structure of Your Experiment",
+  "chooseYourRiskLevelChanceOfBeingWrong": "Choose your risk level (chance of being wrong if test indicates a real difference in factor states)",
+  "chooseYourSampleSize": "Choose your sample size",
+  "projectName": "Project Name",
+  "projectNameIsRequired": "Project name is required.",
+  "nameFactor": "Name Factor",
+  "nameOneStateOfThatFactor": "Name one state of that factor",
+  "nameTheOtherStateOfThatFactor": "Name the other state of that factor",
+  "imputeMissingDataWithTheGrandMean": "Impute missing data with the grand mean",
+  "submit": "Submit",
+  "detectableDifference": "Detectable difference",
+  "noDetectableDifference": "No detectable difference",
+  "marginal": "Marginal",
+  "insufficientData": "Insufficient data",
+  "pNGImage": "PNG image",
+  "jPEGImage": "JPEG image",
+  "pDFDocument": "PDF document",
+  "projectParameters": "Project Parameters",
+  "grandMean": "Grand Mean",
+  "riskLevel": "Risk Level",
+  "detectableDifferenceMessage": "Detectable Difference",
+  "dataMatrix": "Data Matrix",
+  "couldNotRenderChartForExport": "Could not render chart for export.",
+  "exportResults": "Export Results",
+  "averageGroupSize": "Average group size",
+  "noData": "No data",
+  "format": "Format",
+  "includeDataMatrix": "Include data matrix",
+  "cancel": "Cancel",
+  "export": "Export",
+  "matrixWillBePlacedBeforeTheGraph": "Matrix will be placed before the graph.",
+  "onlyAvailableWhenExportingToPDF": "Only available when exporting to PDF.",
+  "aVG2SHOTGROUPSIZE": "AVG. 2-SHOT GROUP SIZE",
+  "aVERAGETWOSHOTGROUPSIZE": "AVERAGE TWO SHOT GROUP SIZE",
+  "noGroupSizeDataAvailable": "No group size data available",
+  "enterAtLeastOneGroupSizeInThe": "Enter at least one group size in the data matrix to see results.",
+  "grandMeanMessage": "Grand mean",
+  "riskBounds": "Risk bounds",
+  "exporting": "Exporting…",
+  "riskLevelMessage": "Risk level",
+  "meanGroupSizesPerFactorStateVsGrand": "Mean group sizes per factor state vs. grand mean",
+  "menu": "Menu",
+  "instructions": "Instructions",
+  "donations": "Donations",
+  "unableToOpenPayPalPleaseTryAgain": "Unable to open PayPal. Please try again.",
+  "deleteProject": "Delete project?",
+  "delete": "Delete",
+  "unableToLoadYourProjects": "Unable to load your projects.",
+  "noProjectsYet": "No projects yet",
+  "createYourFirstProjectToStartMeasuringHow": "Create your first project to start measuring how your chosen factors influence precision.",
+  "unableToLoadOlderProjectsPleaseTryAgain": "Unable to load older projects. Please try again.",
+  "loadingOlderProjects": "Loading older projects…",
+  "retryLoadingOlderProjects": "Retry loading older projects",
+  "loadOlderProjects": "Load older projects",
+  "deleteProjectMessage": "This will permanently remove \"{project}\" from your cloud account.",
+  "switchToLightMode": "Switch to light mode",
+  "switchToDarkMode": "Switch to dark mode",
+  "factorNameIsRequired": "Factor name is required.",
+  "eachFactorNameMustBeUnique": "Each factor name must be unique.",
+  "factorStateIsRequired": "Factor state is required.",
+  "factorStatesMustBeDifferent": "Factor states must be different.",
+  "dataMatrixMessage": "Data matrix",
+  "factors": "Factors",
+  "groupSizeColumnDataIsIncompletePleaseFill": "Group Size column data is incomplete. Please fill out all cells to continue.",
+  "clearGroupSizes": "Clear Group Sizes?",
+  "areYouSureYouWantToClearAll": "Are you sure you want to clear all entered group size values? This action cannot be undone.",
+  "clear": "Clear",
+  "randomizeOrder": "Randomize order?",
+  "help": "Help",
+  "close": "Close",
+  "errorLoadingMarkdown": "Error loading markdown",
+  "unableToOpenThisLink": "Unable to open this link.",
+  "verifyAddress": "Verify {email} before opening your workspace.",
+  "@verifyAddress": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAgainSeconds": "Send again in {seconds}s",
+  "@sendAgainSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "requestAnotherEmailSeconds": "Request another email in {seconds}s",
+  "@requestAnotherEmailSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "factorNumber": "Factor {number}",
+  "@factorNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "detectsDifference": "Detects a difference of {difference}",
+  "@detectsDifference": {
+    "placeholders": {
+      "difference": {
+        "type": "String"
+      }
+    }
+  },
+  "factorRunCount": "{count, plural, =1{1 factor} other{{count} factors}} · {runs} runs",
+  "@factorRunCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "runs": {
+        "type": "int"
+      }
+    }
+  },
+  "projectResults": "{project} — Results",
+  "@projectResults": {
+    "placeholders": {
+      "project": {
+        "type": "String"
+      }
+    }
+  },
+  "exportedTo": "Exported to {path}",
+  "@exportedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "stateMean": "{state}: {value}",
+  "@stateMean": {
+    "placeholders": {
+      "state": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "perFactorRisk": "Per-factor results at risk level {risk}",
+  "@perFactorRisk": {
+    "placeholders": {
+      "risk": {
+        "type": "String"
+      }
+    }
+  },
+  "factorLegend": "F{number}: {name}",
+  "@factorLegend": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chartTooltip": "{factor}\n{state}: {value}",
+  "@chartTooltip": {
+    "placeholders": {
+      "factor": {
+        "type": "String"
+      },
+      "state": {
+        "type": "String"
+      },
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "meanRiskLabel": "Mean / ±{percent}%",
+  "@meanRiskLabel": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "@deleteProjectMessage": {
+    "placeholders": {
+      "project": {
+        "type": "String"
+      }
+    }
+  },
+  "createdModified": "Created {created}  ·  Modified {modified}",
+  "@createdModified": {
+    "placeholders": {
+      "created": {
+        "type": "String"
+      },
+      "modified": {
+        "type": "String"
+      }
+    }
+  },
+  "createdModifiedLines": "Created {created}\nModified {modified}",
+  "@createdModifiedLines": {
+    "placeholders": {
+      "created": {
+        "type": "String"
+      },
+      "modified": {
+        "type": "String"
+      }
+    }
+  },
+  "groupSamples": "{total} total group sizes in {replicates} groups of {ranges} group sizes each",
+  "@groupSamples": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "replicates": {
+        "type": "String"
+      },
+      "ranges": {
+        "type": "String"
+      }
+    }
+  },
+  "replicateSamples": "{total} total group sizes in {replicates} replicates of {ranges} group sizes each",
+  "@replicateSamples": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "replicates": {
+        "type": "String"
+      },
+      "ranges": {
+        "type": "String"
+      }
+    }
+  },
+  "shortGroupSamples": "{total} total group sizes in {replicates} groups of {ranges}",
+  "@shortGroupSamples": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      },
+      "replicates": {
+        "type": "String"
+      },
+      "ranges": {
+        "type": "String"
+      }
+    }
+  },
+  "sampleCount": "{total} total group sizes",
+  "@sampleCount": {
+    "placeholders": {
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "saveConflictHint": "{status} Review conflict",
+  "@saveConflictHint": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "saveActionHint": "{status} {action}",
+  "@saveActionHint": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "emailAddressFallback": "your email address",
+  "exportFailure": "Unable to export results. Try again.",
+  "percentBand": "±{percent}%",
+  "@percentBand": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "copyrightCredit": "© 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt",
+  "deleteProjectAction": "Delete project",
+  "chartDescription": "Results chart. Grand mean {mean}. Risk interval {lower} to {upper}. Numerical results for every factor state follow the chart.",
+  "@chartDescription": {
+    "placeholders": {
+      "mean": {
+        "type": "String"
+      },
+      "lower": {
+        "type": "String"
+      },
+      "upper": {
+        "type": "String"
+      }
+    }
+  },
+  "cachedData": "Cached data · reconnecting",
+  "unexpectedAppError": "Something went wrong. Restart the app and try again."
+}

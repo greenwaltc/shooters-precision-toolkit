@@ -58,7 +58,7 @@ for (const environment of ['dev', 'prod']) {
   if (apple.PROJECT_ID !== project || apple.BUNDLE_ID !== bundleId) throw new Error(`Wrong Apple configuration for ${environment}`);
   platforms.android[environment] = { projectId: project, appId: androidId, fileOutput: androidPath };
 
-  const dartPath = `lib/firebase/firebase_options_${environment}.dart`;
+  const dartPath = `lib/app/firebase/firebase_options_${environment}.dart`;
   const oldDart = readFileSync(dartPath, 'utf8');
   const web = oldDart.match(/  static const FirebaseOptions web = FirebaseOptions\([\s\S]*?\n  \);/)[0];
   const windows = oldDart.match(/  static const FirebaseOptions windows = FirebaseOptions\([\s\S]*?\n  \);/)?.[0];

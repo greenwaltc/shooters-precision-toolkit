@@ -1,7 +1,7 @@
 @TestOn('browser')
 library;
 
-import 'package:bramwells_precision_test_kit/widgets/anomr_matrix/services/matrix_grid_clipboard.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/services/matrix_grid_clipboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,7 +27,11 @@ void main() {
       manager.setCurrentSelectingPosition(
         cellPosition: const PlutoGridCellPosition(columnIdx: 4, rowIdx: 2),
       );
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
       final copyData = web.DataTransfer();
       final copyEvent = _event('copy', copyData);
       web.document.dispatchEvent(copyEvent);
@@ -53,35 +57,59 @@ void main() {
         await tester.sendKeyUpEvent(modifier);
       }
       manager.setCurrentCell(manager.rows.first.cells['range'], 0);
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
       // External paste must use the event's text, not the previous copied TSV.
       _paste('10.25\r\n20.5\r\n');
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
       expect(manager.rows[0].cells['range']!.value, '10.25');
       expect(manager.rows[1].cells['range']!.value, '20.5');
       expect(manager.rows[2].cells['range']!.value, '3');
       final original = Map.of(store.selectedProject!.matrixState);
       for (final editing in [false, true]) {
         manager.setEditing(editing);
-        await tester.pumpAndSettle();
+        await tester.pumpAndSettle(
+          const Duration(milliseconds: 100),
+          EnginePhase.sendSemanticsUpdate,
+          const Duration(seconds: 5),
+        );
         await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
         expect(await tester.sendKeyDownEvent(LogicalKeyboardKey.keyV), isFalse);
         await tester.sendKeyUpEvent(LogicalKeyboardKey.keyV);
         await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
         _paste('100\t200\n300\t400\n');
-        await tester.pumpAndSettle();
+        await tester.pumpAndSettle(
+          const Duration(milliseconds: 100),
+          EnginePhase.sendSemanticsUpdate,
+          const Duration(seconds: 5),
+        );
         expect(store.selectedProject!.matrixState, original);
         expect(
           find.text(MatrixGridClipboard.pasteRestrictionMessage),
           findsOneWidget,
         );
         await tester.pump(const Duration(seconds: 4));
-        await tester.pumpAndSettle();
+        await tester.pumpAndSettle(
+          const Duration(milliseconds: 100),
+          EnginePhase.sendSemanticsUpdate,
+          const Duration(seconds: 5),
+        );
       }
       // Other input fields/routes must retain their normal clipboard behavior.
       manager.setEditing(false);
       await tester.tap(find.widgetWithText(FilledButton, 'Contact'));
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
       final outsidePaste = _event(
         'paste',
         web.DataTransfer()..setData('text/plain', '99'),

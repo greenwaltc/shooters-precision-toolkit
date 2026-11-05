@@ -1,3 +1,5 @@
+import { releaseIdentity } from './build_identity.mjs';
+import { loadManifest } from './app_config.mjs';
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -5,6 +7,11 @@ import { fileURLToPath } from 'node:url';
 
 export const root = fileURLToPath(new URL('../', import.meta.url));
 export const settings = JSON.parse(await readFile(path.join(root, 'config/web_environments.json')));
+const sourceMapDirective = /^[\t ]*\/\/[#@][\t ]*sourceMappingURL=.*(?:\r?\n|$)|\/\*[#@][\t ]*sourceMappingURL=[^*]*\*\//gm;
+
+export function stripSourceMapDirectives(source) {
+  return source.replace(sourceMapDirective, '');
+}
 
 export function environmentConfig(environment) {
   if (!Object.hasOwn(settings.environments, environment)) {
@@ -30,10 +37,18 @@ export async function artifactHashes(directory) {
     const name = path.relative(directory, file).split(path.sep).join('/');
     // Match Hosting's **/.* ignore and upload-artifact's hidden-file exclusion.
     if (name === 'release.json' || name.split('/').some((part) => part.startsWith('.'))) continue;
+    if (/\.(map|symbols)$/i.test(name)) throw new Error(`Debug symbols must remain private: ${name}`);
     if (/\.(apk|aab|exe|msi|msix|dmg|ipa|pdf)$/i.test(name)) {
       throw new Error(`Keep installers and PDF exports outside Hosting: ${name}`);
     }
-    hashes[name] = createHash('sha256').update(await readFile(file)).digest('hex');
+    const contents = await readFile(file);
+    if (name.endsWith('.js')) {
+      const code = contents.toString('utf8');
+      if (code !== stripSourceMapDirectives(code)) {
+        throw new Error(`Source map directives must remain private: ${name}`);
+      }
+    }
+    hashes[name] = createHash('sha256').update(contents).digest('hex');
   }
   return hashes;
 }
@@ -63,6 +78,16 @@ export async function verifyRelease(environment, directory = path.join(root, `bu
   const manifest = JSON.parse(await readFile(path.join(directory, 'release.json')));
   for (const key of ['environment', 'projectId', 'siteId', 'publicOrigin']) {
     if (manifest[key] !== config[key]) throw new Error(`Release ${key} does not match ${environment}. Rebuild it.`);
+  }
+  const buildConfig = await loadManifest(environment);
+  if (manifest.configChecksum !== buildConfig.checksum || manifest.configurationSchema !== buildConfig.values.CONFIG_SCHEMA_VERSION) throw new Error('Release configuration changed. Rebuild before deploying.');
+  const identity = await releaseIdentity();
+  for (const [key, expected] of Object.entries(identity)) {
+    if (manifest[key] !== expected) throw new Error(`Release ${key} does not match this checkout.`);
+  }
+  if (manifest.target !== 'web' || typeof manifest.sourceDirty !== 'boolean' ||
+      !new RegExp(`^${identity.sourceRevision.slice(0, 12)}-[a-z0-9]{4,16}$`).test(manifest.buildId)) {
+    throw new Error('Release build identity is invalid.');
   }
   if (manifest.canonicalOrigin !== settings.canonicalOrigin) throw new Error('Rebuild after changing canonicalOrigin.');
   const hashes = await artifactHashes(directory);

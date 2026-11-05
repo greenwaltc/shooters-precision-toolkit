@@ -2,7 +2,7 @@
 
 A statistical analysis app for testing firearm shot consistency, by Denton M. Bramwell.
 
-Built with Flutter and running on **web, Android, iOS, macOS, and Windows**, the app walks a shooter through designing a precision experiment, collecting two-shot group data, and reading statistically sound conclusions from an ANOMR (Analysis of Means for Ranges) chart — no statistics background required.
+Built with Flutter for **web, Android, iOS, and macOS**, the app walks a shooter through designing a precision experiment, collecting two-shot group data, and reading statistically sound conclusions from an ANOMR (Analysis of Means for Ranges) chart — no statistics background required. Windows has a runner scaffold but no configured Firebase environment.
 
 ## What it does
 
@@ -26,7 +26,7 @@ Full usage instructions live in the app under the **Instructions** button (sourc
 
 ## Getting started (development)
 
-Prerequisites: a recent [Flutter](https://docs.flutter.dev/get-started/install) stable release (Dart SDK ≥ 3.11, per `pubspec.yaml`) and [Task](https://taskfile.dev/docs/installation). On macOS, install Task with `brew install go-task`. Infrastructure/deployment commands also use Terraform, Node.js/npm, and the Google Cloud CLI.
+Prerequisites: [Flutter](https://docs.flutter.dev/get-started/install) **3.47.9** (bundled Dart **3.13.7**), Node.js **22+**, and [Task](https://taskfile.dev/docs/installation). The SDK pin is recorded in `.fvmrc` and `config/toolchain.json`. On macOS, install Task with `brew install go-task`. Infrastructure commands also use Terraform and the Google Cloud CLI.
 
 ```bash
 task deps
@@ -38,7 +38,7 @@ task                      # List all available commands
 
 `task local` starts the Auth and Standard Firestore emulators, waits for them, and launches Flutter in Chrome at `http://127.0.0.1:7357`. Use Flutter's `r`/`R` commands to reload/restart after changes, and `q` to quit. Ctrl+C also shuts down the session. The Emulator UI is at [127.0.0.1:4000](http://127.0.0.1:4000).
 
-The first start downloads the Firebase CLI and emulator binaries, so it needs internet access. Install Node.js 20+ and Java 21+; on this Mac the launcher automatically uses Android Studio's bundled Java 21 when the default Java is older. No Firebase login, cloud deployment, or Terraform apply is needed. Local services use `demo-bramwellsprecisiontestkit`, with separate dummy SDK configuration. All emulator listeners are restricted to this computer.
+The first start downloads the Firebase CLI and emulator binaries, so it needs internet access. Install Java 21 or newer; the launcher can use Android Studio's bundled Java when the default Java is older. No Firebase login, cloud deployment, or Terraform apply is needed. Local services use `demo-bramwellsprecisiontestkit`, with separate dummy SDK configuration. All emulator listeners are restricted to this computer.
 
 For separate terminals:
 
@@ -99,11 +99,11 @@ task macos:build                            # unsigned dev macOS app
 task macos:build ENV=prod
 ```
 
-For a native dev app with local Firebase, start `task emulators:start` in one terminal and run `task native:local DEVICE=macos` in another. Use `flutter devices` for other device IDs. Android emulators use `task native:local DEVICE=YOUR_DEVICE_ID EMULATOR_HOST=10.0.2.2`. Apple signed runs require a development certificate/team configured in Xcode; unsigned builds do not need one. Android production release signing uses the private `android/key.properties` file; see its checked-in example. Production releases fail if that file is absent.
+For a native dev app with local Firebase, start `task emulators:start` in one terminal and run `task native:local DEVICE=macos` in another. Use `flutter devices` for other device IDs. Android emulators use `task native:local DEVICE=YOUR_DEVICE_ID LOCAL_PROFILE=local-android`. Apple signed runs require a development certificate/team configured in Xcode; unsigned builds do not need one. Android production release signing uses the private `android/key.properties` file; see its checked-in example. Production releases fail if that file is absent.
 
 If Xcode reports “Found no destinations” or “iOS 26.5 is not installed,” install the matching iOS platform in Xcode > Settings > Components, then rerun `task ios:build`. A simulator runtime is also needed to run the app in a simulator.
 
-`task native:config` retrieves SDK config using Terraform output app IDs and regenerates native Dart options while preserving web options. It never creates Firebase apps. `task native:check` checks both environments and every Apple build configuration. `task verify` runs regular Flutter, native config, rules, and browser emulator checks sequentially on macOS; stop interactive emulators first.
+`task native:config` retrieves SDK config using Terraform output app IDs and regenerates native Dart options while preserving web options. It never creates Firebase apps. `task native:check` checks environment identity and transport policy. `task verify` runs regular Flutter, native config, rules, and browser emulator checks sequentially on macOS; stop interactive emulators first or run `task local:test` against the running instance. See the [engineering standards](docs/README.md) and [verification commands](docs/testing_evidence.md).
 
 The application is cloud-native. Its signed-in workspace retains only session drafts, and persistent Firestore caching is disabled. Legacy import and durable offline replay are outside scope; unsaved changes do not survive a refresh/restart. Existing cloud revision guards remain in place. Steps 10–11 are marked skipped in the [migration guide](docs/firebase_migration_guide.md).
 
@@ -127,43 +127,33 @@ Auth settings are separate: `task auth:deploy` deploys only the selected provide
 
 ```
 lib/
-├── main.dart                  # App bootstrap, routing, theme wiring
-├── config/                    # Feature flags and build configuration
-├── help/                      # In-app instructions sheet
-├── model/                     # ProjectStore, form model, theme controller
-├── navigation/                # Route names
-├── sample_size_catalog.dart   # Sample-size options per factor count / risk
-├── storage/                   # SharedPreferences persistence boundary
-├── styles/
-│   ├── app_design.dart        # ← Central design config: every visual "knob"
-│   ├── app_theme.dart         # Material 3 theme built from AppDesign
-│   ├── tokens/                # Spacing, radius, color, border, opacity facets
-│   ├── components/            # Reusable styled widgets (cards, pills, panels)
-│   ├── layout/                # Responsive breakpoints and viewport helpers
-│   └── chart/                 # Chart scaling and layout rules
-└── widgets/
-    ├── project_home_page.dart # Project list + create
-    ├── project_form.dart      # Experiment setup form
-    ├── anomr_matrix.dart      # Data-entry grid (PlutoGrid)
-    └── anomr_results/         # ANOMR calculation, chart, export
+├── main.dart       # Entry point
+├── app/            # Validated configuration, startup, routing, composition
+├── features/
+│   ├── auth/       # Account lifecycle and Firebase Auth adapter
+│   ├── contact/    # Contact page
+│   └── experiments/ # Projects, Test Design, matrix, results, and persistence
+└── shared/         # Contracts, platform adapters, localization, and UI
 ```
+
+See the [architecture map](docs/architecture_map.md) for dependencies and state
+lifetimes.
 
 ### Theming and design knobs
 
-All visual configuration — brand color, spacing scale, radii, typography, button geometry, motion — lives in **`lib/styles/app_design.dart`** as documented constants. Change a value there and it propagates through the theme and every token. Light and dark themes are generated from the same knobs, so they stay consistent automatically.
+Common visual settings live in `lib/shared/ui/theme/app_design.dart` and its
+theme tokens. Responsive layout adapts those values to the viewport. User-facing
+copy lives in `lib/shared/l10n/app_en.arb`.
 
 ## Testing
 
-Tests live in `test/` and cover the form model (factor persistence across structure changes), range-value parsing, grid undo/redo history, theme controller persistence, text-scale clamping, and end-to-end widget flows (project creation → setup → matrix → results).
+Tests mirror the app under `test/`. They cover form validation, numeric parsing,
+matrix selection and history, accessible layouts, and account isolation. The
+assembled browser journey covers project creation → Test Design → matrix → results.
+See [test commands and evidence](docs/testing_evidence.md).
 
 ```bash
-flutter test
-```
-
-Authentication coverage also checks verification gating, verified workspace access, per-account local storage, logout and route disposal, verification-email retries, and generic password-reset responses. The regular suite injects controlled Auth failures and advances the cooldown clock without real delays.
-
-```bash
-task check               # Analysis and regular tests
+task check               # Locked dependencies, analysis, tests and coverage
 task emulators:test      # Fresh emulators and browser Auth/Firestore tests
 task local:test          # Browser tests against already-running emulators
 ```

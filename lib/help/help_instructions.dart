@@ -4,8 +4,8 @@
 // Unauthorized use or reproduction of this source code is prohibited.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -105,9 +105,13 @@ class _HelpInstructionsState extends State<HelpInstructions> {
   /// Held in state rather than rebuilt in `build` so the [FutureBuilder] is
   /// not restarted on every rebuild. `rootBundle` caches the decoded string,
   /// so re-opening help does not re-read the asset.
-  late final Future<String> _instructions = rootBundle.loadString(
-    'assets/help_instructions.md',
-  );
+  late final Future<String> _instructions;
+
+  @override
+  void initState() {
+    super.initState();
+    _instructions = rootBundle.loadString('assets/help_instructions.md');
+  }
 
   ScrollController? get scrollController => widget.scrollController;
 
@@ -120,7 +124,9 @@ class _HelpInstructionsState extends State<HelpInstructions> {
   }
 
   Widget _buildSnapshot(BuildContext context, AsyncSnapshot<String> snapshot) {
-    if (snapshot.hasData) return _buildMarkdown(snapshot.data!);
+    if (snapshot.hasData) {
+      return _buildMarkdown(snapshot.data!);
+    }
     if (snapshot.hasError) {
       return const Center(child: Text('Error loading markdown'));
     }
@@ -178,7 +184,9 @@ class _HelpInstructionsState extends State<HelpInstructions> {
     Widget child,
     ImageChunkEvent? loadingProgress,
   ) {
-    if (loadingProgress == null) return child;
+    if (loadingProgress == null) {
+      return child;
+    }
     return Center(
       child: CircularProgressIndicator(
         value: _imageLoadingValue(loadingProgress),
@@ -188,13 +196,26 @@ class _HelpInstructionsState extends State<HelpInstructions> {
 
   double? _imageLoadingValue(ImageChunkEvent loadingProgress) {
     final expectedTotalBytes = loadingProgress.expectedTotalBytes;
-    if (expectedTotalBytes == null) return null;
+    if (expectedTotalBytes == null) {
+      return null;
+    }
     return loadingProgress.cumulativeBytesLoaded / expectedTotalBytes;
   }
 
-  void _openLink(String text, String? url, String? title) {
+  Future<void> _openLink(String text, String? url, String? title) async {
     if (url != null) {
-      launchUrl(Uri.parse(url));
+      try {
+        if (await launchUrl(Uri.parse(url))) {
+          return;
+        }
+      } on Exception {
+        // Platform/link failures are reported below while the sheet is mounted.
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open this link.')),
+        );
+      }
     }
   }
 }

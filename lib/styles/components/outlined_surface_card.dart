@@ -5,10 +5,10 @@
 
 import 'package:flutter/material.dart';
 
+import '../layout/app_layout.dart';
 import '../tokens/app_opacity.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
-import '../layout/app_layout.dart';
 
 /// Visual variant for [OutlinedSurfaceCard].
 enum OutlinedSurfaceVariant {

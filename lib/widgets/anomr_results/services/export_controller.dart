@@ -88,7 +88,9 @@ class ExportController {
         allowedExtensions: [artifact.extension],
       );
 
-      if (savedPath == null) return const ExportCancelled();
+      if (savedPath == null) {
+        return const ExportCancelled();
+      }
       return ExportSucceeded(savedPath);
     } catch (error) {
       return ExportFailed('Export failed: $error');

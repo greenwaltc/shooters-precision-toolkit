@@ -9,9 +9,9 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pluto_grid/pluto_grid.dart';
 
-import '../../anomr_matrix/services/matrix_grid_data_builder.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/pdf/pdf_styles.dart';
+import '../../anomr_matrix/services/matrix_grid_data_builder.dart';
 
 /// Builds a PDF document containing the export-rendered chart image and an
 /// optional ANOMR data table.
@@ -157,7 +157,9 @@ class AnomrPdfBuilder {
   }
 
   static String _formatNumber(double value) {
-    if (value.isNaN || !value.isFinite) return '—';
+    if (value.isNaN || !value.isFinite) {
+      return '—';
+    }
     return value.toStringAsFixed(4);
   }
 
@@ -165,9 +167,7 @@ class AnomrPdfBuilder {
   /// regardless of on-screen randomization or viewport.
   static List<PlutoRow> _exportRows(PlutoGridStateManager manager) {
     final rows = List<PlutoRow>.from(manager.refRows);
-    rows.sort(
-      (a, b) => _storageIndexFor(a).compareTo(_storageIndexFor(b)),
-    );
+    rows.sort((a, b) => _storageIndexFor(a).compareTo(_storageIndexFor(b)));
     return rows;
   }
 

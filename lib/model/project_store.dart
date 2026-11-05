@@ -9,8 +9,9 @@ import 'dart:convert';
 
 import 'package:flutter/widgets.dart';
 
-import '../storage/project_repository.dart';
 import '../storage/project_draft_storage.dart';
+import '../storage/project_repository.dart';
+import '../util/json_object.dart';
 import 'project_form_model.dart';
 import 'saved_project.dart';
 
@@ -42,14 +43,22 @@ class ProjectEditState {
   bool get hasConflict => error is ProjectConflict;
 
   ProjectSaveState get saveState {
-    if (isSaving) return ProjectSaveState.saving;
-    if (hasConflict) return ProjectSaveState.conflict;
-    if (error != null) return ProjectSaveState.error;
+    if (isSaving) {
+      return ProjectSaveState.saving;
+    }
+    if (hasConflict) {
+      return ProjectSaveState.conflict;
+    }
+    if (error != null) {
+      return ProjectSaveState.error;
+    }
     return isDirty ? ProjectSaveState.dirty : ProjectSaveState.saved;
   }
 }
 
-/// Owns editable projects for one account, independently of the persistence SDK.
+/// Owns subscriptions, debounce timers, and editable projects for one account.
+/// Disposing invalidates listener generations immediately. Already-started I/O
+/// may finish, but must not notify or update a disposed workspace.
 class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   ProjectStore({
     required this.repository,
@@ -107,8 +116,12 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   Object? get olderProjectsError => _olderProjectsError;
   Object? get loadError => _loadError;
   WorkspaceLoadState get loadState {
-    if (_loadError != null) return WorkspaceLoadState.error;
-    if (!_isLoaded) return WorkspaceLoadState.loading;
+    if (_loadError != null) {
+      return WorkspaceLoadState.error;
+    }
+    if (!_isLoaded) {
+      return WorkspaceLoadState.loading;
+    }
     return _projects.isEmpty
         ? WorkspaceLoadState.empty
         : WorkspaceLoadState.ready;
@@ -121,7 +134,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   ProjectEditState? editStateFor(String id) {
     final project = _projects[id];
-    if (project == null) return null;
+    if (project == null) {
+      return null;
+    }
     return ProjectEditState(
       project: project,
       revision: revisionFor(id),
@@ -154,8 +169,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _captureChanges(original);
     final originalCounter = _editVersions[id];
     final now = DateTime.now().toUtc().toIso8601String();
-    final json =
-        jsonDecode(jsonEncode(original.toJson())) as Map<String, dynamic>;
+    final json = decodeJsonObject(jsonEncode(original.toJson()));
     json['id'] = repository.newProjectId();
     json['createdAt'] = now;
     json['updatedAt'] = now;
@@ -183,6 +197,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
     final remote = _pendingRemote.remove(id);
     _saveDebounceTimers.remove(id)?.cancel();
+    // _draftOperationTail observes and exposes failures through draftError.
     unawaited(_queueDraftChange(id, () => draftStorage.remove(id)));
     _dirty.remove(id);
     _saveErrors.remove(id);
@@ -190,7 +205,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _removeProject(id, selectNext: false);
     } else {
       final existing = _projects[id];
-      if (existing != null) _observedContents[id] = _contents(existing);
+      if (existing != null) {
+        _observedContents[id] = _contents(existing);
+      }
       _acceptRemote(remote!);
     }
     _notifyIfActive();
@@ -206,14 +223,20 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   /// Attaches once and completes when the first result or loading error arrives.
   /// A subsequent call after an error retries without discarding existing data.
   Future<void> load() {
-    if (_disposed) return Future.error(StateError('Workspace is disposed.'));
-    if (_loadFuture != null && _loadError == null) return _loadFuture!;
+    if (_disposed) {
+      return Future.error(StateError('Workspace is disposed.'));
+    }
+    if (_loadFuture != null && _loadError == null) {
+      return _loadFuture!;
+    }
     final generation = ++_loadGeneration;
     final first = Completer<void>();
     _initialLoad = first;
     _loadFuture = first.future;
     _loadError = null;
     _notifyIfActive();
+    // _subscribe translates failures to loadState and completes the initial
+    // load. Generation checks reject results after replacement or disposal.
     unawaited(_subscribe(generation));
     return first.future;
   }
@@ -223,16 +246,22 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   void _completeInitialLoad() {
     final first = _initialLoad;
-    if (first != null && !first.isCompleted) first.complete();
+    if (first != null && !first.isCompleted) {
+      first.complete();
+    }
   }
 
   Future<void> _subscribe(int generation) async {
     try {
       await _projectsSubscription?.cancel();
-      if (!_isCurrentLoad(generation)) return;
+      if (!_isCurrentLoad(generation)) {
+        return;
+      }
       if (!_draftsLoaded) {
         final drafts = await draftStorage.readAll();
-        if (!_isCurrentLoad(generation)) return;
+        if (!_isCurrentLoad(generation)) {
+          return;
+        }
         for (final entry in drafts.entries) {
           final project = entry.value.project;
           _projects[entry.key] = project;
@@ -268,7 +297,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _applyRecentPage(List<CloudProject> page, int generation) {
-    if (!_isCurrentLoad(generation)) return;
+    if (!_isCurrentLoad(generation)) {
+      return;
+    }
     try {
       final firstPage = !_isLoaded;
       final ordering = jsonEncode([
@@ -334,12 +365,16 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _notifyIfActive();
     try {
       final page = await repository.fetchOlderProjects(after: cursor);
-      if (_disposed || generation != _paginationGeneration) return;
+      if (_disposed || generation != _paginationGeneration) {
+        return;
+      }
       for (final record in page) {
         _acceptRemote(record);
       }
       _olderPages.add(List.unmodifiable(page));
-      if (page.isNotEmpty) _olderCursor = page.last;
+      if (page.isNotEmpty) {
+        _olderCursor = page.last;
+      }
       _hasMoreProjects = page.length == ProjectRepository.pageSize;
     } catch (error) {
       if (!_disposed && generation == _paginationGeneration) {
@@ -352,7 +387,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _handleProjectLoadError(Object error, int generation) {
-    if (!_isCurrentLoad(generation)) return;
+    if (!_isCurrentLoad(generation)) {
+      return;
+    }
     // Retain projects, selection, dirty drafts and revisions for retry.
     _loadError = error;
     _completeInitialLoad();
@@ -379,8 +416,12 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> selectProject(String projectId) async {
-    if (_disposed || !_projects.containsKey(projectId)) return;
-    if (_selectedProjectId == projectId) return;
+    if (_disposed || !_projects.containsKey(projectId)) {
+      return;
+    }
+    if (_selectedProjectId == projectId) {
+      return;
+    }
     _select(projectId);
     _notifyIfActive();
   }
@@ -388,7 +429,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   /// Records direct matrix/map edits without waiting for an explicit save call.
   void markProjectChanged(String id) {
     final project = _projects[id];
-    if (_disposed || project == null || !_captureChanges(project)) return;
+    if (_disposed || project == null || !_captureChanges(project)) {
+      return;
+    }
     project.touch();
     _notifyIfActive();
   }
@@ -396,15 +439,21 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   void _select(String? id) {
     _selectedProjectId = id;
     final generation = ++_selectionGeneration;
-    unawaited(_selectedSubscription?.cancel());
+    unawaited(_observeCancellation(_selectedSubscription?.cancel()));
     _selectedSubscription = null;
-    if (id == null || _disposed) return;
+    if (id == null || _disposed) {
+      return;
+    }
     _selectedSubscription = repository
         .watchProject(id)
         .listen(
           (record) {
-            if (_disposed || generation != _selectionGeneration) return;
-            if (_deleting.contains(id)) return;
+            if (_disposed || generation != _selectionGeneration) {
+              return;
+            }
+            if (_deleting.contains(id)) {
+              return;
+            }
             if (record != null) {
               final previous = _projects[id];
               if (!record.hasPendingWrites &&
@@ -431,7 +480,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
             _notifyIfActive();
           },
           onError: (Object error, StackTrace stack) {
-            if (_disposed || generation != _selectionGeneration) return;
+            if (_disposed || generation != _selectionGeneration) {
+              return;
+            }
             _loadError = error;
             _notifyIfActive();
           },
@@ -440,9 +491,13 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   void _acceptRemote(CloudProject record) {
     final id = record.project.id;
-    if (_deleting.contains(id) || record.hasPendingWrites) return;
+    if (_deleting.contains(id) || record.hasPendingWrites) {
+      return;
+    }
     final existing = _projects[id];
-    if (existing != null) _captureChanges(existing);
+    if (existing != null) {
+      _captureChanges(existing);
+    }
     if (_dirty.contains(id) || _saving.contains(id)) {
       final pending = _pendingRemote[id];
       if (pending == null || record.revision >= pending.revision) {
@@ -454,7 +509,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       }
       return;
     }
-    if (record.revision < revisionFor(id)) return;
+    if (record.revision < revisionFor(id)) {
+      return;
+    }
     if (existing != null && _contents(existing) == _contents(record.project)) {
       existing.updatedAt = record.project.updatedAt;
     } else {
@@ -476,7 +533,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     var deletedSelection = false;
     try {
       await _enqueue(() async {
-        if (_disposed) throw StateError('Workspace is disposed.');
+        if (_disposed) {
+          throw StateError('Workspace is disposed.');
+        }
         await repository.deleteProject(
           projectId,
           expectedRevision: revisionFor(projectId),
@@ -485,7 +544,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
           projectId,
           () => draftStorage.remove(projectId),
         );
-        if (_disposed) return;
+        if (_disposed) {
+          return;
+        }
         deletedSelection = _selectedProjectId == projectId;
         _removeProject(projectId);
       });
@@ -501,21 +562,31 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   /// Records edits locally and debounces cloud upload, including matrix changes.
   Future<void> persistSelectedProject({bool markModified = false}) async {
-    if (_disposed) return;
+    if (_disposed) {
+      return;
+    }
     final project = selectedProject;
-    if (project == null) return;
+    if (project == null) {
+      return;
+    }
     _syncSetupComplete(project);
-    if (markModified) project.touch();
+    if (markModified) {
+      project.touch();
+    }
     _captureChanges(project);
     _notifyIfActive();
     await _draftOperationTail;
-    if (_draftErrors[project.id] case final error?) throw error;
+    if (_draftErrors[project.id] case final error?) {
+      throw error;
+    }
   }
 
   /// An explicit Save/Retry action bypasses debounce for the selected project.
   Future<void> saveSelectedProject() async {
     final id = selectedProject?.id;
-    if (_disposed || id == null) return;
+    if (_disposed || id == null) {
+      return;
+    }
     if (!_dirty.contains(id) && _draftErrors.containsKey(id)) {
       await _queueDraftChange(id, () => draftStorage.remove(id));
       _saveErrors.remove(id);
@@ -527,14 +598,18 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<bool> completeProjectSetup() async {
     final project = selectedProject;
-    if (project == null || !project.formModel.isSetupValid) return false;
+    if (project == null || !project.formModel.isSetupValid) {
+      return false;
+    }
     if (!project.setupComplete) {
       project.setupComplete = true;
       project.touch();
       _captureChanges(project);
     }
     await _draftOperationTail;
-    if (_draftErrors[project.id] case final error?) throw error;
+    if (_draftErrors[project.id] case final error?) {
+      throw error;
+    }
     _notifyIfActive();
     return true;
   }
@@ -573,17 +648,25 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       _enqueue(() => _saveProject(id, automatic: automatic));
 
   Future<void> _saveProject(String id, {bool automatic = false}) async {
-    if (_disposed || _deleting.contains(id)) return;
-    if (automatic && saveErrorFor(id) != null) return;
+    if (_disposed || _deleting.contains(id)) {
+      return;
+    }
+    if (automatic && saveErrorFor(id) != null) {
+      return;
+    }
     final project = _projects[id];
-    if (project == null) return;
+    if (project == null) {
+      return;
+    }
     _captureChanges(project);
-    if (!_dirty.contains(id)) return;
+    if (!_dirty.contains(id)) {
+      return;
+    }
     _saveDebounceTimers.remove(id)?.cancel();
     final version = _editVersions[id];
     final expectedRevision = revisionFor(id);
     final snapshot = SavedProject.fromJson(
-      jsonDecode(jsonEncode(project.toJson())) as Map<String, dynamic>,
+      decodeJsonObject(jsonEncode(project.toJson())),
     );
     final acknowledgedDraft = ProjectDraft.capture(
       snapshot,
@@ -597,12 +680,16 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       // Local writes and cleanup share an ordered queue. An old acknowledgement
       // cannot remove a newer draft, and failed local writes stop cloud upload.
       await _writeDraft(id);
-      if (_disposed) return;
+      if (_disposed) {
+        return;
+      }
       final revision = await repository.saveProject(
         snapshot,
         expectedRevision: expectedRevision,
       );
-      if (_disposed) return;
+      if (_disposed) {
+        return;
+      }
       _revisions[id] = revision;
       _captureChanges(project);
       if (_editVersions[id] == version) {
@@ -633,7 +720,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         _scheduleSave(id);
       }
     } catch (error) {
-      if (!_disposed) _saveErrors[id] = error;
+      if (!_disposed) {
+        _saveErrors[id] = error;
+      }
       rethrow;
     } finally {
       _saving.remove(id);
@@ -644,16 +733,18 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   // Only domain content is compared: server updatedAt acknowledgement is not an edit.
   String _contents(SavedProject project) => jsonEncode(
     _canonical(
-      Map<String, dynamic>.from(project.toJson())..remove('updatedAt'),
+      Map<String, Object?>.from(project.toJson())..remove('updatedAt'),
     ),
   );
 
   Object? _canonical(Object? value) {
-    if (value is Map<String, dynamic>) {
+    if (value is Map<String, Object?>) {
       final keys = value.keys.toList()..sort();
       return {for (final key in keys) key: _canonical(value[key])};
     }
-    if (value is List) return value.map(_canonical).toList();
+    if (value is List<Object?>) {
+      return value.map(_canonical).toList();
+    }
     return value;
   }
 
@@ -670,6 +761,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _editVersions[project.id] = (_editVersions[project.id] ?? 0) + 1;
     _dirty.add(project.id);
     _sortedProjects = null;
+    // The ordered draft tail handles errors even for these detached writes.
     unawaited(_writeDraft(project.id));
     _scheduleSave(project.id);
   }
@@ -677,7 +769,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   void _attachProjectListener(SavedProject project) {
     _detachProjectListener(project.id);
     void listener() {
-      if (_disposed) return;
+      if (_disposed) {
+        return;
+      }
       project.touch();
       _syncSetupComplete(project);
       _captureChanges(project);
@@ -690,7 +784,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   void _detachProjectListener(String id) {
     final listener = _projectListeners.remove(id);
-    if (listener != null) _projects[id]?.formModel.removeListener(listener);
+    if (listener != null) {
+      _projects[id]?.formModel.removeListener(listener);
+    }
   }
 
   void _removeProject(String id, {bool selectNext = true}) {
@@ -727,7 +823,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     final next = _draftOperationTail.then((_) => change());
     _draftOperationTail = next.then<void>(
       (_) {
-        if (_draftErrors.remove(id) != null) _notifyIfActive();
+        if (_draftErrors.remove(id) != null) {
+          _notifyIfActive();
+        }
       },
       onError: (Object error, StackTrace _) {
         _draftErrors[id] = error;
@@ -740,7 +838,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> _writeDraft(String id) {
     final project = _projects[id];
-    if (project == null) return Future.value();
+    if (project == null) {
+      return Future.value();
+    }
     final draft = ProjectDraft.capture(
       project,
       revisionFor(id),
@@ -750,7 +850,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _scheduleSave(String id) {
-    if (_disposed || saveErrorFor(id) != null) return;
+    if (_disposed || saveErrorFor(id) != null) {
+      return;
+    }
     _saveDebounceTimers.remove(id)?.cancel();
     _saveDebounceTimers[id] = Timer(saveDebounce, () {
       _saveDebounceTimers.remove(id);
@@ -763,16 +865,24 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _saveInBackground() {
-    if (_disposed || !_isLoaded) return;
+    if (_disposed || !_isLoaded) {
+      return;
+    }
     for (final project in _projects.values) {
       _captureChanges(project);
-      if (_dirty.contains(project.id)) _scheduleSave(project.id);
+      if (_dirty.contains(project.id)) {
+        _scheduleSave(project.id);
+      }
     }
   }
 
   void _requireLoaded() {
-    if (_disposed) throw StateError('Workspace is disposed.');
-    if (!_isLoaded) throw StateError('The workspace is still loading.');
+    if (_disposed) {
+      throw StateError('Workspace is disposed.');
+    }
+    if (!_isLoaded) {
+      throw StateError('The workspace is still loading.');
+    }
   }
 
   @override
@@ -793,8 +903,8 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
       timer.cancel();
     }
     _saveDebounceTimers.clear();
-    unawaited(_projectsSubscription?.cancel());
-    unawaited(_selectedSubscription?.cancel());
+    unawaited(_observeCancellation(_projectsSubscription?.cancel()));
+    unawaited(_observeCancellation(_selectedSubscription?.cancel()));
     if (_initialLoad != null && !_initialLoad!.isCompleted) {
       _initialLoad!.complete();
     }
@@ -806,6 +916,25 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _notifyIfActive() {
-    if (!_disposed) notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
+  }
+
+  /// Cancellation is detached from synchronous dispose/selection callbacks;
+  /// failures are reported without reviving the disposed notifier.
+  static Future<void> _observeCancellation(Future<void>? cancellation) async {
+    try {
+      await cancellation;
+    } catch (error, stack) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stack,
+          library: 'project store',
+          context: ErrorDescription('while cancelling a project subscription'),
+        ),
+      );
+    }
   }
 }

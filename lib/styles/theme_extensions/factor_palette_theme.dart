@@ -16,7 +16,12 @@ import '../tokens/app_colors.dart';
 /// chart code.
 @immutable
 class FactorPaletteTheme extends ThemeExtension<FactorPaletteTheme> {
-  const FactorPaletteTheme({required this.colors});
+  FactorPaletteTheme({required List<Color> colors})
+    : colors = List.unmodifiable(colors) {
+    if (colors.isEmpty) {
+      throw ArgumentError.value(colors, 'colors', 'Must not be empty.');
+    }
+  }
 
   /// Default palette wired up in the standard light theme.
   const FactorPaletteTheme.standard() : colors = AppColors.factorPalette;
@@ -34,8 +39,12 @@ class FactorPaletteTheme extends ThemeExtension<FactorPaletteTheme> {
 
   @override
   FactorPaletteTheme lerp(ThemeExtension<FactorPaletteTheme>? other, double t) {
-    if (other is! FactorPaletteTheme) return this;
-    if (identical(this, other)) return this;
+    if (other is! FactorPaletteTheme) {
+      return this;
+    }
+    if (identical(this, other)) {
+      return this;
+    }
     final length = colors.length < other.colors.length
         ? colors.length
         : other.colors.length;

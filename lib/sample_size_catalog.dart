@@ -32,7 +32,7 @@ const _fortyEightSampleRiskLevels = {
 // totalSamples levels: 8, 14, 56.
 // ---------------------------------------------------------------------------
 
-const SampleSizeOption _oneFactor_8 = SampleSizeOption(
+final SampleSizeOption _oneFactor8 = SampleSizeOption(
   numFactors: 1,
   numSets: 4,
   family: SampleSizeFamily.simpleComparison,
@@ -43,7 +43,7 @@ const SampleSizeOption _oneFactor_8 = SampleSizeOption(
   },
 );
 
-const SampleSizeOption _oneFactor_14 = SampleSizeOption(
+final SampleSizeOption _oneFactor14 = SampleSizeOption(
   numFactors: 1,
   numSets: 7,
   family: SampleSizeFamily.simpleComparison,
@@ -54,7 +54,7 @@ const SampleSizeOption _oneFactor_14 = SampleSizeOption(
   },
 );
 
-const SampleSizeOption _oneFactor_56 = SampleSizeOption(
+final SampleSizeOption _oneFactor56 = SampleSizeOption(
   numFactors: 1,
   numSets: 28,
   family: SampleSizeFamily.simpleComparison,
@@ -70,21 +70,21 @@ const SampleSizeOption _oneFactor_56 = SampleSizeOption(
 // totalSamples levels: 16, 32, 48.
 // ---------------------------------------------------------------------------
 
-const SampleSizeOption _twoFactor_16 = SampleSizeOption(
+final SampleSizeOption _twoFactor16 = SampleSizeOption(
   numFactors: 2,
   numSets: 4,
   family: SampleSizeFamily.factorial,
   detectableDifferences: _sixteenSampleRiskLevels,
 );
 
-const SampleSizeOption _twoFactor_32 = SampleSizeOption(
+final SampleSizeOption _twoFactor32 = SampleSizeOption(
   numFactors: 2,
   numSets: 8,
   family: SampleSizeFamily.factorial,
   detectableDifferences: _thirtyTwoSampleRiskLevels,
 );
 
-const SampleSizeOption _twoFactor_48 = SampleSizeOption(
+final SampleSizeOption _twoFactor48 = SampleSizeOption(
   numFactors: 2,
   numSets: 12,
   family: SampleSizeFamily.factorial,
@@ -96,21 +96,21 @@ const SampleSizeOption _twoFactor_48 = SampleSizeOption(
 // totalSamples levels: 16, 32, 48.
 // ---------------------------------------------------------------------------
 
-const SampleSizeOption _threeFactor_16 = SampleSizeOption(
+final SampleSizeOption _threeFactor16 = SampleSizeOption(
   numFactors: 3,
   numSets: 2,
   family: SampleSizeFamily.factorial,
   detectableDifferences: _sixteenSampleRiskLevels,
 );
 
-const SampleSizeOption _threeFactor_32 = SampleSizeOption(
+final SampleSizeOption _threeFactor32 = SampleSizeOption(
   numFactors: 3,
   numSets: 4,
   family: SampleSizeFamily.factorial,
   detectableDifferences: _thirtyTwoSampleRiskLevels,
 );
 
-const SampleSizeOption _threeFactor_48 = SampleSizeOption(
+final SampleSizeOption _threeFactor48 = SampleSizeOption(
   numFactors: 3,
   numSets: 6,
   family: SampleSizeFamily.factorial,
@@ -122,21 +122,21 @@ const SampleSizeOption _threeFactor_48 = SampleSizeOption(
 // totalSamples levels: 16, 32, 48.
 // ---------------------------------------------------------------------------
 
-const SampleSizeOption _fourFactor_16 = SampleSizeOption(
+final SampleSizeOption _fourFactor16 = SampleSizeOption(
   numFactors: 4,
   numSets: 1,
   family: SampleSizeFamily.factorial,
   detectableDifferences: _sixteenSampleRiskLevels,
 );
 
-const SampleSizeOption _fourFactor_32 = SampleSizeOption(
+final SampleSizeOption _fourFactor32 = SampleSizeOption(
   numFactors: 4,
   numSets: 2,
   family: SampleSizeFamily.factorial,
   detectableDifferences: _thirtyTwoSampleRiskLevels,
 );
 
-const SampleSizeOption _fourFactor_48 = SampleSizeOption(
+final SampleSizeOption _fourFactor48 = SampleSizeOption(
   numFactors: 4,
   numSets: 3,
   family: SampleSizeFamily.factorial,
@@ -150,30 +150,26 @@ const SampleSizeOption _fourFactor_48 = SampleSizeOption(
 class SampleSizeCatalog {
   const SampleSizeCatalog._();
 
-  static const Map<int, Map<RiskLevel, List<SampleSizeOption>>> _entries = {
+  static final Map<int, Map<RiskLevel, List<SampleSizeOption>>> _entries = {
     1: {
-      RiskLevel.tenPercent: [_oneFactor_8, _oneFactor_14, _oneFactor_56],
-      RiskLevel.fivePercent: [_oneFactor_8, _oneFactor_14, _oneFactor_56],
-      RiskLevel.onePercent: [_oneFactor_8, _oneFactor_14, _oneFactor_56],
+      RiskLevel.tenPercent: [_oneFactor8, _oneFactor14, _oneFactor56],
+      RiskLevel.fivePercent: [_oneFactor8, _oneFactor14, _oneFactor56],
+      RiskLevel.onePercent: [_oneFactor8, _oneFactor14, _oneFactor56],
     },
     2: {
-      RiskLevel.tenPercent: [_twoFactor_16, _twoFactor_32, _twoFactor_48],
-      RiskLevel.fivePercent: [_twoFactor_16, _twoFactor_32, _twoFactor_48],
-      RiskLevel.onePercent: [_twoFactor_16, _twoFactor_32, _twoFactor_48],
+      RiskLevel.tenPercent: [_twoFactor16, _twoFactor32, _twoFactor48],
+      RiskLevel.fivePercent: [_twoFactor16, _twoFactor32, _twoFactor48],
+      RiskLevel.onePercent: [_twoFactor16, _twoFactor32, _twoFactor48],
     },
     3: {
-      RiskLevel.tenPercent: [_threeFactor_16, _threeFactor_32, _threeFactor_48],
-      RiskLevel.fivePercent: [
-        _threeFactor_16,
-        _threeFactor_32,
-        _threeFactor_48,
-      ],
-      RiskLevel.onePercent: [_threeFactor_16, _threeFactor_32, _threeFactor_48],
+      RiskLevel.tenPercent: [_threeFactor16, _threeFactor32, _threeFactor48],
+      RiskLevel.fivePercent: [_threeFactor16, _threeFactor32, _threeFactor48],
+      RiskLevel.onePercent: [_threeFactor16, _threeFactor32, _threeFactor48],
     },
     4: {
-      RiskLevel.tenPercent: [_fourFactor_16, _fourFactor_32, _fourFactor_48],
-      RiskLevel.fivePercent: [_fourFactor_16, _fourFactor_32, _fourFactor_48],
-      RiskLevel.onePercent: [_fourFactor_16, _fourFactor_32, _fourFactor_48],
+      RiskLevel.tenPercent: [_fourFactor16, _fourFactor32, _fourFactor48],
+      RiskLevel.fivePercent: [_fourFactor16, _fourFactor32, _fourFactor48],
+      RiskLevel.onePercent: [_fourFactor16, _fourFactor32, _fourFactor48],
     },
   };
 
@@ -183,13 +179,13 @@ class SampleSizeCatalog {
     required int factorCount,
     required RiskLevel riskLevel,
   }) {
-    return _entries[factorCount]?[riskLevel] ?? const [];
+    return List.unmodifiable(_entries[factorCount]?[riskLevel] ?? const []);
   }
 
   /// Resolves a persisted [SampleSizeOption] back to one of the catalog
   /// entries.
   static SampleSizeOption resolveFromJson({
-    required Map<String, dynamic>? json,
+    required Map<String, Object?>? json,
     required int factorCount,
     required RiskLevel riskLevel,
   }) {
@@ -200,7 +196,9 @@ class SampleSizeCatalog {
         'riskLevel=${riskLevel.name}.',
       );
     }
-    if (json == null) return options.first;
+    if (json == null) {
+      return options.first;
+    }
 
     final candidate = SampleSizeOption.fromJson(json);
     return options.firstWhere(

@@ -11,9 +11,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../auth/workspace_sign_out.dart';
 import '../contact/contact_page.dart';
+import '../help/help_instructions.dart';
 import '../navigation/app_page_transitions.dart';
 import '../navigation/app_routes.dart';
-import '../help/help_instructions.dart';
 import '../styles/app_design.dart';
 import '../styles/layout/app_layout.dart';
 
@@ -50,7 +50,9 @@ abstract final class AppBarActionBar {
   /// Standalone workspace previews/tests can omit the session provider.
   static List<AppBarActionItem> signOutActions(BuildContext context) {
     final operation = context.read<WorkspaceSignOut?>();
-    if (operation == null) return const [];
+    if (operation == null) {
+      return const [];
+    }
     return [
       AppBarActionItem(
         label: 'Sign out',
@@ -68,7 +70,9 @@ abstract final class AppBarActionBar {
     required List<AppBarActionItem> items,
     bool hasLeading = false,
   }) {
-    if (items.isEmpty) return const [];
+    if (items.isEmpty) {
+      return const [];
+    }
 
     final metrics = AppBarActionsMetrics.of(
       context,

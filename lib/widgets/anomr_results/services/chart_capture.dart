@@ -22,14 +22,21 @@ class ChartCapture {
     double pixelRatio = 3.0,
   }) async {
     final context = key.currentContext;
-    if (context == null) return null;
+    if (context == null) {
+      return null;
+    }
 
     final renderObject = context.findRenderObject();
-    if (renderObject is! RenderRepaintBoundary) return null;
+    if (renderObject is! RenderRepaintBoundary) {
+      return null;
+    }
 
     final image = await renderObject.toImage(pixelRatio: pixelRatio);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    image.dispose();
-    return byteData?.buffer.asUint8List();
+    try {
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
   }
 }

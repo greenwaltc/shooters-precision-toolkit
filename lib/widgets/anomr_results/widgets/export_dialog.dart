@@ -29,10 +29,14 @@ class _ExportDialogState extends State<ExportDialog> {
   bool get _pdfSelected => _format == ExportFormat.pdf;
 
   void _onFormatChanged(ExportFormat? value) {
-    if (value == null) return;
+    if (value == null) {
+      return;
+    }
     setState(() {
       _format = value;
-      if (!_pdfSelected) _includeMatrix = false;
+      if (!_pdfSelected) {
+        _includeMatrix = false;
+      }
     });
   }
 

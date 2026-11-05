@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../config/project_configuration.dart';
 import '../sample_size_catalog.dart';
+import '../util/json_object.dart';
 
 /// Supported experiment structures and their factor counts.
 enum ExperimentStructure {
@@ -24,10 +25,7 @@ enum ExperimentStructure {
     factorCount: 4,
   );
 
-  const ExperimentStructure({
-    required this.label,
-    required this.factorCount,
-  });
+  const ExperimentStructure({required this.label, required this.factorCount});
 
   final String label;
   final int factorCount;
@@ -88,16 +86,16 @@ class FactorDefinition {
   final String secondState;
 
   /// Rehydrates a factor definition from persisted JSON.
-  factory FactorDefinition.fromJson(Map<String, dynamic> json) {
+  factory FactorDefinition.fromJson(Map<String, Object?> json) {
     return FactorDefinition(
-      name: json['name'] as String? ?? '',
-      firstState: json['firstState'] as String? ?? '',
-      secondState: json['secondState'] as String? ?? '',
+      name: optionalJsonValue<String>(json, 'name') ?? '',
+      firstState: optionalJsonValue<String>(json, 'firstState') ?? '',
+      secondState: optionalJsonValue<String>(json, 'secondState') ?? '',
     );
   }
 
   /// Serializes this factor definition to JSON.
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {'name': name, 'firstState': firstState, 'secondState': secondState};
   }
 }
@@ -128,12 +126,12 @@ class FactorDefinition {
 /// purposes.
 @immutable
 class SampleSizeOption {
-  const SampleSizeOption({
+  SampleSizeOption({
     required this.numFactors,
     required this.numSets,
     required this.family,
-    this.detectableDifferences = const {},
-  });
+    Map<RiskLevel, double> detectableDifferences = const {},
+  }) : detectableDifferences = Map.unmodifiable(detectableDifferences);
 
   /// Number of factors in the experiment design.
   final int numFactors;
@@ -238,9 +236,9 @@ class SampleSizeOption {
     return formatFraction(detectableDifferenceFor(riskLevel));
   }
 
-  factory SampleSizeOption.fromJson(Map<String, dynamic> json) {
-    final persistedGroupSize = (json['setSize'] as int?) ?? 0;
-    final numFactorsFromJson = json['numFactors'] as int?;
+  factory SampleSizeOption.fromJson(Map<String, Object?> json) {
+    final persistedGroupSize = (optionalJsonValue<int>(json, 'setSize')) ?? 0;
+    final numFactorsFromJson = optionalJsonValue<int>(json, 'numFactors');
     final numFactors =
         numFactorsFromJson ??
         (persistedGroupSize > 0
@@ -249,14 +247,16 @@ class SampleSizeOption {
 
     return SampleSizeOption(
       numFactors: numFactors,
-      numSets: (json['numSets'] as num?) ?? 0,
-      family: SampleSizeFamily.fromName(json['family'] as String?),
+      numSets: (optionalJsonValue<num>(json, 'numSets')) ?? 0,
+      family: SampleSizeFamily.fromName(
+        optionalJsonValue<String>(json, 'family'),
+      ),
     );
   }
 
   /// Identity-only — `detectableDifferences` is supplementary data
   /// resolved from the catalog after loading.
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       'numFactors': numFactors,
       'numSets': numSets,
@@ -267,7 +267,9 @@ class SampleSizeOption {
 
   @override
   bool operator ==(Object other) {
-    if (identical(this, other)) return true;
+    if (identical(this, other)) {
+      return true;
+    }
     return other is SampleSizeOption &&
         other.numFactors == numFactors &&
         other.numSets == numSets &&
@@ -290,7 +292,9 @@ class SampleSizeOption {
   }
 
   static int _numFactorsForGroupSize(int groupSize) {
-    if (groupSize <= 0 || (groupSize & (groupSize - 1)) != 0) return 0;
+    if (groupSize <= 0 || (groupSize & (groupSize - 1)) != 0) {
+      return 0;
+    }
     return groupSize.bitLength - 1;
   }
 
@@ -333,18 +337,21 @@ class ProjectFormModel extends ChangeNotifier {
   final List<FactorDefinition> _factorDefinitions;
 
   /// Rehydrates form state from persisted JSON.
-  factory ProjectFormModel.fromJson(Map<String, dynamic> json) {
+  factory ProjectFormModel.fromJson(Map<String, Object?> json) {
     final structure = ExperimentStructure.fromName(
-      json['experimentStructure'] as String?,
+      optionalJsonValue<String>(json, 'experimentStructure'),
     );
-    final sampleSizeJson = json['sampleSizeOption'] is Map<String, dynamic>
-        ? json['sampleSizeOption'] as Map<String, dynamic>
-        : null;
+    final sampleSizeValue = json['sampleSizeOption'];
+    final sampleSizeJson = sampleSizeValue == null
+        ? null
+        : jsonObject(sampleSizeValue);
 
-    final risk = RiskLevel.fromName(json['riskLevel'] as String?);
+    final risk = RiskLevel.fromName(
+      optionalJsonValue<String>(json, 'riskLevel'),
+    );
 
     return ProjectFormModel(
-      projectTitle: json['projectTitle'] as String? ?? '',
+      projectTitle: optionalJsonValue<String>(json, 'projectTitle') ?? '',
       experimentStructure: structure,
       riskLevel: risk,
       sampleSizeOption: SampleSizeCatalog.resolveFromJson(
@@ -353,7 +360,8 @@ class ProjectFormModel extends ChangeNotifier {
         riskLevel: risk,
       ),
       factorDefinitions: _factorDefinitionsFromJson(json['factorDefinitions']),
-      imputeMissingData: json['imputeMissingData'] as bool? ?? false,
+      imputeMissingData:
+          optionalJsonValue<bool>(json, 'imputeMissingData') ?? false,
     );
   }
 
@@ -386,7 +394,9 @@ class ProjectFormModel extends ChangeNotifier {
   /// Whether the form satisfies the same requirements enforced by submit
   /// validation on [ProjectForm].
   bool get isSetupValid {
-    if (projectTitle.trim().isEmpty) return false;
+    if (projectTitle.trim().isEmpty) {
+      return false;
+    }
 
     final normalizedFactorNames = <String>{};
     for (var index = 0; index < experimentStructure.factorCount; index++) {
@@ -414,7 +424,7 @@ class ProjectFormModel extends ChangeNotifier {
   }
 
   /// Serializes this form state to JSON.
-  Map<String, dynamic> toJson() {
+  Map<String, Object?> toJson() {
     return {
       'projectTitle': projectTitle,
       'experimentStructure': experimentStructure.name,
@@ -429,7 +439,9 @@ class ProjectFormModel extends ChangeNotifier {
 
   /// Updates the project title and notifies listeners when it changes.
   void setProjectTitle(String title) {
-    if (projectTitle == title) return;
+    if (projectTitle == title) {
+      return;
+    }
 
     projectTitle = title;
     notifyListeners();
@@ -437,7 +449,9 @@ class ProjectFormModel extends ChangeNotifier {
 
   /// Updates the experiment structure and resizes factor definitions.
   void setExperimentStructure(ExperimentStructure structure) {
-    if (experimentStructure == structure) return;
+    if (experimentStructure == structure) {
+      return;
+    }
 
     experimentStructure = structure;
     _ensureFactorDefinitionsCapacity();
@@ -452,7 +466,9 @@ class ProjectFormModel extends ChangeNotifier {
     required String firstState,
     required String secondState,
   }) {
-    if (index < 0 || index >= _factorDefinitions.length) return;
+    if (index < 0 || index >= _factorDefinitions.length) {
+      return;
+    }
 
     final nextDefinition = FactorDefinition(
       name: name,
@@ -472,7 +488,9 @@ class ProjectFormModel extends ChangeNotifier {
 
   /// Updates the selected risk level and reconciles sample-size options.
   void setRiskLevel(RiskLevel level) {
-    if (riskLevel == level) return;
+    if (riskLevel == level) {
+      return;
+    }
 
     riskLevel = level;
     _ensureSampleSizeOptionIsValid();
@@ -481,7 +499,9 @@ class ProjectFormModel extends ChangeNotifier {
 
   /// Updates the selected sample-size option.
   void setSampleSizeOption(SampleSizeOption option) {
-    if (sampleSizeOption == option) return;
+    if (sampleSizeOption == option) {
+      return;
+    }
 
     sampleSizeOption = option;
     notifyListeners();
@@ -492,7 +512,9 @@ class ProjectFormModel extends ChangeNotifier {
     if (!canImputeMissingData) {
       shouldImpute = false;
     }
-    if (imputeMissingData == shouldImpute) return;
+    if (imputeMissingData == shouldImpute) {
+      return;
+    }
 
     imputeMissingData = shouldImpute;
     notifyListeners();
@@ -529,10 +551,15 @@ class ProjectFormModel extends ChangeNotifier {
   }
 
   static List<FactorDefinition> _factorDefinitionsFromJson(Object? value) {
-    if (value is! List) return const [];
+    if (value == null) {
+      return const [];
+    }
+    if (value is! List<Object?>) {
+      throw const FormatException('Factor definitions must be a list.');
+    }
 
-    return value.whereType<Map>().map((item) {
-      return FactorDefinition.fromJson(Map<String, dynamic>.from(item));
+    return value.map((item) {
+      return FactorDefinition.fromJson(jsonObject(item));
     }).toList();
   }
 

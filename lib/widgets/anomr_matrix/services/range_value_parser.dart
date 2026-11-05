@@ -6,14 +6,14 @@
 /// Result of parsing a range cell input string.
 class RangeValueParseResult {
   const RangeValueParseResult.empty()
-      : displayValue = null,
-        numericValue = null,
-        invalid = false;
+    : displayValue = null,
+      numericValue = null,
+      invalid = false;
 
   const RangeValueParseResult.invalid()
-      : displayValue = null,
-        numericValue = null,
-        invalid = true;
+    : displayValue = null,
+      numericValue = null,
+      invalid = true;
 
   const RangeValueParseResult.valid({
     required this.displayValue,
@@ -37,9 +37,7 @@ class RangeValueParser {
   static const invalidInputMessage =
       'Group size values must be numbers. Please correct any invalid cells.';
 
-  static final RegExp _fractionPattern = RegExp(
-    r'^(-?\d+)\s*/\s*(\d+)$',
-  );
+  static final RegExp _fractionPattern = RegExp(r'^(-?\d+)\s*/\s*(\d+)$');
 
   static RangeValueParseResult parse(Object? raw) {
     if (raw == null) {

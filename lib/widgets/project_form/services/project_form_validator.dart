@@ -24,7 +24,9 @@ class ProjectFormValidator {
     required int factorCount,
   }) {
     final requiredError = requiredField(value, 'Factor name is required.');
-    if (requiredError != null) return requiredError;
+    if (requiredError != null) {
+      return requiredError;
+    }
 
     return _hasDuplicateName(index, value!, controllers, factorCount)
         ? 'Each factor name must be unique.'
@@ -37,7 +39,9 @@ class ProjectFormValidator {
     required TextEditingController comparedController,
   }) {
     final requiredError = requiredField(value, 'Factor state is required.');
-    if (requiredError != null) return requiredError;
+    if (requiredError != null) {
+      return requiredError;
+    }
 
     final normalizedValue = value!.trim().toLowerCase();
     final comparedValue = comparedController.text.trim().toLowerCase();

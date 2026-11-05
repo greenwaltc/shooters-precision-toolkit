@@ -103,8 +103,12 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   void _syncFactorDefinition(int index, {bool trimValues = false}) {
-    if (_isHydratingControllers) return;
-    if (index >= widget.formModel.experimentStructure.factorCount) return;
+    if (_isHydratingControllers) {
+      return;
+    }
+    if (index >= widget.formModel.experimentStructure.factorCount) {
+      return;
+    }
 
     final controllers = _factorControllers[index];
     widget.formModel.setFactorDefinition(
@@ -146,10 +150,14 @@ class _ProjectFormState extends State<ProjectForm> {
 
   void _scrollToFirstInvalidField() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       final invalidField = _findFirstInvalidField(_formKey.currentContext);
-      if (invalidField == null) return;
+      if (invalidField == null) {
+        return;
+      }
 
       Scrollable.ensureVisible(
         invalidField,
@@ -161,12 +169,16 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Element? _findFirstInvalidField(BuildContext? root) {
-    if (root == null) return null;
+    if (root == null) {
+      return null;
+    }
 
     Element? firstInvalidField;
 
     void visit(Element element) {
-      if (firstInvalidField != null) return;
+      if (firstInvalidField != null) {
+        return;
+      }
 
       if (element is StatefulElement) {
         final state = element.state;
@@ -267,10 +279,14 @@ class _ProjectFormState extends State<ProjectForm> {
 
   void _scheduleScrollCueUpdate() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       final controller = _fieldsScrollController;
-      if (!controller.hasClients) return;
+      if (!controller.hasClients) {
+        return;
+      }
 
       final position = controller.position;
       final showTop = position.pixels > _scrollCueEpsilon;
@@ -369,7 +385,9 @@ class _ProjectFormState extends State<ProjectForm> {
       child: RadioGroup<ExperimentStructure>(
         groupValue: widget.formModel.experimentStructure,
         onChanged: (structure) {
-          if (structure == null) return;
+          if (structure == null) {
+            return;
+          }
 
           setState(() {
             widget.formModel.setExperimentStructure(structure);
@@ -466,7 +484,9 @@ class _ProjectFormState extends State<ProjectForm> {
       child: RadioGroup<RiskLevel>(
         groupValue: widget.formModel.riskLevel,
         onChanged: (level) {
-          if (level == null) return;
+          if (level == null) {
+            return;
+          }
 
           setState(() => widget.formModel.setRiskLevel(level));
         },
@@ -502,7 +522,9 @@ class _ProjectFormState extends State<ProjectForm> {
       child: RadioGroup<SampleSizeOption>(
         groupValue: widget.formModel.sampleSizeOption,
         onChanged: (option) {
-          if (option == null) return;
+          if (option == null) {
+            return;
+          }
 
           setState(() => widget.formModel.setSampleSizeOption(option));
         },

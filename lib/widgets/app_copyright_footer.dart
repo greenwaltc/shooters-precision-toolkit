@@ -5,14 +5,14 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../model/project_store.dart';
-import 'project_save_status.dart';
 
 import '../config/project_configuration.dart';
-import '../styles/layout/app_viewport.dart';
+import '../model/project_store.dart';
 import '../styles/layout/app_layout.dart';
+import '../styles/layout/app_viewport.dart';
 import '../styles/tokens/app_spacing.dart';
 import 'app_brand_bar.dart';
+import 'project_save_status.dart';
 
 /// Slim copyright notice pinned to the bottom of every page.
 ///

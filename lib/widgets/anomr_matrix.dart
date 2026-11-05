@@ -25,9 +25,9 @@ import '../styles/layout/app_layout.dart';
 import '../styles/theme_extensions/pluto_grid_theme.dart';
 import '../styles/tokens/app_spacing.dart';
 import '../styles/tokens/app_text_styles.dart';
-import 'anomr_matrix/services/matrix_grid_clipboard.dart';
 import 'anomr_matrix/services/matrix_browser_clipboard_stub.dart'
     if (dart.library.js_interop) 'anomr_matrix/services/matrix_browser_clipboard_web.dart';
+import 'anomr_matrix/services/matrix_grid_clipboard.dart';
 import 'anomr_matrix/services/matrix_grid_data_builder.dart';
 import 'anomr_matrix/services/matrix_grid_history.dart';
 import 'anomr_matrix/services/range_value_parser.dart';
@@ -38,8 +38,8 @@ import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
 import 'app_nav_chrome.dart';
 import 'no_selected_project_page.dart';
-import 'range_entry_sheet.dart';
 import 'project_save_status.dart';
+import 'range_entry_sheet.dart';
 
 /// Route that renders the selected project's ANOMR data-entry matrix.
 class AnomrMatrix extends StatelessWidget {
@@ -79,7 +79,9 @@ class _ProjectSetupRequiredRedirectState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       Navigator.of(context).pushReplacementNamed(AppRoutes.projectForm);
     });
   }
@@ -231,7 +233,9 @@ class _AnomrMatrixScaffold extends StatelessWidget {
   ) async {
     final navigator = Navigator.of(context);
     await store.persistSelectedProject();
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
     await AppRoutes.openProjectFormFromMatrix(navigator);
   }
 }
@@ -322,6 +326,9 @@ class AnomrMatrixGrid extends StatefulWidget {
 }
 
 class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
+  // initState builds all columns/rows together before build or callbacks run.
+  // Every built row has range/storage/index cells; these SDK cells remain
+  // mutable, while nullable selection/focus state must be checked separately.
   static const double _desktopMaxWidth = 1180;
   late List<PlutoColumn> _columns;
   late List<PlutoRow> _rows;
@@ -595,21 +602,29 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     // Column autosizing can notify scroll/resize listeners during grid layout.
     // Coalesce those notifications and update our chrome after layout finishes.
     _pendingGridResize = _pendingGridResize || resize;
-    if (_gridUpdateScheduled) return;
+    if (_gridUpdateScheduled) {
+      return;
+    }
     _gridUpdateScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _gridUpdateScheduled = false;
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final resized = _pendingGridResize;
       _pendingGridResize = false;
       _updateScrollCues();
-      if (resized) setState(() {});
+      if (resized) {
+        setState(() {});
+      }
     });
   }
 
   void _updateScrollCues() {
     final manager = _stateManager;
-    if (manager == null || !mounted) return;
+    if (manager == null || !mounted) {
+      return;
+    }
 
     final horizontalScroll = manager.scroll.bodyRowsHorizontal;
     final verticalScroll = manager.scroll.bodyRowsVertical;
@@ -651,7 +666,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     _stateManager?.scroll.bodyRowsHorizontal?.addListener(_handleScroll);
     _stateManager?.scroll.bodyRowsVertical?.addListener(_handleScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _updateScrollCues();
+      if (mounted) {
+        _updateScrollCues();
+      }
     });
   }
 
@@ -712,7 +729,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         onLoaded: (PlutoGridOnLoadedEvent event) {
           setState(() => _attachStateManager(event.stateManager));
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
+            if (!mounted) {
+              return;
+            }
             _fitIndexColumns();
           });
         },
@@ -884,15 +903,21 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   void _fitIndexColumns() {
     final manager = _stateManager;
-    if (manager == null || !mounted) return;
+    if (manager == null || !mounted) {
+      return;
+    }
 
     var changed = false;
     for (final column in manager.columns) {
-      if (column.field != 'row' && column.field != 'group') continue;
+      if (column.field != 'row' && column.field != 'group') {
+        continue;
+      }
 
       final widthBefore = column.width;
       _autoFitReadOnlyColumn(column);
-      if (column.width != widthBefore) changed = true;
+      if (column.width != widthBefore) {
+        changed = true;
+      }
     }
 
     if (changed) {
@@ -902,7 +927,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   void _autoFitReadOnlyColumn(PlutoColumn column) {
     final manager = _stateManager;
-    if (manager == null) return;
+    if (manager == null) {
+      return;
+    }
 
     manager.autoFitColumn(context, column);
 
@@ -1028,7 +1055,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   bool _isBrowserClipboardKey(KeyEvent event) {
-    if (!kIsWeb || !_acceptsGridClipboard || event is KeyUpEvent) return false;
+    if (!kIsWeb || !_acceptsGridClipboard || event is KeyUpEvent) {
+      return false;
+    }
     final keyboard = HardwareKeyboard.instance;
     return (keyboard.isMetaPressed || keyboard.isControlPressed) &&
         !keyboard.isAltPressed &&
@@ -1038,7 +1067,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   KeyEventResult _clipboardKeyHandler(KeyEvent event) {
-    if (!_acceptsGridClipboard) return KeyEventResult.ignored;
+    if (!_acceptsGridClipboard) {
+      return KeyEventResult.ignored;
+    }
     final keyboard = HardwareKeyboard.instance;
     if (!(keyboard.isMetaPressed || keyboard.isControlPressed) ||
         keyboard.isAltPressed) {
@@ -1098,7 +1129,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
 
     _randomizeOrder = widget.project.randomizeOrder;
-    final ordered = _initialRowOrder(gridData.rows);
+    final ordered = _initialRowOrder(List.of(gridData.rows));
     _renumberRunOrder(ordered);
 
     _rows = ordered;
@@ -1109,7 +1140,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   /// Resolves the row order for the first paint, honoring any persisted
   /// randomized sequence so the layout survives navigation and app restarts.
   List<PlutoRow> _initialRowOrder(List<PlutoRow> rows) {
-    if (!_randomizeOrder) return rows;
+    if (!_randomizeOrder) {
+      return rows;
+    }
 
     final sequence = widget.project.randomizeSequence;
     if (sequence != null && _sequenceMatchesRows(sequence, rows)) {
@@ -1283,7 +1316,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       ),
     );
 
-    if (!mounted || result == null) return;
+    if (!mounted || result == null) {
+      return;
+    }
 
     _applyRangeValue(rowIdx: rendererContext.rowIdx, value: result);
   }
@@ -1300,7 +1335,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
   }
 
-  // TODO: Undo/redo keybindings — see TODO in matrix_grid_history.dart.
+  // TODO: Repair undo/redo keybindings; tracking: docs/code_maintenance.md#matrix-undo-and-redo.
   bool _matrixKeyboardHandler(KeyEvent event) {
     if (!mounted) {
       return false;
@@ -1346,7 +1381,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     bool persist = true,
   }) {
     final manager = _stateManager;
-    if (manager == null) return;
+    if (manager == null) {
+      return;
+    }
 
     final row = manager.rows[rowIdx];
     final cell = row.cells['range']!;
@@ -1408,7 +1445,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   /// lived in the PlutoGrid model.
   void _flushAllRangeValuesToProject({bool persist = true}) {
     final manager = _stateManager;
-    if (manager == null) return;
+    if (manager == null) {
+      return;
+    }
 
     final changed = MatrixGridDataBuilder.syncMatrixStateFromGrid(
       project: widget.project,
@@ -1449,7 +1488,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     _flushAllRangeValuesToProject();
 
     final manager = _stateManager;
-    if (manager == null) return;
+    if (manager == null) {
+      return;
+    }
 
     if (!ProjectConfiguration.current.featureFlags.isEnabled(
           FeatureFlag.imputeMissingData,
@@ -1468,10 +1509,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     Navigator.pushNamed(context, AppRoutes.anomrResults, arguments: manager);
   }
 
-  void _clearRanges() {
-    if (_stateManager == null) return;
+  Future<void> _clearRanges() async {
+    if (_stateManager == null) {
+      return;
+    }
 
-    showDialog(context: context, builder: _buildClearRangesDialog);
+    await showDialog<void>(context: context, builder: _buildClearRangesDialog);
   }
 
   AlertDialog _buildClearRangesDialog(BuildContext context) {
@@ -1501,7 +1544,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   void _clearAllRangeValues() {
     final manager = _stateManager;
-    if (manager == null) return;
+    if (manager == null) {
+      return;
+    }
 
     _history.beginBatch();
     try {
@@ -1636,7 +1681,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         ],
       ),
     );
-    if (!nonMobile) return content;
+    if (!nonMobile) {
+      return content;
+    }
     // Give the toolbar and grid the same centered bounds on wide windows.
     return Align(
       alignment: Alignment.topCenter,
@@ -1653,7 +1700,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   /// reordered by instance, so range values stay bound to their rows.
   void _onRandomizeToggled(bool value) {
     final manager = _stateManager;
-    if (manager == null) return;
+    if (manager == null) {
+      return;
+    }
 
     _history.clear();
 
@@ -1689,7 +1738,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     manager.notifyListeners();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _updateScrollCues();
+      if (mounted) {
+        _updateScrollCues();
+      }
     });
   }
 
@@ -1704,7 +1755,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   bool _sequenceMatchesRows(List<int> sequence, List<PlutoRow> rows) {
-    if (sequence.length != rows.length) return false;
+    if (sequence.length != rows.length) {
+      return false;
+    }
     final rowIndices = rows.map(_storageIndexOf).toSet();
     final sequenceIndices = sequence.toSet();
     return sequenceIndices.length == rowIndices.length &&

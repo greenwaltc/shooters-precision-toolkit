@@ -1,15 +1,19 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../model/saved_project.dart';
+import '../util/json_object.dart';
 import 'project_repository.dart';
 
-export 'project_repository.dart';
+export 'project_repository.dart'
+    show CloudProject, ProjectConflict, ProjectRepository;
 
 class FirestoreProjectRepository implements ProjectRepository {
   FirestoreProjectRepository({required this.db, required this.uid});
   final FirebaseFirestore db;
   final String uid;
 
+  // Firestore SDK maps are a dynamic interop boundary. _decode validates data
+  // before exposing Object?-typed JSON to domain models.
   CollectionReference<Map<String, dynamic>> get _projects =>
       db.collection('users').doc(uid).collection('projects');
 
@@ -32,7 +36,9 @@ class FirestoreProjectRepository implements ProjectRepository {
     required CloudProject after,
   }) async {
     final cursor = after.snapshot;
-    if (cursor == null) throw StateError('A Firestore cursor is required.');
+    if (cursor == null) {
+      throw StateError('A Firestore cursor is required.');
+    }
     final page = await _recentQuery
         .startAfterDocument(cursor)
         .limit(pageSize)
@@ -48,17 +54,23 @@ class FirestoreProjectRepository implements ProjectRepository {
 
   CloudProject _decode(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data();
+    final revision = data?['revision'];
+    final createdAt = data?['createdAt'];
+    final updatedAt = data?['updatedAt'];
     if (data == null ||
         data['schemaVersion'] != 1 ||
-        data['revision'] is! int ||
-        data['createdAt'] is! Timestamp) {
+        revision is! int ||
+        revision < 1 ||
+        createdAt is! Timestamp ||
+        (updatedAt != null && updatedAt is! Timestamp)) {
       throw FormatException('Unsupported project ${doc.id}');
     }
-    final created = (data['createdAt'] as Timestamp).toDate().toUtc();
-    final updated =
-        (data['updatedAt'] as Timestamp?)?.toDate().toUtc() ??
-        created; // Pending server timestamps can be null.
-    final json = Map<String, dynamic>.from(data)
+    final created = createdAt.toDate().toUtc();
+    // Pending server timestamps can be null until Firestore acknowledges a write.
+    final updated = updatedAt is Timestamp
+        ? updatedAt.toDate().toUtc()
+        : created;
+    final json = Map<String, Object?>.from(data)
       ..remove('schemaVersion')
       ..remove('revision')
       ..['id'] = doc.id
@@ -66,17 +78,20 @@ class FirestoreProjectRepository implements ProjectRepository {
       ..['updatedAt'] = updated.toIso8601String();
     return CloudProject(
       SavedProject.fromJson(json),
-      data['revision'] as int,
+      revision,
       doc.metadata.hasPendingWrites,
       snapshot: doc,
     );
   }
 
-  Map<String, dynamic> _encode(Map<String, dynamic> snapshot, int revision) {
-    final data = Map<String, dynamic>.from(snapshot)
+  Map<String, Object?> _encode(Map<String, Object?> snapshot, int revision) {
+    final data = Map<String, Object?>.from(snapshot)
       ..remove('id')
       ..['createdAt'] = Timestamp.fromDate(
-        DateTime.parse(snapshot['createdAt'] as String),
+        DateTime.parse(
+          optionalJsonValue<String>(snapshot, 'createdAt') ??
+              (throw const FormatException('Missing project creation date.')),
+        ),
       )
       ..['updatedAt'] = FieldValue.serverTimestamp()
       ..['schemaVersion'] = 1
@@ -90,15 +105,12 @@ class FirestoreProjectRepository implements ProjectRepository {
     required int expectedRevision,
   }) async {
     // Freeze mutable form/matrix data before an async transaction can retry.
-    final snapshot = Map<String, dynamic>.from(
-      jsonDecode(jsonEncode(project.toJson())) as Map,
-    );
+    final snapshot = decodeJsonObject(jsonEncode(project.toJson()));
     final ref = _projects.doc(project.id);
     final revision = await db.runTransaction<int?>((transaction) async {
       final current = await transaction.get(ref);
-      final actualRevision = current.exists
-          ? current.data()!['revision'] as int
-          : 0;
+      final currentData = current.data();
+      final actualRevision = current.exists ? _revision(currentData) : 0;
       if (actualRevision != expectedRevision) {
         // Return the conflict through the SDK boundary. On web, throwing a Dart
         // domain exception inside a JS transaction wraps it as a NativeError.
@@ -106,12 +118,14 @@ class FirestoreProjectRepository implements ProjectRepository {
       }
       final data = _encode(snapshot, actualRevision + 1);
       if (current.exists) {
-        data['createdAt'] = current.data()!['createdAt'];
+        data['createdAt'] = currentData?['createdAt'];
       }
       transaction.set(ref, data);
       return actualRevision + 1;
     });
-    if (revision == null) throw ProjectConflict(project.id);
+    if (revision == null) {
+      throw ProjectConflict(project.id);
+    }
     return revision;
   }
 
@@ -120,46 +134,25 @@ class FirestoreProjectRepository implements ProjectRepository {
     final deleted = await db.runTransaction<bool>((tx) async {
       final ref = _projects.doc(id);
       final current = await tx.get(ref);
-      if (!current.exists) return true;
-      if (current.data()!['revision'] != expectedRevision) {
+      if (!current.exists) {
+        return true;
+      }
+      if (_revision(current.data()) != expectedRevision) {
         return false;
       }
       tx.delete(ref);
       return true;
     });
-    if (!deleted) throw ProjectConflict(id);
+    if (!deleted) {
+      throw ProjectConflict(id);
+    }
   }
 
-  Future<bool> importLegacyProject(
-    SavedProject project,
-    String migrationKey,
-  ) async {
-    final targetId = 'legacy_$migrationKey';
-    final marker = db
-        .collection('users')
-        .doc(uid)
-        .collection('imports')
-        .doc(migrationKey);
-    final target = _projects.doc(targetId);
-    final snapshot = Map<String, dynamic>.from(
-      jsonDecode(jsonEncode(project.toJson())) as Map,
-    );
-    return db.runTransaction<bool>((tx) async {
-      final imported = await tx.get(marker);
-      if (imported.exists) return false;
-      final existing = await tx.get(target);
-      if (existing.exists) {
-        throw StateError(
-          'Migration target already exists without its receipt.',
-        );
-      }
-      tx.set(target, _encode(snapshot, 1));
-      tx.set(marker, {
-        'schemaVersion': 1,
-        'projectId': targetId,
-        'completedAt': FieldValue.serverTimestamp(),
-      });
-      return true;
-    });
+  int _revision(Map<String, Object?>? data) {
+    final revision = data?['revision'];
+    if (revision is! int || revision < 1) {
+      throw const FormatException('Invalid cloud project revision.');
+    }
+    return revision;
   }
 }

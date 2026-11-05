@@ -20,7 +20,9 @@ class ProjectWorkspaceFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = ProjectSaveStatus(navigatorKey: navigatorKey);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    if (AppLayoutMetrics.of(context).isMobile) return child;
+    if (AppLayoutMetrics.of(context).isMobile) {
+      return child;
+    }
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -63,7 +65,9 @@ class ProjectSaveStatus extends StatelessWidget {
     final store = context.watch<ProjectStore>();
     final project = store.selectedProject;
     final state = project == null ? null : store.editStateFor(project.id);
-    if (state == null) return const SizedBox.shrink();
+    if (state == null) {
+      return const SizedBox.shrink();
+    }
     final label = state.draftError != null
         ? 'Unable to save the local draft. Keep this window open.'
         : switch (state.saveState) {

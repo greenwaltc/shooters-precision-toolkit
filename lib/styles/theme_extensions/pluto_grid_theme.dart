@@ -90,7 +90,9 @@ class PlutoGridStyleTheme extends ThemeExtension<PlutoGridStyleTheme> {
     ThemeExtension<PlutoGridStyleTheme>? other,
     double t,
   ) {
-    if (other is! PlutoGridStyleTheme) return this;
+    if (other is! PlutoGridStyleTheme) {
+      return this;
+    }
     return PlutoGridStyleTheme(
       borderColor: Color.lerp(borderColor, other.borderColor, t) ?? borderColor,
       backgroundColor:

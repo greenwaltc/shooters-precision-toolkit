@@ -13,6 +13,30 @@ void main() {
   );
 
   test(
+    'malformed stored types fail validation without deleting the draft',
+    () async {
+      final storage = SharedPreferencesProjectDraftStorage(
+        projectId: 'dev',
+        uid: 'validation',
+      );
+      final project = _project();
+      final draft = ProjectDraft.capture(project, 1, 1);
+      await storage.write(project.id, draft);
+      final preferences = await SharedPreferences.getInstance();
+      final key = preferences.getKeys().singleWhere(
+        (key) => key.startsWith('project_drafts_v1/'),
+      );
+      await preferences.setInt(key, 42);
+      await expectLater(storage.readAll(), throwsFormatException);
+      await expectLater(
+        storage.removeIfMatches(project.id, draft),
+        throwsFormatException,
+      );
+      expect(preferences.getInt(key), 42);
+    },
+  );
+
+  test(
     'drafts freeze mutable form/matrix values with their revision and counter',
     () {
       final project = _project();

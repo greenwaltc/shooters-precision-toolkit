@@ -35,7 +35,9 @@ class AuthService {
     await auth.currentUser?.reload();
 
     final user = auth.currentUser;
-    if (user == null || !user.emailVerified) return false;
+    if (user == null || !user.emailVerified) {
+      return false;
+    }
 
     await user.getIdToken(true);
     return true;
@@ -49,7 +51,9 @@ class AuthService {
       );
     } on FirebaseAuthException catch (error) {
       // Keep the response the same for unknown addresses.
-      if (error.code != 'user-not-found') rethrow;
+      if (error.code != 'user-not-found') {
+        rethrow;
+      }
     }
   }
 

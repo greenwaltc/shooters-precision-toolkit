@@ -100,7 +100,9 @@ class ChartXAxis {
             );
           }
           final label = locator.stateLabelAt(value);
-          if (label == null) return const SizedBox.shrink();
+          if (label == null) {
+            return const SizedBox.shrink();
+          }
           final size = sizes[label]!;
           return labelBand(
             Padding(

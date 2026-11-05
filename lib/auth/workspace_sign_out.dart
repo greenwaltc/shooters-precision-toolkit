@@ -11,7 +11,9 @@ class WorkspaceSignOut {
   bool _busy = false;
 
   Future<void> run(BuildContext context) async {
-    if (_busy || !context.mounted) return;
+    if (_busy || !context.mounted) {
+      return;
+    }
     _busy = true;
 
     final navigator = Navigator.of(context, rootNavigator: true);
@@ -44,7 +46,9 @@ class WorkspaceSignOut {
       FocusManager.instance.primaryFocus?.unfocus();
       unawaited(navigator.push(progress));
       await WidgetsBinding.instance.endOfFrame;
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
       await flush();
       saved = true;
       await signOut();

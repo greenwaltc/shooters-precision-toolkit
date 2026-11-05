@@ -82,6 +82,7 @@ class AppTheme {
     );
   }
 
+  // Flutter's ThemeData.extensions uses this heterogeneous generic boundary.
   static List<ThemeExtension<dynamic>> _extensionsFor(ColorScheme colorScheme) {
     return [
       const FactorPaletteTheme.standard(),
@@ -287,7 +288,9 @@ class AppTheme {
   static RadioThemeData _toggleableTheme(ColorScheme colorScheme) {
     return RadioThemeData(
       fillColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) return colorScheme.primary;
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.primary;
+        }
         return colorScheme.onSurfaceVariant;
       }),
     );
@@ -296,7 +299,9 @@ class AppTheme {
   static CheckboxThemeData _checkboxTheme(ColorScheme colorScheme) {
     return CheckboxThemeData(
       fillColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) return colorScheme.primary;
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.primary;
+        }
         return Colors.transparent;
       }),
       checkColor: WidgetStatePropertyAll(colorScheme.onPrimary),
@@ -333,7 +338,10 @@ class AppTheme {
     );
   }
 
-  static AppBarTheme _appBarTheme(ColorScheme colorScheme, TextTheme textTheme) {
+  static AppBarTheme _appBarTheme(
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
     return AppBarTheme(
       elevation: AppDesign.elevationNone,
       scrolledUnderElevation: AppDesign.elevationNone,

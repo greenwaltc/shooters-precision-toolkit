@@ -6,10 +6,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'contact/contact_page.dart';
 import 'package:provider/provider.dart';
 
+import 'auth/auth_gate.dart';
+import 'auth/auth_page.dart';
+import 'auth/auth_service.dart';
+import 'auth/workspace_sign_out.dart';
 import 'config/project_configuration.dart';
+import 'contact/contact_page.dart';
+import 'firebase/firebase_bootstrap.dart';
+import 'firebase/firebase_startup.dart';
 import 'model/project_store.dart';
 import 'model/theme_controller.dart';
 import 'navigation/app_page_transitions.dart';
@@ -23,13 +29,6 @@ import 'widgets/app_background.dart';
 import 'widgets/project_form_page.dart';
 import 'widgets/project_home_page.dart';
 import 'widgets/project_save_status.dart';
-
-import 'firebase/firebase_bootstrap.dart';
-import 'auth/auth_service.dart';
-import 'firebase/firebase_startup.dart';
-import 'auth/auth_gate.dart';
-import 'auth/auth_page.dart';
-import 'auth/workspace_sign_out.dart';
 
 /// Boots Flutter and mounts the application.
 Future<void> main() async {
@@ -89,13 +88,17 @@ final Map<String, WidgetBuilder> _appRoutes = {
 /// Root widget that owns the project store and theme controller unless they
 /// are injected (e.g. for tests).
 class MyApp extends StatefulWidget {
-  const MyApp({
+  MyApp({
     super.key,
     this.projectStore,
     this.themeController,
     this.projectRepository,
     this.projectDraftStorage,
-  }) : assert(projectStore != null || projectRepository != null);
+  }) {
+    if (projectStore == null && projectRepository == null) {
+      throw ArgumentError('Provide a project store or repository.');
+    }
+  }
 
   final ProjectStore? projectStore;
   final ThemeController? themeController;
@@ -124,11 +127,26 @@ class _MyAppState extends State<MyApp> {
           repository: widget.projectRepository!,
           draftStorage: widget.projectDraftStorage,
         );
+    // The store exposes startup failures through loadState while this State
+    // owns disposal. Injected stores remain owned by their caller.
     unawaited(_projectStore.load());
 
     _ownsThemeController = widget.themeController == null;
     _themeController = widget.themeController ?? ThemeController();
-    unawaited(_themeController.load());
+    // Preference I/O failures retain the default; unexpected errors are reported
+    // at the Flutter boundary. ThemeController ignores late loads after dispose.
+    unawaited(
+      _themeController.load().onError((Object error, StackTrace stack) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            library: 'application startup',
+            context: ErrorDescription('while loading the theme preference'),
+          ),
+        );
+      }),
+    );
   }
 
   @override
@@ -179,7 +197,9 @@ class _MyAppState extends State<MyApp> {
                 AppBackground(child: child ?? const SizedBox.shrink()),
             onGenerateRoute: (settings) {
               final builder = _appRoutes[settings.name];
-              if (builder == null) return null;
+              if (builder == null) {
+                return null;
+              }
               return AppPageRoute<void>(
                 settings: settings,
                 builder: (context) {

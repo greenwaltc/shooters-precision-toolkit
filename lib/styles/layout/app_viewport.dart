@@ -65,7 +65,9 @@ class AppViewport {
       textScaler: clampTextScaler(mediaQuery.textScaler),
     );
 
-    if (!needsWebBottomClearance) return scaled;
+    if (!needsWebBottomClearance) {
+      return scaled;
+    }
 
     final reportedBottom = math.max(
       scaled.padding.bottom,

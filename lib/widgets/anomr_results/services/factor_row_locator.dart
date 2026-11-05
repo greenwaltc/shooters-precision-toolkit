@@ -20,8 +20,12 @@ class FactorRowLocator {
   /// Returns the state label whose tick exactly matches [x], or `null`.
   String? stateLabelAt(double x) {
     for (final row in rows) {
-      if ((x - row.firstX).abs() < _epsilon) return row.firstLabel;
-      if ((x - row.secondX).abs() < _epsilon) return row.secondLabel;
+      if ((x - row.firstX).abs() < _epsilon) {
+        return row.firstLabel;
+      }
+      if ((x - row.secondX).abs() < _epsilon) {
+        return row.secondLabel;
+      }
     }
     return null;
   }
@@ -29,7 +33,9 @@ class FactorRowLocator {
   /// Returns the [FactorRow] whose midpoint matches [x], or `null`.
   FactorRow? factorAtMidpoint(double x) {
     for (final row in rows) {
-      if ((x - row.midpointX).abs() < _epsilon) return row;
+      if ((x - row.midpointX).abs() < _epsilon) {
+        return row;
+      }
     }
     return null;
   }

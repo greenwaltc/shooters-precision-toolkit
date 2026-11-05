@@ -3,6 +3,7 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -36,7 +37,7 @@ class MatrixGridClipboard {
   static Future<void> copy(String text) async {
     try {
       await Clipboard.setData(ClipboardData(text: text));
-    } catch (_) {
+    } on Exception {
       // Browsers use their native copy event if programmatic access is denied.
     }
   }
@@ -56,7 +57,7 @@ class MatrixGridClipboard {
       if (text != null && text.isNotEmpty) {
         return text;
       }
-    } catch (_) {
+    } on Exception {
       // Clipboard read failed.
     }
     return null;
@@ -66,7 +67,9 @@ class MatrixGridClipboard {
   /// including read-only columns. Hidden storage indexes are excluded.
   static String? copyTextForSelection(PlutoGridStateManager manager) {
     final current = manager.currentCellPosition;
-    if (current?.rowIdx == null) return null;
+    if (current?.rowIdx == null) {
+      return null;
+    }
     final columns = manager.columnIndexesByShowFrozen;
     String headers(int start, int end) => [
       for (var i = start; i <= end; i++) manager.refColumns[columns[i]].title,
@@ -250,7 +253,9 @@ class MatrixGridCopyValuesAction extends PlutoGridShortcutAction {
       stateManager.setEditing(false);
     }
 
-    MatrixGridClipboard.copy(text);
+    // The clipboard boundary handles expected platform failures; no widget or
+    // selection state is retained by this detached copy operation.
+    unawaited(MatrixGridClipboard.copy(text));
   }
 }
 
@@ -266,18 +271,28 @@ class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
     String? text, {
     MatrixGridPasteTarget? target,
   }) {
-    if (text == null || text.isEmpty || canApply?.call() == false) return false;
+    if (text == null || text.isEmpty || canApply?.call() == false) {
+      return false;
+    }
     target ??= MatrixGridClipboard.capturePasteTarget(manager);
-    if (target == null) return false;
+    if (target == null) {
+      return false;
+    }
     final values = MatrixGridClipboard.parsePaste(text);
     if (!MatrixGridClipboard.permitsPaste(target, values)) {
       onRejected?.call();
       return false;
     }
     // Allow a copied Group Size column to round-trip with its new header.
-    if (values.first.single.trim() == 'Group Size') values.removeAt(0);
-    if (values.isEmpty) return false;
-    if (manager.isEditing == true) manager.setEditing(false);
+    if (values.first.single.trim() == 'Group Size') {
+      values.removeAt(0);
+    }
+    if (values.isEmpty) {
+      return false;
+    }
+    if (manager.isEditing == true) {
+      manager.setEditing(false);
+    }
     history?.beginBatch();
     try {
       MatrixGridClipboard.pasteIntoRangeCells(manager, values, target: target);
@@ -296,13 +311,36 @@ class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
   }
 
   void pasteFromClipboard(PlutoGridStateManager stateManager) {
+    // A shortcut cannot await. This boundary reports unexpected failures and
+    // canApply rejects late completions after the owning grid loses focus.
+    unawaited(
+      _pasteFromClipboard(stateManager).onError((
+        Object error,
+        StackTrace stack,
+      ) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            library: 'matrix clipboard',
+            context: ErrorDescription('while pasting into the matrix'),
+          ),
+        );
+      }),
+    );
+  }
+
+  Future<void> _pasteFromClipboard(PlutoGridStateManager stateManager) async {
     // Web paste is handled by the native ClipboardEvent, including external
     // clipboard content. Never substitute a previous in-app copy for it.
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      return;
+    }
     final target = MatrixGridClipboard.capturePasteTarget(stateManager);
-    if (target == null) return;
-    MatrixGridClipboard.readText().then(
-      (text) => applyText(stateManager, text, target: target),
-    );
+    if (target == null) {
+      return;
+    }
+    final text = await MatrixGridClipboard.readText();
+    applyText(stateManager, text, target: target);
   }
 }

@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../contact/contact_page.dart';
+import '../navigation/app_routes.dart';
 import '../styles/app_theme.dart';
 import '../styles/layout/app_layout.dart';
 import '../widgets/app_background.dart';
@@ -12,8 +14,6 @@ import '../widgets/app_bar_actions.dart';
 import '../widgets/app_brand_bar.dart';
 import '../widgets/app_copyright_footer.dart';
 import 'auth_service.dart';
-import '../contact/contact_page.dart';
-import '../navigation/app_routes.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key, this.verification = false});
@@ -38,7 +38,9 @@ class _AuthPageState extends State<AuthPage> {
 
   int get _emailWait {
     final next = _nextEmailAt;
-    if (next == null) return 0;
+    if (next == null) {
+      return 0;
+    }
 
     final seconds = next.difference(clock.now()).inSeconds + 1;
     return seconds > 0 ? seconds : 0;
@@ -48,7 +50,9 @@ class _AuthPageState extends State<AuthPage> {
   void initState() {
     super.initState();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_nextEmailAt != null && mounted) setState(() {});
+      if (_nextEmailAt != null && mounted) {
+        setState(() {});
+      }
     });
   }
 
@@ -73,7 +77,9 @@ class _AuthPageState extends State<AuthPage> {
     Future<String?> Function(AuthService service) action, {
     bool sendsEmail = false,
   }) async {
-    if (_busy || (sendsEmail && _emailWait > 0)) return;
+    if (_busy || (sendsEmail && _emailWait > 0)) {
+      return;
+    }
 
     final service = context.read<AuthService>();
 
@@ -87,7 +93,9 @@ class _AuthPageState extends State<AuthPage> {
 
     try {
       final message = await action(service);
-      if (mounted) setState(() => _message = message);
+      if (mounted) {
+        setState(() => _message = message);
+      }
     } on FirebaseAuthException catch (error) {
       if (mounted) {
         setState(() => _message = _friendlyError(error.code));
@@ -99,12 +107,16 @@ class _AuthPageState extends State<AuthPage> {
         });
       }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
   Future<void> _submit() async {
-    if (!_form.currentState!.validate()) return;
+    if (!_form.currentState!.validate()) {
+      return;
+    }
 
     // Capture values before awaiting; the gate may dispose this page.
     final email = _email.text.trim();

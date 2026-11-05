@@ -24,7 +24,9 @@ InputDecoration buildAppTextFieldDecoration({
     suffixIcon: IconButton(
       icon: const Icon(Icons.clear),
       onPressed: () {
-        if (controller != null) controller.clear();
+        if (controller != null) {
+          controller.clear();
+        }
       },
     ),
   );

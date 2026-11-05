@@ -37,9 +37,7 @@ class ExportChartRenderer {
     );
 
     final chartKey = GlobalKey();
-    late OverlayEntry entry;
-
-    entry = OverlayEntry(
+    final entry = OverlayEntry(
       builder: (context) => Positioned(
         left: -30000,
         top: -30000,
@@ -79,6 +77,7 @@ class ExportChartRenderer {
       );
     } finally {
       entry.remove();
+      entry.dispose();
     }
   }
 }

@@ -15,7 +15,8 @@ import 'anomr_pdf_builder.dart';
 
 /// Result of producing the bytes for a single export operation.
 class ExportArtifact {
-  const ExportArtifact({required this.bytes, required this.extension});
+  ExportArtifact({required Uint8List bytes, required this.extension})
+    : bytes = Uint8List.fromList(bytes).asUnmodifiableView();
 
   final Uint8List bytes;
   final String extension;
@@ -70,7 +71,9 @@ class AnomrExportService {
 
   static Future<Uint8List> _reencodeAsJpeg(Uint8List pngBytes) async {
     final decoded = img.decodePng(pngBytes);
-    if (decoded == null) return pngBytes;
+    if (decoded == null) {
+      return pngBytes;
+    }
     final withBackground = img.Image(
       width: decoded.width,
       height: decoded.height,

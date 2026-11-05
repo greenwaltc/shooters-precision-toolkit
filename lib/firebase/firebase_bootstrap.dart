@@ -98,5 +98,7 @@ Future<void> connectAuthToEmulator(
 ) async {
   clearAuthEmulatorHint(auth.app.name);
   await auth.useAuthEmulator(host, port);
-  if (kIsWeb) await auth.setPersistence(Persistence.NONE);
+  if (kIsWeb) {
+    await auth.setPersistence(Persistence.NONE);
+  }
 }

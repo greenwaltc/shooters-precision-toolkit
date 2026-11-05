@@ -9,9 +9,11 @@ import 'package:pluto_grid/pluto_grid.dart';
 /// Immutable row payload used to initialize the ANOMR matrix grid.
 @immutable
 class MatrixGridData {
-  const MatrixGridData({required this.rows, required this.totalSamples});
+  MatrixGridData({required List<PlutoRow> rows, required this.totalSamples})
+    : rows = List.unmodifiable(rows);
 
-  /// Pluto rows rendered by the matrix.
+  /// Read-only row ordering; each PlutoRow remains an SDK-owned mutable cell set.
+  /// The grid takes a mutable copy of this list when initializing its viewport.
   final List<PlutoRow> rows;
 
   /// Total range rows expected for the selected sample-size option.

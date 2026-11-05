@@ -13,18 +13,26 @@ void Function() registerMatrixBrowserClipboard({
   required void Function(String) pasteText,
 }) {
   final paste = ((web.Event event) {
-    if (!acceptsPaste()) return;
+    if (!acceptsPaste()) {
+      return;
+    }
     final data = (event as web.ClipboardEvent).clipboardData;
-    if (data == null) return;
+    if (data == null) {
+      return;
+    }
     event.preventDefault();
     event.stopImmediatePropagation();
     pasteText(data.getData('text/plain'));
   }).toJS;
   final copy = ((web.Event event) {
     final text = copyText();
-    if (text == null) return;
+    if (text == null) {
+      return;
+    }
     final data = (event as web.ClipboardEvent).clipboardData;
-    if (data == null) return;
+    if (data == null) {
+      return;
+    }
     data.setData('text/plain', text);
     event.preventDefault();
     event.stopImmediatePropagation();

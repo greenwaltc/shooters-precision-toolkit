@@ -19,10 +19,12 @@ class AppTextStyles {
   const AppTextStyles._();
 
   /// Section title styling for forms ("Choose your risk level", etc.).
-  static TextStyle? sectionTitle(BuildContext context) => AppHeadings.h4(context);
+  static TextStyle? sectionTitle(BuildContext context) =>
+      AppHeadings.h4(context);
 
   /// Per-factor label inside a grouped form panel.
-  static TextStyle? factorLabel(BuildContext context) => AppHeadings.h5(context);
+  static TextStyle? factorLabel(BuildContext context) =>
+      AppHeadings.h5(context);
 
   /// Uppercase + tracked label used by stat tiles and stat blocks.
   static TextStyle? statLabel(BuildContext context) {

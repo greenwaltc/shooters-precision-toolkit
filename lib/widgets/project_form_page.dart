@@ -14,8 +14,8 @@ import 'app_bar_actions.dart';
 import 'app_brand_bar.dart';
 import 'app_copyright_footer.dart';
 import 'app_nav_chrome.dart';
-import 'project_form.dart';
 import 'no_selected_project_page.dart';
+import 'project_form.dart';
 import 'project_save_status.dart';
 
 /// Route that hosts setup editing for the selected project.
@@ -101,9 +101,13 @@ class ProjectFormPage extends StatelessWidget {
     final navigator = Navigator.of(context);
     final openedFromMatrix = AppRoutes.isProjectFormOpenedFromMatrix(context);
 
-    if (!await store.completeProjectSetup()) return;
+    if (!await store.completeProjectSetup()) {
+      return;
+    }
     await store.persistSelectedProject();
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
 
     // Returning from the matrix "tune" path should pop back onto the existing
     // matrix page so the stack does not grow [matrix, form, matrix, ...].

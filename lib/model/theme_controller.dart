@@ -13,9 +13,20 @@ import '../styles/app_design.dart';
 /// Exposed to the widget tree via `provider` so the root [MaterialApp] can
 /// react to changes (rebuilding with the new `themeMode`) and so any control
 /// — e.g. the home page dark-mode toggle — can read and update the choice.
+/// Pending reads are ignored after a newer selection or disposal. Writes
+/// requested before disposal finish in order; later requests are no-ops.
 class ThemeController extends ChangeNotifier {
-  ThemeController({ThemeMode? initialMode})
-    : _themeMode = initialMode ?? AppDesign.defaultThemeMode;
+  ThemeController({
+    ThemeMode? initialMode,
+    Future<SharedPreferences> Function() preferencesLoader =
+        SharedPreferences.getInstance,
+  }) : _themeMode = initialMode ?? AppDesign.defaultThemeMode,
+       _preferencesLoader = preferencesLoader;
+
+  final Future<SharedPreferences> Function() _preferencesLoader;
+  Future<void> _writeTail = Future.value();
+  int _generation = 0;
+  bool _disposed = false;
 
   /// SharedPreferences key under which the chosen [ThemeMode] name is stored.
   static const String _storageKey = 'anomr_theme_mode_v1';
@@ -37,33 +48,59 @@ class ThemeController extends ChangeNotifier {
   }
 
   /// Loads the persisted preference. Safe to call when no platform storage is
-  /// available (e.g. widget tests): failures simply leave the default in place.
+  /// available (e.g. widget tests): expected storage exceptions leave the
+  /// default in place. Unexpected programming errors propagate to the caller.
   Future<void> load() async {
+    if (_disposed) {
+      return;
+    }
+    final generation = ++_generation;
     try {
-      final preferences = await SharedPreferences.getInstance();
-      final stored = preferences.getString(_storageKey);
-      final restored = _themeModeFromName(stored);
+      final preferences = await _preferencesLoader();
+      if (_disposed || generation != _generation) {
+        return;
+      }
+      final stored = preferences.get(_storageKey);
+      final restored = stored is String ? _themeModeFromName(stored) : null;
       if (restored != null && restored != _themeMode) {
         _themeMode = restored;
         notifyListeners();
       }
-    } catch (_) {
+    } on Exception {
       // No persistent store available; keep the in-memory default.
     }
   }
 
   /// Updates and persists the selected [mode].
-  Future<void> setThemeMode(ThemeMode mode) async {
-    if (_themeMode == mode) return;
+  Future<void> setThemeMode(ThemeMode mode) {
+    if (_disposed || _themeMode == mode) {
+      return Future.value();
+    }
+    _generation++;
     _themeMode = mode;
     notifyListeners();
 
+    // Preserve user-action order even if platform storage completes out of order.
+    // Disposal stops notifications, but lets already requested writes complete.
+    final write = _writeTail.then((_) => _persistMode(mode));
+    _writeTail = write;
+    return write;
+  }
+
+  Future<void> _persistMode(ThemeMode mode) async {
     try {
-      final preferences = await SharedPreferences.getInstance();
+      final preferences = await _preferencesLoader();
       await preferences.setString(_storageKey, mode.name);
-    } catch (_) {
+    } on Exception {
       // Persistence is best-effort; the in-memory value still applies.
     }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _generation++;
+    super.dispose();
   }
 
   /// Convenience for a binary toggle: dark when [enabled], light otherwise.
@@ -73,7 +110,9 @@ class ThemeController extends ChangeNotifier {
 
   static ThemeMode? _themeModeFromName(String? name) {
     for (final mode in ThemeMode.values) {
-      if (mode.name == name) return mode;
+      if (mode.name == name) {
+        return mode;
+      }
     }
     return null;
   }

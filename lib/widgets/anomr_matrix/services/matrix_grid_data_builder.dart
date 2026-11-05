@@ -41,7 +41,9 @@ class MatrixGridDataBuilder {
   /// "Run Order" column is purely positional and must not drive persistence.
   static String storageKeyForRow(PlutoRow row) {
     final storageIndex = cellIntValue(row.cells['storage']);
-    if (storageIndex != null) return 'range_$storageIndex';
+    if (storageIndex != null) {
+      return 'range_$storageIndex';
+    }
 
     final rowNumber = cellIntValue(row.cells['row']) ?? 1;
     return 'range_${rowNumber - 1}';
@@ -63,9 +65,12 @@ class MatrixGridDataBuilder {
       ).displayValue;
       final stored = project.matrixState[storageKey]?.toString();
       final left = (stored == null || stored.isEmpty) ? null : stored;
-      final right =
-          (normalized == null || normalized.isEmpty) ? null : normalized;
-      if (left == right) continue;
+      final right = (normalized == null || normalized.isEmpty)
+          ? null
+          : normalized;
+      if (left == right) {
+        continue;
+      }
 
       project.matrixState[storageKey] = normalized;
       changed = true;
@@ -84,8 +89,12 @@ class MatrixGridDataBuilder {
   /// Returns the integer value stored in [cell], if it can be parsed.
   static int? cellIntValue(PlutoCell? cell) {
     final value = cell?.value;
-    if (value is int) return value;
-    if (value is num) return value.toInt();
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
     return int.tryParse(value?.toString() ?? '');
   }
 
@@ -99,7 +108,9 @@ class MatrixGridDataBuilder {
   static List<List<String>> generateCombinations(
     List<FactorDefinition> factors,
   ) {
-    if (factors.isEmpty) return const [[]];
+    if (factors.isEmpty) {
+      return const [[]];
+    }
 
     var results = const <List<String>>[[]];
     for (final factor in factors) {
@@ -219,8 +230,12 @@ class MatrixGridDataBuilder {
     required ExperimentStructure structure,
   }) {
     final primaryValue = project.matrixState['range_$rangeIndex'];
-    if (primaryValue != null) return primaryValue;
-    if (structure != ExperimentStructure.simpleABComparison) return null;
+    if (primaryValue != null) {
+      return primaryValue;
+    }
+    if (structure != ExperimentStructure.simpleABComparison) {
+      return null;
+    }
 
     // Older one-factor projects used replicate-major keys. Read the legacy
     // key once and rewrite through the primary key on the next edit.

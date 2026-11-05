@@ -16,13 +16,14 @@ import '../tokens/app_opacity.dart';
 /// (responsive) and structural geometry lives in `ChartLayout`.
 @immutable
 class AnomrChartTheme extends ThemeExtension<AnomrChartTheme> {
-  const AnomrChartTheme({
+  AnomrChartTheme({
     required this.dotOutlineColor,
     required this.gridLineOpacity,
     required this.referenceLineOpacity,
-    required this.gridLineDashArray,
-    required this.boundLineDashArray,
-  });
+    required List<int> gridLineDashArray,
+    required List<int> boundLineDashArray,
+  }) : gridLineDashArray = List.unmodifiable(gridLineDashArray),
+       boundLineDashArray = List.unmodifiable(boundLineDashArray);
 
   /// Sensible defaults for the standard light theme.
   const AnomrChartTheme.standard()
@@ -67,7 +68,9 @@ class AnomrChartTheme extends ThemeExtension<AnomrChartTheme> {
 
   @override
   AnomrChartTheme lerp(ThemeExtension<AnomrChartTheme>? other, double t) {
-    if (other is! AnomrChartTheme) return this;
+    if (other is! AnomrChartTheme) {
+      return this;
+    }
     return AnomrChartTheme(
       dotOutlineColor:
           Color.lerp(dotOutlineColor, other.dotOutlineColor, t) ??

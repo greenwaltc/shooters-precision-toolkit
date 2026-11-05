@@ -14,7 +14,9 @@ import 'app_bar_actions.dart';
 abstract final class AppNavChrome {
   /// Leading back control when the navigator can pop; otherwise `null`.
   static Widget? backLeading(BuildContext context) {
-    if (!Navigator.canPop(context)) return null;
+    if (!Navigator.canPop(context)) {
+      return null;
+    }
     return AppBackButton(onPressed: () => Navigator.of(context).pop());
   }
 
@@ -35,13 +37,12 @@ abstract final class AppNavChrome {
   }
 
   /// Persists the selection and clears the stack to Projects.
-  static Future<void> goHome(
-    BuildContext context,
-    ProjectStore store,
-  ) async {
+  static Future<void> goHome(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
     await store.persistSelectedProject();
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
     await AppRoutes.goToProjects(navigator);
   }
 }

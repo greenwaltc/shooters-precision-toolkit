@@ -8,11 +8,11 @@ import 'package:pluto_grid/pluto_grid.dart';
 import '../../../model/project_form_model.dart';
 import '../../../styles/chart/chart_layout.dart';
 import '../../../styles/tokens/app_colors.dart';
+import '../../anomr_matrix/services/range_value_parser.dart';
 import '../models/anomr_summary.dart';
 import '../models/effect_status.dart';
 import '../models/factor_row.dart';
 import '../models/factor_stats.dart';
-import '../../anomr_matrix/services/range_value_parser.dart';
 
 /// Pure (no `BuildContext`) computations used to derive the values the
 /// results view renders.
@@ -20,7 +20,9 @@ class AnomrCalculator {
   const AnomrCalculator._();
 
   static double mean(List<double> values) {
-    if (values.isEmpty) return double.nan;
+    if (values.isEmpty) {
+      return double.nan;
+    }
     return values.reduce((a, b) => a + b) / values.length;
   }
 
@@ -43,7 +45,9 @@ class AnomrCalculator {
         .map((row) => _parseRangeValue(row.cells['range']?.value))
         .whereType<double>()
         .toList(growable: false);
-    if (observed.isEmpty) return const [];
+    if (observed.isEmpty) {
+      return const [];
+    }
 
     final grandMean = mean(observed);
     return manager.rows
@@ -53,7 +57,9 @@ class AnomrCalculator {
 
   /// Returns true when any matrix row lacks a parseable range value.
   static bool hasMissingRangeData(PlutoGridStateManager manager) {
-    if (manager.rows.isEmpty) return true;
+    if (manager.rows.isEmpty) {
+      return true;
+    }
 
     return manager.rows.any(
       (row) => _parseRangeValue(row.cells['range']?.value) == null,
@@ -76,7 +82,9 @@ class AnomrCalculator {
 
     for (final row in manager.rows) {
       final rangeValue = _rangeValueForRow(row, imputeWith: imputeWith);
-      if (rangeValue == null) continue;
+      if (rangeValue == null) {
+        continue;
+      }
 
       final factorValue = row.cells[factorField]?.value?.toString();
       if (factorValue == firstState) {
@@ -107,15 +115,21 @@ class AnomrCalculator {
     required double lowerBound,
     required double upperBound,
   }) {
-    if (!stats.hasBoth) return EffectStatus.insufficient;
+    if (!stats.hasBoth) {
+      return EffectStatus.insufficient;
+    }
 
     final firstOutside =
         stats.firstMean > upperBound || stats.firstMean < lowerBound;
     final secondOutside =
         stats.secondMean > upperBound || stats.secondMean < lowerBound;
 
-    if (firstOutside && secondOutside) return EffectStatus.significant;
-    if (!firstOutside && !secondOutside) return EffectStatus.notDetected;
+    if (firstOutside && secondOutside) {
+      return EffectStatus.significant;
+    }
+    if (!firstOutside && !secondOutside) {
+      return EffectStatus.notDetected;
+    }
     return EffectStatus.marginal;
   }
 

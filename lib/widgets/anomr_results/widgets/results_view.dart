@@ -9,11 +9,11 @@ import 'package:provider/provider.dart';
 
 import '../../../model/project_form_model.dart';
 import '../../../model/project_store.dart';
+import '../../../navigation/app_routes.dart';
 import '../../../styles/chart/chart_layout.dart';
 import '../../../styles/chart/chart_scale.dart';
 import '../../../styles/layout/app_layout.dart';
 import '../../../styles/tokens/app_spacing.dart';
-import '../../../navigation/app_routes.dart';
 import '../../anomr_matrix/services/matrix_grid_data_builder.dart';
 import '../../app_bar_actions.dart';
 import '../../app_brand_bar.dart';
@@ -124,7 +124,9 @@ class _ResultsViewState extends State<ResultsView> {
 
     final navigator = Navigator.of(context);
     await store.persistSelectedProject();
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
     await AppRoutes.goToProjects(navigator);
   }
 
@@ -140,7 +142,9 @@ class _ResultsViewState extends State<ResultsView> {
       context: context,
       builder: (_) => const ExportDialog(),
     );
-    if (options == null || !mounted) return;
+    if (options == null || !mounted) {
+      return;
+    }
 
     final overlay = Overlay.of(context, rootOverlay: true);
 
@@ -149,7 +153,9 @@ class _ResultsViewState extends State<ResultsView> {
       // Wait for any setState-triggered repaints to flush before exporting.
       await WidgetsBinding.instance.endOfFrame;
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       final controller = ExportController(
         overlay: overlay,
@@ -159,7 +165,9 @@ class _ResultsViewState extends State<ResultsView> {
       );
       final outcome = await controller.run(options);
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       switch (outcome) {
         case ExportSucceeded(:final path):
           _showSnack('Exported to $path');
@@ -169,7 +177,9 @@ class _ResultsViewState extends State<ResultsView> {
           _showSnack(message);
       }
     } finally {
-      if (mounted) setState(() => _isExporting = false);
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
     }
   }
 

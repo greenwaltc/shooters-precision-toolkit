@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/saved_project.dart';
+import '../util/json_object.dart';
 
 /// An immutable editing snapshot and the cloud revision it was based on.
 class ProjectDraft {
@@ -18,7 +19,7 @@ class ProjectDraft {
   final int expectedRevision;
   final int editCounter;
   SavedProject get project =>
-      SavedProject.fromJson(jsonDecode(projectJson) as Map<String, dynamic>);
+      SavedProject.fromJson(decodeJsonObject(projectJson));
 
   String encode() => jsonEncode({
     'schemaVersion': 1,
@@ -34,25 +35,25 @@ class ProjectDraft {
 
   factory ProjectDraft.decode(String value) {
     final decoded = jsonDecode(value);
-    if (decoded is! Map<String, dynamic>) {
+    if (decoded is! Map<String, Object?>) {
       throw const FormatException('A project draft must be a JSON object.');
     }
     final data = decoded;
+    final project = data['project'];
+    final id = project is Map<String, Object?> ? project['id'] : null;
+    final revision = data['expectedRevision'];
+    final counter = data['editCounter'];
     if (data['schemaVersion'] != 1 ||
-        data['project'] is! Map<String, dynamic> ||
-        data['project']['id'] is! String ||
-        (data['project']['id'] as String).isEmpty ||
-        data['expectedRevision'] is! int ||
-        (data['expectedRevision'] as int) < 0 ||
-        data['editCounter'] is! int ||
-        (data['editCounter'] as int) < 1) {
+        project is! Map<String, Object?> ||
+        id is! String ||
+        id.isEmpty ||
+        revision is! int ||
+        revision < 0 ||
+        counter is! int ||
+        counter < 1) {
       throw const FormatException('Unsupported local project draft.');
     }
-    return ProjectDraft._(
-      jsonEncode(data['project']),
-      data['expectedRevision'] as int,
-      data['editCounter'] as int,
-    );
+    return ProjectDraft._(jsonEncode(project), revision, counter);
   }
 }
 
@@ -79,7 +80,9 @@ class InMemoryProjectDraftStorage implements ProjectDraftStorage {
   @override
   Future<bool> removeIfMatches(String id, ProjectDraft acknowledged) async {
     final current = _drafts[id];
-    if (current == null || !current.matches(acknowledged)) return false;
+    if (current == null || !current.matches(acknowledged)) {
+      return false;
+    }
     _drafts.remove(id);
     return true;
   }
@@ -103,7 +106,11 @@ class SharedPreferencesProjectDraftStorage implements ProjectDraftStorage {
     for (final key in preferences.getKeys().where(
       (key) => key.startsWith(_prefix),
     )) {
-      final draft = ProjectDraft.decode(preferences.getString(key)!);
+      final value = preferences.get(key);
+      if (value is! String) {
+        throw const FormatException('A stored project draft must be a string.');
+      }
+      final draft = ProjectDraft.decode(value);
       final id = Uri.decodeComponent(key.substring(_prefix.length));
       if (draft.project.id != id) {
         throw const FormatException('Draft ID mismatch.');
@@ -134,8 +141,14 @@ class SharedPreferencesProjectDraftStorage implements ProjectDraftStorage {
     final preferences = await SharedPreferences.getInstance();
     // Refresh the legacy preferences cache before comparing persisted contents.
     await preferences.reload();
-    final value = preferences.getString(_key(id));
-    if (value == null || !ProjectDraft.decode(value).matches(acknowledged)) {
+    final value = preferences.get(_key(id));
+    if (value == null) {
+      return false;
+    }
+    if (value is! String) {
+      throw const FormatException('A stored project draft must be a string.');
+    }
+    if (!ProjectDraft.decode(value).matches(acknowledged)) {
       return false;
     }
     if (!await preferences.remove(_key(id))) {

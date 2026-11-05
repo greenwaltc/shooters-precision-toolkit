@@ -7,11 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 
-// TODO: Matrix undo/redo (cell, grid, and page-level) is still not functioning
-// reliably with platform keybindings (Cmd+Z / Cmd+Shift+Z, Ctrl+Z / Ctrl+Y) on
-// desktop and web. Revisit keyboard routing (HardwareKeyboard handler vs
-// EditableText), PlutoGrid isEditing after Enter/Tab, and focus outside the
-// grid. See _matrixKeyboardHandler in anomr_matrix.dart.
+// TODO: Repair matrix undo/redo routing; tracking: docs/code_maintenance.md#matrix-undo-and-redo.
 
 /// A single committed range-cell value change.
 class MatrixRangeChange {
@@ -28,7 +24,8 @@ class MatrixRangeChange {
 
 /// One undo/redo step, possibly spanning multiple cells.
 class MatrixHistoryEntry {
-  const MatrixHistoryEntry(this.changes);
+  MatrixHistoryEntry(List<MatrixRangeChange> changes)
+    : changes = List.unmodifiable(changes);
 
   factory MatrixHistoryEntry.single(MatrixRangeChange change) {
     return MatrixHistoryEntry([change]);
@@ -37,11 +34,8 @@ class MatrixHistoryEntry {
   final List<MatrixRangeChange> changes;
 }
 
-typedef MatrixRangeApply = void Function(
-  int rowIdx,
-  Object? value, {
-  bool recordHistory,
-});
+typedef MatrixRangeApply =
+    void Function(int rowIdx, Object? value, {bool recordHistory});
 
 /// Undo/redo stacks for committed range-cell edits in the matrix grid.
 class MatrixGridHistoryController {
@@ -73,7 +67,9 @@ class MatrixGridHistoryController {
       return;
     }
 
-    _commitUndoEntry(MatrixHistoryEntry(List<MatrixRangeChange>.from(_batchBuffer)));
+    _commitUndoEntry(
+      MatrixHistoryEntry(List<MatrixRangeChange>.from(_batchBuffer)),
+    );
     _batchBuffer.clear();
   }
 

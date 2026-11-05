@@ -84,7 +84,9 @@ class _RangeEntrySheetState extends State<RangeEntrySheet> {
     super.initState();
     _controller = TextEditingController(text: widget.entry.initialValue ?? '');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       _fieldFocusNode.requestFocus();
     });
   }

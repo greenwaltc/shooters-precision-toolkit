@@ -3,6 +3,7 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+import '../util/json_object.dart';
 import 'project_form_model.dart';
 
 /// User-created project plus its setup and matrix entry state.
@@ -15,7 +16,7 @@ class SavedProject {
     this.setupComplete = false,
     this.randomizeOrder = false,
     this.randomizeSequence,
-    Map<String, dynamic>? matrixState,
+    Map<String, Object?>? matrixState,
   }) : matrixState = matrixState ?? {};
 
   final String id;
@@ -35,7 +36,7 @@ class SavedProject {
   /// Re-generated only when the randomize toggle is switched off and back on.
   List<int>? randomizeSequence;
 
-  final Map<String, dynamic> matrixState;
+  final Map<String, Object?> matrixState;
 
   /// Display title with a stable fallback for incomplete projects.
   String get displayName {
@@ -44,33 +45,47 @@ class SavedProject {
   }
 
   /// Rehydrates a project from persisted JSON.
-  factory SavedProject.fromJson(Map<String, dynamic> json) {
+  factory SavedProject.fromJson(Map<String, Object?> json) {
     final now = DateTime.now().toUtc();
-    final matrixState = json['matrixState'] is Map
-        ? Map<String, dynamic>.from(json['matrixState'] as Map)
-        : <String, dynamic>{};
-    final formModel = json['formModel'] is Map<String, dynamic>
-        ? ProjectFormModel.fromJson(json['formModel'] as Map<String, dynamic>)
-        : ProjectFormModel();
+    final matrix = json['matrixState'];
+    final matrixState = matrix == null
+        ? <String, Object?>{}
+        : Map<String, Object?>.of(jsonObject(matrix));
+    final form = json['formModel'];
+    final formModel = form == null
+        ? ProjectFormModel()
+        : ProjectFormModel.fromJson(jsonObject(form));
+    final sequence = optionalJsonValue<List<Object?>>(
+      json,
+      'randomizeSequence',
+    );
+    final randomizeSequence = sequence?.map((value) {
+      if (value is! int || value < 0) {
+        throw const FormatException(
+          'Randomized row indexes must be nonnegative integers.',
+        );
+      }
+      return value;
+    }).toList();
 
     return SavedProject(
-      id: json['id'] as String? ?? now.microsecondsSinceEpoch.toString(),
+      id:
+          optionalJsonValue<String>(json, 'id') ??
+          now.microsecondsSinceEpoch.toString(),
       createdAt: _dateFromJson(json['createdAt'], now),
       updatedAt: _dateFromJson(json['updatedAt'], now),
       formModel: formModel,
       setupComplete:
-          json['setupComplete'] as bool? ??
+          optionalJsonValue<bool>(json, 'setupComplete') ??
           (matrixState.isNotEmpty && formModel.isSetupValid),
-      randomizeOrder: json['randomizeOrder'] as bool? ?? false,
-      randomizeSequence: (json['randomizeSequence'] as List?)
-          ?.map((value) => (value as num).toInt())
-          .toList(),
+      randomizeOrder: optionalJsonValue<bool>(json, 'randomizeOrder') ?? false,
+      randomizeSequence: randomizeSequence,
       matrixState: matrixState,
     );
   }
 
-  /// Serializes the project for [ProjectStorage].
-  Map<String, dynamic> toJson() {
+  /// Serializes the editable project at the persistence boundary.
+  Map<String, Object?> toJson() {
     return {
       'id': id,
       'createdAt': createdAt.toIso8601String(),
@@ -89,7 +104,9 @@ class SavedProject {
   }
 
   static DateTime _dateFromJson(Object? value, DateTime fallback) {
-    if (value is! String) return fallback;
+    if (value is! String) {
+      return fallback;
+    }
     return DateTime.tryParse(value)?.toUtc() ?? fallback;
   }
 }

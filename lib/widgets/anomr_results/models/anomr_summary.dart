@@ -11,14 +11,15 @@ import 'factor_row.dart';
 /// for a given (PlutoGrid state manager + project form model) combination.
 @immutable
 class AnomrSummary {
-  const AnomrSummary({
-    required this.ranges,
+  AnomrSummary({
+    required List<double> ranges,
     required this.grandMean,
     required this.detectableDiffPercent,
     required this.lowerBound,
     required this.upperBound,
-    required this.factorRows,
-  });
+    required List<FactorRow> factorRows,
+  }) : ranges = List.unmodifiable(ranges),
+       factorRows = List.unmodifiable(factorRows);
 
   final List<double> ranges;
   final double grandMean;

@@ -43,7 +43,9 @@ abstract final class AppBrandAssets {
 
   /// Tagline wrap limit for the current viewport.
   static int taglineMaxLines(BuildContext context) {
-    if (isMobileLandscapeBanner(context)) return 0;
+    if (isMobileLandscapeBanner(context)) {
+      return 0;
+    }
     return isMobileBanner(context)
         ? AppDesign.homeBannerTaglineMaxLinesMobile
         : AppDesign.homeBannerTaglineMaxLines;
@@ -64,7 +66,9 @@ abstract final class AppBrandAssets {
     required double availableWidth,
     required double height,
   }) {
-    if (!availableWidth.isFinite || availableWidth <= 0) return false;
+    if (!availableWidth.isFinite || availableWidth <= 0) {
+      return false;
+    }
     return availableWidth < height * bannerAspectRatio;
   }
 
@@ -598,7 +602,9 @@ class AppBrandTitle extends StatelessWidget {
       maxLines: trailing == null ? maxLines : 1,
       overflow: TextOverflow.ellipsis,
     );
-    if (trailing == null) return text;
+    if (trailing == null) {
+      return text;
+    }
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

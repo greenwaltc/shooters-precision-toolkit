@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({
     super.key,
     required this.auth,
@@ -16,8 +16,31 @@ class AuthGate extends StatelessWidget {
   final Widget Function(BuildContext, User) signedInBuilder;
 
   @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  // StreamBuilder owns its subscription. Rebuilds keep the same stream rather
+  // than re-registering SDK listeners; replacing auth replaces that stream.
+  late Stream<User?> _users;
+
+  @override
+  void initState() {
+    super.initState();
+    _users = widget.auth.userChanges();
+  }
+
+  @override
+  void didUpdateWidget(AuthGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.auth != widget.auth) {
+      _users = widget.auth.userChanges();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => StreamBuilder<User?>(
-    stream: auth.userChanges(),
+    stream: _users,
     builder: (context, snapshot) {
       if (snapshot.hasError) {
         return const MaterialApp(
@@ -32,14 +55,18 @@ class AuthGate extends StatelessWidget {
         );
       }
       final user = snapshot.data;
-      if (user == null) return signedOutBuilder(context);
-      if (!user.emailVerified) return verifyEmailBuilder(context);
+      if (user == null) {
+        return widget.signedOutBuilder(context);
+      }
+      if (!user.emailVerified) {
+        return widget.verifyEmailBuilder(context);
+      }
       return KeyedSubtree(
-        key: ValueKey('${auth.app.options.projectId}/${user.uid}'),
+        key: ValueKey('${widget.auth.app.options.projectId}/${user.uid}'),
         child: _VerifiedSession(
           user: user,
-          verifiedBuilder: (context) => signedInBuilder(context, user),
-          unverifiedBuilder: verifyEmailBuilder,
+          verifiedBuilder: (context) => widget.signedInBuilder(context, user),
+          unverifiedBuilder: widget.verifyEmailBuilder,
         ),
       );
     },

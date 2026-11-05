@@ -58,7 +58,9 @@ class LegendChip extends StatelessWidget {
     );
 
     final maxWidth = this.maxWidth;
-    if (maxWidth == null) return content;
+    if (maxWidth == null) {
+      return content;
+    }
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),

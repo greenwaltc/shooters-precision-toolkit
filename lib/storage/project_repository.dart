@@ -20,7 +20,8 @@ class CloudProject {
   final int revision;
   final bool hasPendingWrites;
 
-  /// Firestore pagination cursor, absent for an in-memory repository.
+  /// Firestore SDK pagination cursor, absent for an in-memory repository.
+  /// Its SDK-mandated dynamic map stays opaque outside the repository.
   final DocumentSnapshot<Map<String, dynamic>>? snapshot;
 }
 

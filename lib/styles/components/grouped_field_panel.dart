@@ -5,10 +5,10 @@
 
 import 'package:flutter/material.dart';
 
+import '../layout/app_layout.dart';
 import '../tokens/app_borders.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_spacing.dart';
-import '../layout/app_layout.dart';
 
 /// Lightly tinted container used to visually group related form fields
 /// (e.g. each factor's name + states). Pure styling shell — callers stack

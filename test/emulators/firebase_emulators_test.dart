@@ -7,6 +7,7 @@ import 'dart:js_interop';
 
 import 'package:bramwells_precision_test_kit/auth/auth_page.dart';
 import 'package:bramwells_precision_test_kit/auth/auth_service.dart';
+import 'package:bramwells_precision_test_kit/auth/workspace_sign_out.dart';
 import 'package:bramwells_precision_test_kit/firebase/firebase_bootstrap.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/model/project_form_model.dart';
@@ -172,137 +173,135 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   }, timeout: const Timeout(Duration(minutes: 2)));
 
-  testWidgets(
-    'emulator verification opens workspace; logout removes private routes',
-    (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final previousErrorHandler = FlutterError.onError;
-      FlutterError.onError = (details) {
-        // ignore: avoid_print
-        print('Browser workspace error: ${details.exceptionAsString()}');
-        previousErrorHandler?.call(details);
-      };
-      addTearDown(() => FlutterError.onError = previousErrorHandler);
-      final services = emulatorServices;
-      final auth = AuthService(services.auth);
-      final email =
-          'gate-${DateTime.now().microsecondsSinceEpoch}@example.test';
-      const password = 'Local-test-password-123!';
-      String? createdProjectId;
-      try {
-        await tester.runAsync(
-          () => auth
-              .register(email, password)
-              .timeout(const Duration(seconds: 15)),
-        );
-        expect(services.auth.currentUser!.emailVerified, isFalse);
-        await tester.pumpWidget(FirebaseApplication(services: services));
-        await _waitForAuth(tester, services, signedIn: true);
-        expect(find.text('Verify your email'), findsOneWidget);
-        expect(find.byType(ProjectHomePage), findsNothing);
+  testWidgets('emulator verification opens workspace; logout removes private routes', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final previousErrorHandler = FlutterError.onError;
+    FlutterError.onError = (details) {
+      // ignore: avoid_print
+      print(
+        'Browser workspace error: ${details.exceptionAsString()}\n${details.stack}',
+      );
+      previousErrorHandler?.call(details);
+    };
+    addTearDown(() => FlutterError.onError = previousErrorHandler);
+    final services = emulatorServices;
+    final auth = AuthService(services.auth);
+    final email = 'gate-${DateTime.now().microsecondsSinceEpoch}@example.test';
+    const password = 'Local-test-password-123!';
+    String? createdProjectId;
+    try {
+      await tester.runAsync(
+        () =>
+            auth.register(email, password).timeout(const Duration(seconds: 15)),
+      );
+      expect(services.auth.currentUser!.emailVerified, isFalse);
+      await tester.pumpWidget(FirebaseApplication(services: services));
+      await _waitForAuth(tester, services, signedIn: true);
+      expect(find.text('Verify your email'), findsOneWidget);
+      expect(find.byType(ProjectHomePage), findsNothing);
 
-        await tester.runAsync(() async {
-          // Read only this uniquely named test account's local verification code.
-          final response = await web.window
-              .fetch(
-                'http://127.0.0.1:9099/emulator/v1/projects/$localFirebaseProjectId/oobCodes'
-                    .toJS,
-              )
-              .toDart
-              .timeout(const Duration(seconds: 5));
-          expect(response.ok, isTrue);
-          final data = (await response.json().toDart).dartify() as Map;
-          final codes = (data['oobCodes'] as List).cast<Map>().where(
-            (code) =>
-                code['email'] == email && code['requestType'] == 'VERIFY_EMAIL',
-          );
-          expect(codes, isNotEmpty);
-          await services.auth.applyActionCode(codes.last['oobCode'] as String);
-          // Simulate returning from the external verification page: refresh the
-          // profile without calling the verification screen's refresh helper.
-          // AuthGate must refresh token claims before mounting the workspace.
-          await services.auth.currentUser!.reload();
-        });
-        await _waitForAuth(tester, services, signedIn: true);
-        await tester.runAsync(() async {
-          final token = await services.auth.currentUser!.getIdTokenResult();
-          expect(token.claims?['email_verified'], isTrue);
-        });
-        expect(find.byType(ProjectHomePage), findsOneWidget);
-        expect(find.byType(AuthPage), findsNothing);
+      await tester.runAsync(() async {
+        // Read only this uniquely named test account's local verification code.
+        final response = await web.window
+            .fetch(
+              'http://127.0.0.1:9099/emulator/v1/projects/$localFirebaseProjectId/oobCodes'
+                  .toJS,
+            )
+            .toDart
+            .timeout(const Duration(seconds: 5));
+        expect(response.ok, isTrue);
+        final data = (await response.json().toDart).dartify() as Map;
+        final codes = (data['oobCodes'] as List).cast<Map>().where(
+          (code) =>
+              code['email'] == email && code['requestType'] == 'VERIFY_EMAIL',
+        );
+        expect(codes, isNotEmpty);
+        await services.auth.applyActionCode(codes.last['oobCode'] as String);
+        // Simulate returning from the external verification page: refresh the
+        // profile without calling the verification screen's refresh helper.
+        // AuthGate must refresh token claims before mounting the workspace.
+        await services.auth.currentUser!.reload();
+      });
+      await _waitForAuth(tester, services, signedIn: true);
+      await tester.runAsync(() async {
+        final token = await services.auth.currentUser!.getIdTokenResult();
+        expect(token.claims?['email_verified'], isTrue);
+      });
+      expect(find.byType(ProjectHomePage), findsOneWidget);
+      expect(find.byType(AuthPage), findsNothing);
 
-        final create = find.widgetWithIcon(FilledButton, Icons.add);
-        await tester.ensureVisible(create);
-        // This browser widget runner does not bundle Material's InkSparkle
-        // shader. Exercise real callbacks here; pointer/menu behavior is
-        // covered by the regular workspace widget tests.
-        final store = tester.element(create).read<ProjectStore>();
-        tester.widget<FilledButton>(create).onPressed!();
-        createdProjectId = store.selectedProject?.id;
-        await _pumpUntil(
-          tester,
-          () =>
-              store.selectedProject != null &&
-              store.saveStateFor(store.selectedProject!.id) ==
-                  ProjectSaveState.saved,
-          'project creation was not acknowledged by Firestore',
-        );
-        await tester.pumpAndSettle();
-        expect(find.byType(ProjectFormPage), findsOneWidget);
-        final oldNavigator = Navigator.of(
-          tester.element(find.byType(ProjectFormPage)),
-        );
-        await tester.enterText(
-          find.byType(TextFormField).first,
-          'Emulator private draft',
-        );
-        tester
-            .widget<IconButton>(find.widgetWithIcon(IconButton, Icons.logout))
-            .onPressed!();
-        await tester.pump();
-        await _waitForAuth(tester, services, signedIn: false);
-        expect(oldNavigator.mounted, isFalse);
-        expect(find.byType(AuthPage), findsOneWidget);
-        expect(find.byType(ProjectFormPage), findsNothing);
-        expect(find.byType(ProjectHomePage), findsNothing);
-        expect(find.byType(AlertDialog), findsNothing);
-        final loginNavigator = tester.state<NavigatorState>(
-          find.byType(Navigator),
-        );
-        expect(loginNavigator.canPop(), isFalse);
-        await loginNavigator.maybePop();
-        await tester.pumpAndSettle();
-        expect(find.byType(AuthPage), findsOneWidget);
-      } finally {
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.runAsync(() async {
-          // Never flush the emulator globally: interactive users may be testing too.
-          try {
-            await auth.signIn(email, password);
-            if (createdProjectId != null) {
-              await services.db
-                  .collection('users')
-                  .doc(services.auth.currentUser!.uid)
-                  .collection('projects')
-                  .doc(createdProjectId)
-                  .delete();
-            }
-            await services.auth.currentUser!.delete();
-          } on FirebaseException catch (error) {
-            if (![
-              'user-not-found',
-              'invalid-credential',
-            ].contains(error.code)) {
-              rethrow;
-            }
-          } finally {
-            await services.auth.signOut();
+      final create = find.widgetWithIcon(FilledButton, Icons.add);
+      await tester.ensureVisible(create);
+      // This browser widget runner does not bundle Material's InkSparkle
+      // shader. Exercise real callbacks here; pointer/menu behavior is
+      // covered by the regular workspace widget tests.
+      final store = tester.element(create).read<ProjectStore>();
+      tester.widget<FilledButton>(create).onPressed!();
+      createdProjectId = store.selectedProject?.id;
+      await _pumpUntil(
+        tester,
+        () =>
+            store.selectedProject != null &&
+            store.saveStateFor(store.selectedProject!.id) ==
+                ProjectSaveState.saved,
+        'project creation was not acknowledged by Firestore',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ProjectFormPage), findsOneWidget);
+      final oldNavigator = Navigator.of(
+        tester.element(find.byType(ProjectFormPage)),
+      );
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Emulator private draft',
+      );
+      // Compact headers place Sign out in the overflow menu. Widget tests
+      // cover that wiring; exercise the shared operation here without the
+      // browser runner's unavailable InkSparkle shader/menu pointer path.
+      final pageContext = tester.element(find.byType(ProjectFormPage));
+      final signOut = pageContext.read<WorkspaceSignOut>().run(pageContext);
+      await tester.pump();
+      await _waitForAuth(tester, services, signedIn: false);
+      await signOut;
+      expect(oldNavigator.mounted, isFalse);
+      expect(find.byType(AuthPage), findsOneWidget);
+      expect(find.byType(ProjectFormPage), findsNothing);
+      expect(find.byType(ProjectHomePage), findsNothing);
+      expect(find.byType(AlertDialog), findsNothing);
+      final loginNavigator = tester.state<NavigatorState>(
+        find.byType(Navigator),
+      );
+      expect(loginNavigator.canPop(), isFalse);
+      await loginNavigator.maybePop();
+      await tester.pumpAndSettle();
+      expect(find.byType(AuthPage), findsOneWidget);
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.runAsync(() async {
+        // Never flush the emulator globally: interactive users may be testing too.
+        try {
+          await auth.signIn(email, password);
+          if (createdProjectId != null) {
+            await services.db
+                .collection('users')
+                .doc(services.auth.currentUser!.uid)
+                .collection('projects')
+                .doc(createdProjectId)
+                .delete();
           }
-        });
-      }
-    },
-    timeout: const Timeout(Duration(minutes: 2)),
-  );
+          await services.auth.currentUser!.delete();
+        } on FirebaseException catch (error) {
+          if (!['user-not-found', 'invalid-credential'].contains(error.code)) {
+            rethrow;
+          }
+        } finally {
+          await services.auth.signOut();
+        }
+      });
+    }
+  }, timeout: const Timeout(Duration(minutes: 2)));
   test(
     'real Auth account switching preserves Firestore ownership boundaries',
     () async {

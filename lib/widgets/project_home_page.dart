@@ -278,7 +278,9 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
   Future<void> _createProject(BuildContext context, ProjectStore store) async {
     final navigator = Navigator.of(context);
     await store.createProject();
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
     await navigator.pushNamed(AppRoutes.projectForm);
   }
 }
@@ -342,7 +344,9 @@ class _ProjectListTile extends StatelessWidget {
 
     await store.persistSelectedProject();
     await store.selectProject(project.id);
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
     await navigator.pushNamed(AppRoutes.destinationForProject(project));
   }
 
@@ -350,7 +354,9 @@ class _ProjectListTile extends StatelessWidget {
     final store = context.read<ProjectStore>();
     final confirmed = await confirmDeleteProject(context, project);
 
-    if (!confirmed || !context.mounted) return;
+    if (!confirmed || !context.mounted) {
+      return;
+    }
 
     await store.deleteProject(project.id);
   }

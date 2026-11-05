@@ -9,6 +9,7 @@ const defaults = {
   AUTH_EMULATOR_PORT: '9099', FIRESTORE_EMULATOR_PORT: '8080',
   SAVE_DEBOUNCE_MILLISECONDS: '2000', EMAIL_COOLDOWN_SECONDS: '60',
   IMPUTE_MISSING_DATA: 'false', THEME_MODE_TOGGLE: 'false',
+  WEB3FORMS_ACCESS_KEY: '',
 };
 
 export function parseManifest(text) {
@@ -37,6 +38,10 @@ export function validateManifest(values) {
   if (values.CONFIG_SCHEMA_VERSION !== '1') throw new Error('Unsupported configuration schema.');
   if (!['dev', 'prod'].includes(values.APP_ENV)) throw new Error('Invalid APP_ENV.');
   const config = { ...defaults, ...values };
+  if (config.WEB3FORMS_ACCESS_KEY !== '' &&
+      !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(config.WEB3FORMS_ACCESS_KEY)) {
+    throw new Error('WEB3FORMS_ACCESS_KEY must be a UUID.');
+  }
   for (const key of ['USE_FIREBASE_EMULATORS', 'IMPUTE_MISSING_DATA', 'THEME_MODE_TOGGLE']) {
     if (!['true', 'false'].includes(config[key])) throw new Error(`Invalid ${key}.`);
   }

@@ -15,6 +15,7 @@ cannot prove the deployed project's IAM settings or live token revocation.
 | Account email and credentials | Firebase Auth handles credentials. Forms retain input only while mounted. On web the SDK's persisted session is accessible to scripts on the app origin; the local emulator uses in-memory Auth persistence. Native sessions use the platform storage provided by Firebase Auth, not app preferences. Sign-out tears down private routes and listeners. |
 | Projects, design and measurements | Firestore is the durable record. There is no disk project cache or offline draft store in the app. Pending edits live in the active workspace and expire with it. Owners can delete projects; existing soft-delete/deletion request handling is distinct from an operator's permanent purge. |
 | UI preferences | Shared preferences store ordinary settings, not credentials or measurement data. |
+| Contact form | An explicit send transmits the entered name, reply email, and message to Web3Forms for delivery to Denton Bramwell. The app keeps unsent input only on the current route and clears it after confirmed delivery. The recipient controls access, retention, and deletion of delivered email. Web3Forms documents its processing and log retention in its [privacy FAQ](https://docs.web3forms.com/getting-started/faq). |
 | Exports and clipboard | User-initiated file and clipboard actions can contain measurements and names. They are not uploaded by the app. Files and copied text can outlive a session; the person initiating export controls their distribution and deletion. Browser screenshots used for tests contain only synthetic data. |
 | Diagnostics | App-generated records stay in the local browser console or native log. There is no collection endpoint, analytics integration, or offline telemetry queue. Share only relevant sanitized events in a private issue and remove the attachment when the incident is resolved. |
 
@@ -24,6 +25,16 @@ does not request camera, contacts, location, or storage-wide permissions; file
 export uses the platform picker/download. Dev-only native configurations permit
 the emulator transport; the native validator rejects production exceptions.
 Do not add private SDK keys or signing credentials to client manifests.
+
+The contact endpoint accepts public submissions. Web3Forms applies its spam
+filtering and rate limits. The app limits field sizes and the response size,
+prevents repeat clicks during a send, and sends only to the fixed HTTPS endpoint.
+It records the failure category and elapsed time without the key, message, email,
+or response body. The maintainer reviews repeated `contactSendFailed` events
+against the selected form and provider domain settings. Web3Forms documents
+browser-specific domain restrictions, so verify delivery from the dev host
+before release and confirm native delivery separately if distributing a native build.
+See [Web3Forms troubleshooting](https://docs.web3forms.com/getting-started/troubleshooting).
 
 Diagnostic events carry component, severity, outcome, environment, configuration
 schema and build identity, plus timing when measured. Framework and uncaught

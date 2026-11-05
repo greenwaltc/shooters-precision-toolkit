@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,8 @@ import '../features/auth/data/auth_service.dart';
 import '../features/auth/presentation/auth_gate.dart';
 import '../features/auth/presentation/auth_page.dart';
 import '../features/auth/presentation/workspace_sign_out.dart';
+import '../features/contact/api/contact_sender.dart';
+import '../features/contact/data/web3forms_contact_sender.dart';
 import '../features/contact/presentation/contact_page.dart';
 import '../features/experiments/data/firestore_project_repository.dart';
 import '../features/experiments/data/project_draft_storage.dart';
@@ -74,6 +77,19 @@ class FirebaseApplication extends StatelessWidget {
         ),
       ),
       Provider<AppConfig>.value(value: services.config),
+      if (services.config.web3FormsAccessKey case final key?) ...[
+        Provider<http.Client>(
+          create: (_) => http.Client(),
+          dispose: (_, client) => client.close(),
+        ),
+        Provider<ContactSender>(
+          create: (context) => Web3FormsContactSender(
+            client: context.read<http.Client>(),
+            accessKey: key,
+            diagnostics: diagnostics,
+          ),
+        ),
+      ],
       Provider<EmulatorPresentation>.value(
         value: EmulatorPresentation(enabled: services.config.useEmulators),
       ),
@@ -93,11 +109,11 @@ class FirebaseApplication extends StatelessWidget {
         builder: (context, auth, _) => AuthGate(
           auth: auth,
           signedOutBuilder: (_) => AuthPage(
-            contactBuilder: (_) => const ContactPage(),
+            contactBuilder: _contactPage,
             key: ValueKey('signed-out'),
           ),
           verifyEmailBuilder: (_) => AuthPage(
-            contactBuilder: (_) => const ContactPage(),
+            contactBuilder: _contactPage,
             key: ValueKey('verify/${services.auth.currentUser?.uid}'),
             verification: true,
           ),
@@ -120,8 +136,11 @@ class FirebaseApplication extends StatelessWidget {
   );
 }
 
+Widget _contactPage(BuildContext context) =>
+    ContactPage(sender: context.read<ContactSender?>());
+
 final Map<String, WidgetBuilder> _appRoutes = {
-  AppRoutes.contact: (_) => const ContactPage(),
+  AppRoutes.contact: _contactPage,
   AppRoutes.projects: (_) => const ProjectHomePage(),
   AppRoutes.projectForm: (_) => const ProjectFormPage(),
   AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),

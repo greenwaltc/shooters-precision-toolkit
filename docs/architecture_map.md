@@ -10,8 +10,8 @@ organized by capability:
 - **Experiments**: app-owned project snapshots, bounded pages and cursors, pure
   test-design rules, calibration and ANOMR arithmetic, Firestore/session adapters,
   and projects, design, matrix and results presentation.
-- **Contact**: public placeholder and navigation. No contact address or contact
-  submission service is shipped.
+- **Contact**: localized public form and a Web3Forms adapter supplied by the
+  composition root. The same form is available from account and workspace routes.
 - **Shared**: small pure contracts, generated localization, visual components,
   and explicit platform adapters for clipboard events, preferences, links and
   file saving. Shared code does not import features or the composition root.
@@ -28,7 +28,7 @@ data code receive typed constructors. Adapters translate vendor failures to
 | Test Design | One editable notifier per project holds active and inactive factor slots. Validation precedes matrix navigation. Cloud snapshots remain immutable; the store creates an editable model only at the presentation boundary. |
 | Matrix | Route owns grid controllers, focus, selection, clipboard listeners and undo history. Stable storage indices preserve entered values through reordering and responsive rebuilds. Focus and selection do not survive restart; saved values and row order do. |
 | Results and exports | Domain receives typed numeric observations; it has no knowledge of grid, chart, colors or navigation. Presentation maps results into labels/geometry and owns export busy state. File selection is a platform capability with explicit cancellation. No export data is uploaded. |
-| Contact and shared chrome | Static localized content, a bounded menu and injected navigation callbacks. There is no background work or private state. |
+| Contact | The route owns the form fields and submission state. While a request is pending, duplicate submissions are disabled. A confirmed send clears the fields. A failure retains them for retry. The request has a 15-second deadline, and route disposal discards the local draft and ignores late results. A submission already sent to the provider can still complete after navigation or a timeout. |
 
 Each repository write freezes its `ProjectDocument` synchronously to a
 `ProjectSnapshot` before awaiting external work. Read snapshots own their

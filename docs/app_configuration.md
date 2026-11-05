@@ -44,6 +44,13 @@ must never contain credentials. No runtime remote overrides are implemented.
 | EMAIL_COOLDOWN_SECONDS | Duration, 30–300 s | 60 |
 | IMPUTE_MISSING_DATA | bool, exact true/false | false |
 | THEME_MODE_TOGGLE | bool, exact true/false | false |
+| WEB3FORMS_ACCESS_KEY | Public Web3Forms form UUID | Empty disables submission |
+
+`config/dev.json` and `config/prod.json` select separate Web3Forms forms.
+`task web:build ENV=dev` and `task web:build ENV=prod` embed the selected form's
+public identifier. Local emulator profiles leave the field empty. To rotate a
+form key, update the matching profile and rebuild. See the
+[Web3Forms access key FAQ](https://docs.web3forms.com/getting-started/faq).
 
 Both experimental flags belong to the application maintainer; review for removal
 or permanent adoption by **2026-12-31**. Both states are tested. They expose UI

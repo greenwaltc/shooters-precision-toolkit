@@ -106,11 +106,77 @@ abstract class AppLocalizations {
   /// **'Contact Denton Bramwell'**
   String get contactDentonBramwell;
 
-  /// No description provided for @aContactFormForQuestionsAndFeedbackWill.
+  /// No description provided for @contactUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'A contact form for questions and feedback will be available here soon.'**
-  String get aContactFormForQuestionsAndFeedbackWill;
+  /// **'The contact form is unavailable in this build.'**
+  String get contactUnavailable;
+
+  /// No description provided for @contactDeliveryNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a question or share feedback. Web3Forms delivers your name, email address, and message to Denton Bramwell.'**
+  String get contactDeliveryNotice;
+
+  /// No description provided for @contactName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get contactName;
+
+  /// No description provided for @contactEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get contactEmail;
+
+  /// No description provided for @contactMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get contactMessage;
+
+  /// No description provided for @contactNameInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name within the character limit.'**
+  String get contactNameInvalid;
+
+  /// No description provided for @contactEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get contactEmailInvalid;
+
+  /// No description provided for @contactMessageInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a message within the character limit.'**
+  String get contactMessageInvalid;
+
+  /// No description provided for @contactSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get contactSend;
+
+  /// No description provided for @contactSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get contactSending;
+
+  /// No description provided for @contactSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Your message was sent.'**
+  String get contactSent;
+
+  /// No description provided for @contactSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn’t confirm delivery. Your message is still here if you want to try again.'**
+  String get contactSendFailed;
 
   /// No description provided for @bramwellSPrecisionTestKit.
   ///

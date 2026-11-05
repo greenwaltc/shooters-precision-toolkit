@@ -31,6 +31,12 @@ maintenance health, license, security implications, and lifecycle/disposal model
 Prefer an existing platform/framework capability when adequate. Do not add a large
 framework solely to avoid a few straightforward constructors.
 
+Contact submission declares the already locked Dart-team `http` package as a
+direct dependency. The BSD-3-Clause package uses the browser HTTP stack on web
+and Dart I/O on native platforms. The application owns and closes the client,
+and the adapter limits the lifetime and size of each response. This change keeps
+the resolved dependency version and adds no platform permissions.
+
 ## Code generation and repository hygiene
 
 Generated outputs MUST NOT be hand edited. Pin generator versions and document

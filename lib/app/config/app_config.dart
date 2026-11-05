@@ -12,6 +12,7 @@ final class AppConfig {
     required this.firestoreEmulatorPort,
     required this.saveDebounce,
     required this.emailCooldown,
+    required this.web3FormsAccessKey,
     required this.product,
     required this.build,
   });
@@ -27,6 +28,7 @@ final class AppConfig {
     'FIRESTORE_EMULATOR_PORT',
     'SAVE_DEBOUNCE_MILLISECONDS',
     'EMAIL_COOLDOWN_SECONDS',
+    'WEB3FORMS_ACCESS_KEY',
     'IMPUTE_MISSING_DATA',
     'THEME_MODE_TOGGLE',
     'BUILD_ID',
@@ -69,6 +71,14 @@ final class AppConfig {
     if (!RegExp(r'^(localhost|127\.0\.0\.1|10\.0\.2\.2)$').hasMatch(host)) {
       throw ArgumentError('Use an allowlisted local emulator host.');
     }
+    final contactKey = values['WEB3FORMS_ACCESS_KEY'] ?? '';
+    if (contactKey.isNotEmpty &&
+        !RegExp(
+          r'^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$',
+          caseSensitive: false,
+        ).hasMatch(contactKey)) {
+      throw ArgumentError('WEB3FORMS_ACCESS_KEY must be a UUID.');
+    }
     return AppConfig._(
       environment: environment,
       useEmulators: emulators,
@@ -87,6 +97,7 @@ final class AppConfig {
         seconds: integer('EMAIL_COOLDOWN_SECONDS', 60, 30, 300),
       ),
       build: BuildIdentity._fromValues(values),
+      web3FormsAccessKey: contactKey.isEmpty ? null : contactKey,
       product: ProjectConfiguration(
         featureFlags: FeatureFlags(
           values: {
@@ -110,6 +121,7 @@ final class AppConfig {
   final int firestoreEmulatorPort;
   final Duration saveDebounce;
   final Duration emailCooldown;
+  final String? web3FormsAccessKey;
   final ProjectConfiguration product;
   final BuildIdentity build;
 
@@ -207,6 +219,7 @@ AppConfig loadBuildConfig() => AppConfig.fromValues({
     'THEME_MODE_TOGGLE',
     defaultValue: 'false',
   ),
+  'WEB3FORMS_ACCESS_KEY': const String.fromEnvironment('WEB3FORMS_ACCESS_KEY'),
   'BUILD_ID': const String.fromEnvironment('BUILD_ID', defaultValue: 'unknown'),
   'BUILD_VERSION': const String.fromEnvironment(
     'BUILD_VERSION',

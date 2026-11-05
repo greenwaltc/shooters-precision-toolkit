@@ -1,3 +1,4 @@
+import 'package:bramwells_precision_test_kit/features/contact/api/contact_sender.dart';
 import 'package:bramwells_precision_test_kit/features/contact/presentation/contact_page.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_background.dart';
@@ -7,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_configuration.dart';
+
+final class _ContactSender extends Fake implements ContactSender {}
 
 void main() {
   testWidgets(
@@ -21,7 +24,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             theme: AppTheme.light(),
             builder: (_, child) => AppBackground(child: child!),
-            home: const ContactPage(),
+            home: ContactPage(sender: _ContactSender()),
           ),
         );
         await tester.pumpAndSettle(

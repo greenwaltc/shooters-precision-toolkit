@@ -15,8 +15,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactDentonBramwell => 'Contact Denton Bramwell';
 
   @override
-  String get aContactFormForQuestionsAndFeedbackWill =>
-      'A contact form for questions and feedback will be available here soon.';
+  String get contactUnavailable =>
+      'The contact form is unavailable in this build.';
+
+  @override
+  String get contactDeliveryNotice =>
+      'Send a question or share feedback. Web3Forms delivers your name, email address, and message to Denton Bramwell.';
+
+  @override
+  String get contactName => 'Name';
+
+  @override
+  String get contactEmail => 'Email';
+
+  @override
+  String get contactMessage => 'Message';
+
+  @override
+  String get contactNameInvalid => 'Enter a name within the character limit.';
+
+  @override
+  String get contactEmailInvalid => 'Enter a valid email address.';
+
+  @override
+  String get contactMessageInvalid =>
+      'Enter a message within the character limit.';
+
+  @override
+  String get contactSend => 'Send message';
+
+  @override
+  String get contactSending => 'Sending…';
+
+  @override
+  String get contactSent => 'Your message was sent.';
+
+  @override
+  String get contactSendFailed =>
+      'We couldn’t confirm delivery. Your message is still here if you want to try again.';
 
   @override
   String get bramwellSPrecisionTestKit => 'Bramwell\'s Precision Test Kit';

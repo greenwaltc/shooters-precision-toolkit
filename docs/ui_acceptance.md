@@ -2,7 +2,7 @@
 
 English (`en`) is the supported product language. All application prose, including
 validation, semantics, chart/export labels and errors, comes from `lib/shared/l10n/app_en.arb`.
-Flutter's pinned SDK generates `lib/l10n/generated`; do not edit generated Dart.
+Flutter's pinned SDK generates `lib/shared/l10n/generated`; do not edit generated Dart.
 Context-aware views select the app locale; single-language non-widget validation
 and export adapters explicitly use the English resource. Add a translated ARB and
 complete locale acceptance before advertising another supported language.
@@ -29,6 +29,11 @@ The assembled browser journey captures screenshots under
 `build/test-results/screenshots`, including a 390×844 run when invoked with
 `BROWSER_DIMENSION=390x844 task test:integration:web`. These are review artifacts,
 not automatically approved golden baselines.
+
+The Contact form uses the shared surface card, theme inputs, and action button.
+Automated checks cover its labels, targets, contrast, and the full send and retry
+interaction at 390 logical pixels. Before release, verify keyboard and
+screen-reader operation for the fields, validation messages, and send status.
 
 ## Recorded exceptions and release checks
 

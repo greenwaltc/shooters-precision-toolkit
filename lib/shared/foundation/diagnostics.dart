@@ -4,6 +4,7 @@ enum DiagnosticEvent {
   frameworkError('flutter', 'error', 'failure'),
   uncaughtAsyncError('runtime', 'error', 'failure'),
   authFailed('auth', 'warning', 'failure'),
+  contactSendFailed('contact', 'warning', 'failure'),
   workspaceLoadFailed('workspace', 'warning', 'failure'),
   workspaceSaveFailed('workspace', 'warning', 'failure'),
   exportFailed('export', 'warning', 'failure');

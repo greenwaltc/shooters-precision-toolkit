@@ -81,7 +81,7 @@ task web:deploy ENV=prod  # Check, rebuild, and publish to production Hosting
 
 Environment commands default to `dev` and accept only `dev` or `prod`. Deploy/preview commands run checks, rebuild, measure transfer, and verify file hashes and the Hosting destination before uploading. Dev builds have indexing disabled. Use `task --dry web:deploy ENV=prod` to inspect commands without executing them. Run environments sequentially in one checkout because Flutter shares build intermediates. Node 22+ and Google Chrome are required for web release checks; set `CHROME_EXECUTABLE` if Chrome is installed elsewhere.
 
-An open `dev` → `main` PR deploys each pushed dev commit to the dev live site at `https://dev.bramwelltest.com`. Other same-repository PRs deploy dev previews. Production uses a manual workflow from `main` and the GitHub `production` environment. Configure its reviewer/branch protections before the first production run. See [web release instructions](docs/web_releases.md) for setup, retention, and Spark traffic limits.
+An open `dev` → `main` PR deploys each pushed dev commit to the dev live site at `https://dev.bramwelltest.com`. Other same-repository PRs deploy dev previews. Production uses a manual workflow from `main` and the GitHub `production` environment. Configure its reviewer/branch protections before the first production run. See [web release instructions](docs/guides/web_releases.md) for setup, retention, and Spark traffic limits.
 
 ### Native dev and production apps
 
@@ -103,9 +103,9 @@ For a native dev app with local Firebase, start `task emulators:start` in one te
 
 If Xcode reports “Found no destinations” or “iOS 26.5 is not installed,” install the matching iOS platform in Xcode > Settings > Components, then rerun `task ios:build`. A simulator runtime is also needed to run the app in a simulator.
 
-`task native:config` retrieves SDK config using Terraform output app IDs and regenerates native Dart options while preserving web options. It never creates Firebase apps. `task native:check` checks environment identity and transport policy. `task verify` runs regular Flutter, native config, rules, and browser emulator checks sequentially on macOS; stop interactive emulators first or run `task local:test` against the running instance. See the [engineering standards](docs/README.md) and [verification commands](docs/testing_evidence.md).
+`task native:config` retrieves SDK config using Terraform output app IDs and regenerates native Dart options while preserving web options. It never creates Firebase apps. `task native:check` checks environment identity and transport policy. `task verify` runs regular Flutter, native config, rules, and browser emulator checks sequentially on macOS; stop interactive emulators first or run `task local:test` against the running instance. See the [engineering standards](docs/README.md) and [verification commands](docs/verification/testing_evidence.md).
 
-The application is cloud-native. Its signed-in workspace retains only session drafts, and persistent Firestore caching is disabled. Legacy import and durable offline replay are outside scope; unsaved changes do not survive a refresh/restart. Existing cloud revision guards remain in place. Steps 10–11 are marked skipped in the [migration guide](docs/firebase_migration_guide.md).
+The application is cloud-native. Its signed-in workspace retains only session drafts, and persistent Firestore caching is disabled. Legacy import and durable offline replay are outside scope; unsaved changes do not survive a refresh/restart. Existing cloud revision guards remain in place. Steps 10–11 are marked skipped in the [migration guide](docs/guides/firebase_migration_guide.md).
 
 For first-time authentication, run `task login:firebase` for Firebase CLI deployments, `task login:terraform` for Terraform, and `task login:gcloud` for billing inspection. These maintain separate credentials.
 
@@ -136,7 +136,7 @@ lib/
 └── shared/         # Contracts, platform adapters, localization, and UI
 ```
 
-See the [architecture map](docs/architecture_map.md) for dependencies and state
+See the [architecture map](docs/reference/architecture_map.md) for dependencies and state
 lifetimes.
 
 ### Theming and design knobs
@@ -150,7 +150,7 @@ copy lives in `lib/shared/l10n/app_en.arb`.
 Tests mirror the app under `test/`. They cover form validation, numeric parsing,
 matrix selection and history, accessible layouts, and account isolation. The
 assembled browser journey covers project creation → Test Design → matrix → results.
-See [test commands and evidence](docs/testing_evidence.md).
+See [test commands and evidence](docs/verification/testing_evidence.md).
 
 ```bash
 task check               # Locked dependencies, analysis, tests and coverage
@@ -174,7 +174,7 @@ Configuration is in `pubspec.yaml` under `flutter_launcher_icons` (Android adapt
 
 The web app deploys to Firebase Hosting (project `bramwells-precision-test-kit`), serving `build/web` as a single-page app (`firebase.json`).
 
-- **CI/CD** — GitHub Actions validate every PR. Same-repository `dev` → `main` PRs publish to dev live; other same-repository PRs get preview channels. Production uses a manual release from `main` (`.github/workflows/firebase-hosting-*.yml`). Requires separate dev and production Firebase service-account secrets; see [web release setup](docs/web_releases.md#configure-github-once).
+- **CI/CD** — GitHub Actions validate every PR. Same-repository `dev` → `main` PRs publish to dev live; other same-repository PRs get preview channels. Production uses a manual release from `main` (`.github/workflows/firebase-hosting-*.yml`). Requires separate dev and production Firebase service-account secrets; see [web release setup](docs/guides/web_releases.md#configure-github-once).
 - **Manual deploy:**
 
 ```bash

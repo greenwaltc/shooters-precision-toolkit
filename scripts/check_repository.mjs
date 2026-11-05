@@ -36,7 +36,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     if (name.startsWith('lib/') && name !== 'lib/app/config/app_config.dart' && /\bfromEnvironment\s*\(/.test(source)) {
       problems.push(`${name}: compilation declarations belong at the app configuration boundary`);
     }
-    if (!name.endsWith('.md') || (name !== 'README.md' && !name.startsWith('docs/')) || name === 'docs/firebase_migration_guide.md') continue;
+    if (!name.endsWith('.md') || (name !== 'README.md' && !name.startsWith('docs/'))) continue;
     const prose = source.replace(/```[\s\S]*?```/g, '');
     for (const [, target] of prose.matchAll(/\[[^\]\n]+\]\(<?([^>\s)]+)>?(?:\s+"[^"]+")?\)/g)) {
       const location = target.split('#', 1)[0];

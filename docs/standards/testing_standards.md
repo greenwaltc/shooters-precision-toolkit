@@ -1,6 +1,6 @@
 # Flutter and Dart testing standards
 
-Status and requirement language: [engineering standards](README.md).
+Status and requirement language: [engineering standards](../README.md).
 
 ## Strategy and ownership
 

@@ -24,5 +24,5 @@ A remote crash reporter would improve fleet visibility but adds a collection,
 retention, and access policy. Raw browser logs are simpler but make unsafe details
 easy to disclose. Local records let an operator reproduce incidents without
 introducing a new service; they cannot supply automatic aggregate alerts.
-[Security operations](../security_operations.md) records the compensating checks
+[Security operations](../guides/security_operations.md) records the compensating checks
 and review condition. Diagnostic sink failures never determine app behavior.

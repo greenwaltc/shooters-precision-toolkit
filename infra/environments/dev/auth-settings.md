@@ -10,6 +10,6 @@ Project: `bramwellsprecisiontestkitdev` (`723783645502`). Record verified Consol
 - [ ] Action links resolve to the dev application.
 - [ ] Verification/reset email cooldowns and quota handling tested.
 
-Provider deployment and manual settings are described in step 5 of [the migration guide](../../../docs/firebase_migration_guide.md). Auth configuration is kept outside Terraform to preserve the Spark setup.
+Provider deployment and manual settings are described in step 5 of [the migration guide](../../../docs/guides/firebase_migration_guide.md). Auth configuration is kept outside Terraform to preserve the Spark setup.
 
 App return URL: https://bramwellsprecisiontestkitdev.web.app

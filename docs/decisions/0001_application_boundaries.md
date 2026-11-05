@@ -55,7 +55,8 @@ assembled browser journeys protect design, entry, results and persistence.
 The Firestore document schema and revision protocol remain compatible with older
 valid documents. Structural changes require an ordinary app rollback; no backend
 data migration is introduced. Manual native/accessibility/performance release
-evidence remains governed by ui_acceptance.md and the release runbook.
+evidence remains governed by [UI acceptance](../verification/ui_acceptance.md)
+and the [release runbook](../guides/web_releases.md).
 
 Revisit when another independent capability needs reuse, a second persistence
 adapter changes semantics, or the state convention becomes a measured obstacle.

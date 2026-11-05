@@ -1357,7 +1357,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
   }
 
-  // TODO: Repair undo/redo keybindings; tracking: docs/code_maintenance.md#matrix-undo-and-redo.
+  // TODO: Repair undo/redo keybindings; tracking: docs/reference/code_maintenance.md#matrix-undo-and-redo.
   bool _matrixKeyboardHandler(KeyEvent event) {
     if (!mounted) {
       return false;

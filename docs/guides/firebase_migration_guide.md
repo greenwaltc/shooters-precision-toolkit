@@ -150,10 +150,10 @@ firebase.auth.dev.json
 firebase.auth.prod.json
 firebase.json
 firebase.emulators.json
-docs/firebase_migration_guide.md
+docs/guides/firebase_migration_guide.md
 ```
 
-The infra portion of this layout is now implemented. See [infra/README.md](../infra/README.md) for current inputs and adoption instructions. Both roots passed `terraform validate` with Google/Google Beta 8.9.0 on October 29, 2026, and provider lock files are included. State files are generated privately by Terraform, not created as placeholders. The app/auth/root policy files shown here are later migration steps.
+The infra portion of this layout is now implemented. See [infra/README.md](../../infra/README.md) for current inputs and adoption instructions. Both roots passed `terraform validate` with Google/Google Beta 8.9.0 on October 29, 2026, and provider lock files are included. State files are generated privately by Terraform, not created as placeholders. The app/auth/root policy files shown here are later migration steps.
 
 **4. Keep separate local Terraform states and adopt the existing projects**
 

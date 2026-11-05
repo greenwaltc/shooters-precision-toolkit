@@ -2,7 +2,7 @@ import { spawn, execFileSync } from 'node:child_process';
 import { createServer } from 'node:net';
 import { mkdir, open } from 'node:fs/promises';
 
-// The caller supplies the vendor ChromeDriver binary (see docs/testing_evidence.md).
+// The caller supplies the vendor ChromeDriver binary (see docs/verification/testing_evidence.md).
 const driver = process.env.CHROMEDRIVER ?? 'chromedriver';
 const size = process.env.BROWSER_DIMENSION ?? '1600x1024';
 if (!/^\d{3,4}x\d{3,4}$/.test(size)) throw new Error('Use a browser size like 390x844.');

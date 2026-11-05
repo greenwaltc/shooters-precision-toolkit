@@ -1,4 +1,4 @@
-# Engineering standards
+# Project documentation
 
 Reviewed against upstream guidance: **2026-11-04**.
 
@@ -7,28 +7,41 @@ application. They were written independently of the application's implementation
 They are a target for future development and adoption, not a statement that the
 current code, tooling, or delivery pipeline already complies.
 
-## Reading guide
+## Engineering standards
 
 | Document | Scope |
 | --- | --- |
-| [Dart/Flutter coding standards](dart_flutter_coding_standards.md) | Style, types, API design, async work, widget lifecycle, and analyzer baseline. Combines style and coding standards. |
-| [Testing standards](testing_standards.md) | Unit, widget, integration, golden, and regression tests; determinism and coverage. |
-| [Architecture standards](architecture_standards.md) | Responsibilities, dependency direction, feature boundaries, state, and data contracts. |
-| [Configuration and dependency injection](configuration_and_dependency_injection.md) | Typed configuration, build environments, runtime settings, composition, and practical examples. |
-| [UI quality standards](ui_quality_standards.md) | Accessibility, localization, responsive behavior, and performance. |
-| [Security, privacy, and observability](security_privacy_and_observability.md) | Trust boundaries, data protection, logs, errors, and operational signals. |
-| [Development workflow](development_workflow.md) | Dependencies, code generation, review, CI, releases, and documentation. |
-| [Architecture decision template](adr_template.md) | A reusable record for consequential decisions and exceptions. |
+| [Dart/Flutter coding standards](standards/dart_flutter_coding_standards.md) | Style, types, API design, async work, widget lifecycle, and analyzer baseline. Combines style and coding standards. |
+| [Testing standards](standards/testing_standards.md) | Unit, widget, integration, golden, and regression tests; determinism and coverage. |
+| [Architecture standards](standards/architecture_standards.md) | Responsibilities, dependency direction, feature boundaries, state, and data contracts. |
+| [Configuration and dependency injection](standards/configuration_and_dependency_injection.md) | Typed configuration, build environments, runtime settings, composition, and practical examples. |
+| [UI quality standards](standards/ui_quality_standards.md) | Accessibility, localization, responsive behavior, and performance. |
+| [Security, privacy, and observability](standards/security_privacy_and_observability.md) | Trust boundaries, data protection, logs, errors, and operational signals. |
+| [Development workflow](standards/development_workflow.md) | Dependencies, code generation, review, CI, releases, and documentation. |
 
 Start with architecture and configuration when designing a feature. Use the coding
 and testing documents during implementation, and the workflow checklist before
 review. Each specialist document owns its subject; cross-links avoid competing
 definitions of the same rule.
 
-Implementation and evidence: [adoption status](standards_adoption.md),
-[application architecture](architecture_map.md), [configuration](app_configuration.md),
-[test execution](testing_evidence.md), [security operations](security_operations.md),
-and [UI acceptance](ui_acceptance.md).
+## Guides
+
+- [Application configuration](guides/app_configuration.md)
+- [Web releases](guides/web_releases.md)
+- [Security and diagnostic operations](guides/security_operations.md)
+- [Firebase migration](guides/firebase_migration_guide.md)
+
+## Reference and decisions
+
+- [Application architecture](reference/architecture_map.md)
+- [Maintenance follow-ups](reference/code_maintenance.md)
+- [Architecture decision records](decisions/) and [decision template](decisions/adr_template.md)
+
+## Verification
+
+- [Standards adoption](verification/standards_adoption.md)
+- [Test commands and evidence](verification/testing_evidence.md)
+- [UI acceptance](verification/ui_acceptance.md)
 
 ## Requirement language and decisions
 
@@ -44,7 +57,7 @@ is mandated by this baseline.
 
 A departure from a MUST requires a recorded exception: scope, reason, consequences,
 compensating checks, owner, and review date. Use an
-[architecture decision record (ADR)](adr_template.md) for lasting or cross-cutting
+[architecture decision record (ADR)](decisions/adr_template.md) for lasting or cross-cutting
 decisions. A short review note is sufficient for a local SHOULD departure.
 
 ## Adoption and maintenance
@@ -60,6 +73,6 @@ decisions. A short review note is sufficient for a local SHOULD departure.
 
 Configuration snippets, commands, directory trees, and example names are reference
 designs. They do not assert that the corresponding files or tasks exist today.
-The existing [web release guide](web_releases.md) and
-[Firebase migration guide](firebase_migration_guide.md) remain separate operational
+The existing [web release guide](guides/web_releases.md) and
+[Firebase migration guide](guides/firebase_migration_guide.md) remain separate operational
 documents; they were not used to derive this baseline.

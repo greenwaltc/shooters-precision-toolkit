@@ -9,7 +9,7 @@ import '../../../../../shared/foundation/behavior_policy.dart';
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
-// TODO: Repair matrix undo/redo routing; tracking: docs/code_maintenance.md#matrix-undo-and-redo.
+// TODO: Repair matrix undo/redo routing; tracking: docs/reference/code_maintenance.md#matrix-undo-and-redo.
 
 /// A single committed range-cell value change.
 class MatrixRangeChange {

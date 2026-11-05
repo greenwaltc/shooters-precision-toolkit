@@ -1,6 +1,6 @@
 # Software architecture standards
 
-Status and requirement language: [engineering standards](README.md).
+Status and requirement language: [engineering standards](../README.md).
 
 ## Principles and baseline
 
@@ -152,7 +152,7 @@ Before accepting a boundary change, check that:
 - State, resource lifetimes, failures, and concurrency have named owners.
 - Persistence or API changes have compatibility and migration tests.
 - Complexity has a concrete benefit and consequential decisions have an
-  [ADR](adr_template.md).
+  [ADR](../decisions/adr_template.md).
 
 Use [configuration and injection](configuration_and_dependency_injection.md) for
 wiring and [testing standards](testing_standards.md) for evidence. No architecture

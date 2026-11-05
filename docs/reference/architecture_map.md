@@ -1,6 +1,6 @@
 # Application architecture and lifetimes
 
-See [ADR 0001](decisions/0001_application_boundaries.md) for the boundary and state
+See [ADR 0001](../decisions/0001_application_boundaries.md) for the boundary and state
 management decisions. `lib/main.dart` starts Flutter; `lib/app/application.dart`
 composes adapters, the auth gate, routes and session-owned state. The code is
 organized by capability:
@@ -50,5 +50,5 @@ routes and session state. The server still enforces ownership and verified email
 
 Named routes are drawn from an allowlist; private pages require the verified
 workspace and a usable selected project. Route visibility is not authorization.
-See [configuration](app_configuration.md), [test evidence](testing_evidence.md),
-and [UI acceptance](ui_acceptance.md) for adjacent contracts and verification.
+See [configuration](../guides/app_configuration.md), [test evidence](../verification/testing_evidence.md),
+and [UI acceptance](../verification/ui_acceptance.md) for adjacent contracts and verification.

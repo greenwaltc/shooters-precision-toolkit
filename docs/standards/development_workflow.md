@@ -1,10 +1,10 @@
 # Development, review, and delivery conventions
 
-Status and requirement language: [engineering standards](README.md).
+Status and requirement language: [engineering standards](../README.md).
 
 This document defines the target workflow. It does not claim that CI, coverage
 gates, release automation, or a migration plan have already been implemented.
-See [current adoption](standards_adoption.md) and [test commands](testing_evidence.md)
+See [current adoption](../verification/standards_adoption.md) and [test commands](../verification/testing_evidence.md)
 for the gates in use and the manual checks still required.
 
 ## Toolchain and dependencies
@@ -60,7 +60,7 @@ the ARB resources and commit the generated Dart files. CI checks regeneration
 against the checkout. `task native:config` refreshes public FlutterFire native
 snapshots using the existing Terraform app IDs and operator credentials; review
 and commit the generated snapshots. `task native:check` verifies their environment
-mapping without fetching cloud configuration. See [release tooling](web_releases.md)
+mapping without fetching cloud configuration. See [release tooling](../guides/web_releases.md)
 for artifact and private symbol retention.
 
 ## Change design and review
@@ -75,7 +75,7 @@ choices, validation, and known limitations. Include screenshots or short recordi
 for material UI changes and migration/rollback notes for persistent data or release
 behavior. Do not describe tests as passed unless they were run successfully.
 
-Record consequential choices with [an ADR](adr_template.md), including changes to
+Record consequential choices with [an ADR](../decisions/adr_template.md), including changes to
 state management, module boundaries, configuration sources, persistence, error
 contracts, and security-sensitive integrations. Small implementation choices need
 only a review explanation.

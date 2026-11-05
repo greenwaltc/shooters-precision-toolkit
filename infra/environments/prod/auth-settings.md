@@ -11,7 +11,7 @@ Project: `bramwells-precision-test-kit`. Record its confirmed project number in 
 - [ ] Action links resolve to the production application.
 - [ ] Verification/reset email cooldowns and quota handling tested.
 
-Provider deployment and manual settings are described in step 5 of [the migration guide](../../../docs/firebase_migration_guide.md). Auth configuration is kept outside Terraform to preserve the Spark setup.
+Provider deployment and manual settings are described in step 5 of [the migration guide](../../../docs/guides/firebase_migration_guide.md). Auth configuration is kept outside Terraform to preserve the Spark setup.
 
 Production Auth was initialized using the CLI and reports Identity Platform. Billing remains disabled. Apply Spark Identity Platform quotas rather than basic-Auth capacity assumptions. No downgrade was attempted.
 

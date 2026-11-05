@@ -54,7 +54,7 @@ This keeps the current Spark deployment free of another data collector and avoid
 retaining session data. CI startup and browser journeys, post-release smoke checks,
 Firebase console usage and manual reports are compensating checks. The application
 maintainer reviews this decision by **2027-02-01** or before expanding the release
-audience. See [ADR 0002](decisions/0002_local_diagnostics.md) and
+audience. See [ADR 0002](../decisions/0002_local_diagnostics.md) and
 [web releases](web_releases.md).
 
 **Dependency exception:** The isolated Node rules harness pins

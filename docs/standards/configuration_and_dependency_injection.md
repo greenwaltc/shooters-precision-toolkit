@@ -1,6 +1,6 @@
 # Application configuration and dependency injection
 
-Status and requirement language: [engineering standards](README.md).
+Status and requirement language: [engineering standards](../README.md).
 
 ## Configuration contract
 

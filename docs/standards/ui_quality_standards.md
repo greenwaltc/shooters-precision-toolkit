@@ -1,6 +1,6 @@
 # UI quality, accessibility, and performance
 
-Status and requirement language: [engineering standards](README.md).
+Status and requirement language: [engineering standards](../README.md).
 
 ## Consistent interaction and visual design
 

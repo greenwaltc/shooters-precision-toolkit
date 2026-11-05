@@ -1,6 +1,6 @@
 # Dart and Flutter coding standards
 
-Status and requirement language: [engineering standards](README.md).
+Status and requirement language: [engineering standards](../README.md).
 
 ## Formatting, names, and imports
 

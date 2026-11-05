@@ -1,6 +1,6 @@
 # Security, privacy, and observability standards
 
-Status and requirement language: [engineering standards](README.md).
+Status and requirement language: [engineering standards](../README.md).
 
 ## Trust boundaries and access
 

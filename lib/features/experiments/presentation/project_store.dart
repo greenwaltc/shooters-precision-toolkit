@@ -566,7 +566,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     final generation = ++_selectionGeneration;
     unawaited(_observeCancellation(_selectedSubscription?.cancel()));
     _selectedSubscription = null;
-    if (id == null || _disposed) {
+    // A new draft does not exist on the server yet. An initial missing
+    // snapshot could arrive after creation and look like a deletion.
+    if (id == null || _disposed || revisionFor(id) == 0) {
       return;
     }
     _selectedSubscription = repository
@@ -838,6 +840,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         return;
       }
       _revisions[id] = revision;
+      if (expectedRevision == 0 && _selectedProjectId == id) {
+        _select(id);
+      }
       _captureChanges(project);
       if (_editVersions[id] == version) {
         _dirty.remove(id);

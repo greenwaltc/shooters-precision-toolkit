@@ -39,6 +39,26 @@ void main() {
   }
 
   test(
+    'new drafts start watching the document after creation is acknowledged',
+    () async {
+      await loadPage([]);
+      final acknowledgement = Completer<void>();
+      repository.saveBarrier = acknowledgement.future;
+      final creating = store.createProject();
+      final draft = store.selectedProject!;
+      try {
+        await _events();
+        expect(repository.selectedWatches, isEmpty);
+      } finally {
+        acknowledgement.complete();
+      }
+      await creating;
+      expect(repository.selectedWatches, [draft.id]);
+      expect(store.revisionFor(draft.id), 1);
+    },
+  );
+
+  test(
     'concurrent and repeated loads attach exactly one page listener',
     () async {
       final loads = List.generate(8, (_) => store.load());
@@ -287,7 +307,12 @@ class _PageRepository extends FakeProjectRepository {
   }
 
   @override
-  Stream<CloudProject?> watchProject(String id) => const Stream.empty();
+  Stream<CloudProject?> watchProject(String id) {
+    selectedWatches.add(id);
+    return const Stream.empty();
+  }
+
+  final selectedWatches = <String>[];
 
   void emit(List<CloudProject> page) => _pages.last.add(page);
   void fail(Object error) => _pages.last.addError(error);

@@ -12,6 +12,7 @@ current code, tooling, or delivery pipeline already complies.
 | Document | Scope |
 | --- | --- |
 | [Dart/Flutter coding standards](standards/dart_flutter_coding_standards.md) | Style, types, API design, async work, widget lifecycle, and analyzer baseline. Combines style and coding standards. |
+| [Class and function documentation](standards/api_documentation_standards.md) | Doc comments, API contracts, examples, and review expectations. |
 | [Testing standards](standards/testing_standards.md) | Unit, widget, integration, golden, and regression tests; determinism and coverage. |
 | [Architecture standards](standards/architecture_standards.md) | Responsibilities, dependency direction, feature boundaries, state, and data contracts. |
 | [Configuration and dependency injection](standards/configuration_and_dependency_injection.md) | Typed configuration, build environments, runtime settings, composition, and practical examples. |

@@ -362,6 +362,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   static const double _desktopMaxWidth = 1180;
   late List<PlutoColumn> _columns;
   late List<PlutoRow> _rows;
+  late final List<int> _defaultRunSequence;
   late List<PlutoColumnGroup> _columnGroups;
   PlutoGridStateManager? _stateManager;
   _ScrollCueState _scrollCues = const _ScrollCueState();
@@ -1161,6 +1162,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     );
 
     _randomizeOrder = widget.project.randomizeOrder;
+    _defaultRunSequence = gridData.rows.map(_storageIndexOf).toList();
     final ordered = _initialRowOrder(List.of(gridData.rows));
     _renumberRunOrder(ordered);
 
@@ -1228,10 +1230,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   List<PlutoColumn> _buildFactorColumns(ProjectFormModel formModel) {
     final factors = formModel.factorDefinitions;
-    // The last factor changes on every canonical row. Keep its field index
-    // so display order does not alter saved measurements or analysis.
     return [
-      for (var index = factors.length - 1; index >= 0; index--)
+      for (var index = 0; index < factors.length; index++)
         _buildFactorColumn(index: index, factor: factors[index]),
     ];
   }
@@ -1731,7 +1731,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   /// Toggling on generates a fresh randomized order; toggling off restores the
-  /// canonical sequential order. Either way the new state is persisted so it
+  /// default run order. Either way the new state is persisted so it
   /// survives navigation, project switches, and app restarts. Rows are
   /// reordered by instance, so range values stay bound to their rows.
   void _onRandomizeToggled(bool value) {
@@ -1747,8 +1747,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final current = manager.refRows.toList();
     final ordered = value
         ? ([...current]..shuffle(_random))
-        : ([...current]
-            ..sort((a, b) => _storageIndexOf(a).compareTo(_storageIndexOf(b))));
+        : _applySequence(current, _defaultRunSequence);
 
     _persistRandomizeState(value, ordered);
     _applyOrderedRows(manager, ordered);

@@ -40,7 +40,7 @@ void main() {
       expect(copied.split('\n'), hasLength(4));
       expect(
         copied.split('\n').first,
-        'Run Order\tReplicate\tFactor 1\tFactor 0\tGroup Size',
+        'Run Order\tReplicate\tFactor 0\tFactor 1\tGroup Size',
       );
       expect(copied.split('\n').first.split('\t'), hasLength(5));
       // Native clipboard keys must escape Flutter/Pluto's default handlers so
@@ -71,7 +71,7 @@ void main() {
       );
       expect(manager.rows[0].cells['range']!.value, '10.25');
       expect(manager.rows[1].cells['range']!.value, '20.5');
-      expect(manager.rows[2].cells['range']!.value, '3');
+      expect(manager.rows[2].cells['range']!.value, '2');
       final original = Map.of(store.selectedProject!.matrixState);
       for (final editing in [false, true]) {
         manager.setEditing(editing);

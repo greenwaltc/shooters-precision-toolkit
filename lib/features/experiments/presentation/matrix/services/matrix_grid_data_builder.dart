@@ -105,7 +105,10 @@ class MatrixGridDataBuilder {
     return name.isEmpty ? AppCopy.english.factorNumber(index + 1) : name;
   }
 
-  /// Generates every factor-state combination in matrix display order.
+  /// Generates factor-state combinations in the order used by saved range keys.
+  ///
+  /// The last factor changes fastest in this order. Factorial rows display
+  /// the same combinations in a different order without changing their keys.
   static List<List<String>> generateCombinations(
     List<FactorDefinition> factors,
   ) {
@@ -161,7 +164,14 @@ class MatrixGridDataBuilder {
     for (var comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
       for (var blockIdx = 0; blockIdx < rangesPerGroup; blockIdx++) {
         rows.add(
-          _buildRow(formModel, project, combinations, comboIdx, blockIdx),
+          _buildRow(
+            formModel,
+            project,
+            combinations,
+            comboIdx,
+            blockIdx,
+            runOrder: rows.length + 1,
+          ),
         );
       }
     }
@@ -174,13 +184,33 @@ class MatrixGridDataBuilder {
     List<List<String>> combinations,
     int rangesPerGroup,
   ) {
+    final combinationOrder = _firstFactorFastestOrder(combinations.length);
     for (var blockIdx = 0; blockIdx < rangesPerGroup; blockIdx++) {
-      for (var comboIdx = 0; comboIdx < combinations.length; comboIdx++) {
+      for (final comboIdx in combinationOrder) {
         rows.add(
-          _buildRow(formModel, project, combinations, comboIdx, blockIdx),
+          _buildRow(
+            formModel,
+            project,
+            combinations,
+            comboIdx,
+            blockIdx,
+            runOrder: rows.length + 1,
+          ),
         );
       }
     }
+  }
+
+  /// Interleaves the two halves of each binary factor's stored combinations.
+  /// This reverses which factor changes fastest while retaining storage indices.
+  static List<int> _firstFactorFastestOrder(int combinationCount) {
+    var order = [0];
+    for (var stride = 1; stride < combinationCount; stride *= 2) {
+      order = [
+        for (final index in order) ...[index, index + stride],
+      ];
+    }
+    return order;
   }
 
   static PlutoRow _buildRow(
@@ -188,8 +218,9 @@ class MatrixGridDataBuilder {
     SavedProject project,
     List<List<String>> combinations,
     int comboIdx,
-    int blockIdx,
-  ) {
+    int blockIdx, {
+    required int runOrder,
+  }) {
     final combo = combinations[comboIdx];
     final rangeIndex = formModel.sampleSizeOption.matrixRangeIndex(
       comboIdx: comboIdx,
@@ -200,9 +231,7 @@ class MatrixGridDataBuilder {
 
     return PlutoRow(
       cells: {
-        // Display "Run Order"; built in canonical order so it starts sequential
-        // and is renumbered by position whenever rows are reordered.
-        'row': PlutoCell(value: rangeIndex + 1),
+        'row': PlutoCell(value: runOrder),
         'group': PlutoCell(value: blockIdx + 1),
         // Stable, hidden persistence index (no matching column).
         'storage': PlutoCell(value: rangeIndex),

@@ -124,8 +124,7 @@ void main() {
         expect(manager.columns.map((column) => column.field).toList(), [
           'row',
           if (factorCount > 1) 'group',
-          for (var index = factorCount - 1; index >= 0; index--)
-            'factor_$index',
+          for (var index = 0; index < factorCount; index++) 'factor_$index',
           'range',
         ]);
         for (final width in [

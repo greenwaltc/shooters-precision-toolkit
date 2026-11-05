@@ -56,8 +56,9 @@ templates with instructions. Remove dead code, obsolete flags, and unused
 dependencies as part of the relevant change.
 
 For this repository, run `flutter gen-l10n` with the pinned SDK after changing
-the ARB resources and commit the generated Dart files. CI checks regeneration
-against the checkout. `task native:config` refreshes public FlutterFire native
+the ARB resources and commit the generated Dart files. CI regenerates the files
+from the checked-out ARB before analysis, tests, and builds. Hosting deployments
+use the resulting verified artifact. `task native:config` refreshes public FlutterFire native
 snapshots using the existing Terraform app IDs and operator credentials; review
 and commit the generated snapshots. `task native:check` verifies their environment
 mapping without fetching cloud configuration. See [release tooling](../guides/web_releases.md)

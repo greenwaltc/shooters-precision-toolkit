@@ -25,7 +25,8 @@ jobs:
           channel: stable
           flutter-version: '3.47.9'
       - run: flutter pub get --enforce-lockfile
-      - run: node scripts/check_generated.mjs --tracked
+      - name: Generate Dart localizations from the checked-out ARB
+        run: flutter gen-l10n
       - run: node scripts/check_repository.mjs
       - run: node scripts/check_architecture.mjs
       - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver

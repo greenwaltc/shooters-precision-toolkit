@@ -15,6 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           # Dev live reflects the pushed dev commit; other PRs test the merge ref.
           ref: ${{ github.head_ref == 'dev' && github.base_ref == 'main' && github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-node@v4
@@ -28,6 +29,10 @@ jobs:
       - name: Generate Dart localizations from the checked-out ARB
         run: flutter gen-l10n
       - run: node scripts/check_repository.mjs
+      - name: Verify portable project file schema version
+        run: node scripts/project_file_schema.mjs --base "$PROJECT_SCHEMA_BASE"
+        env:
+          PROJECT_SCHEMA_BASE: ${{ github.event.pull_request.base.sha }}
       - run: node scripts/check_architecture.mjs
       - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver
       - run: flutter analyze --fatal-infos --fatal-warnings

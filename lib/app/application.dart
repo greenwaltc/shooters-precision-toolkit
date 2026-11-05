@@ -18,6 +18,7 @@ import '../features/contact/presentation/contact_page.dart';
 import '../features/experiments/data/firestore_project_repository.dart';
 import '../features/experiments/data/project_draft_storage.dart';
 import '../features/experiments/presentation/matrix/data_matrix_page.dart';
+import '../features/experiments/presentation/project_file_transfer.dart';
 import '../features/experiments/presentation/project_store.dart';
 import '../features/experiments/presentation/projects/project_home_page.dart';
 import '../features/experiments/presentation/results/results_page.dart';
@@ -27,10 +28,12 @@ import '../shared/foundation/behavior_policy.dart';
 import '../shared/foundation/clipboard_events.dart';
 import '../shared/foundation/diagnostics.dart';
 import '../shared/foundation/external_links.dart';
+import '../shared/foundation/file_loader.dart';
 import '../shared/foundation/file_saver.dart';
 import '../shared/l10n/app_copy.dart';
 import '../shared/platform/clipboard_events_stub.dart'
     if (dart.library.js_interop) '../shared/platform/clipboard_events_web.dart';
+import '../shared/platform/file_picker_loader.dart';
 import '../shared/platform/file_picker_saver.dart';
 import '../shared/platform/shared_preferences_theme_storage.dart';
 import '../shared/platform/url_launcher_links.dart';
@@ -158,7 +161,7 @@ class MyApp extends StatefulWidget {
   ///
   /// Supply [projectStore] or [projectRepository]. An injected store or theme
   /// controller stays owned by its caller. The workspace disposes instances it
-  /// creates.
+  /// creates. [fileLoader] and [fileSaver] default to platform file dialogs.
   MyApp({
     super.key,
     required this.config,
@@ -169,6 +172,8 @@ class MyApp extends StatefulWidget {
     this.themeController,
     this.projectRepository,
     this.projectDraftStorage,
+    this.fileLoader = const FilePickerLoader(),
+    this.fileSaver = const FilePickerSaver(),
   }) {
     if (projectStore == null && projectRepository == null) {
       throw ArgumentError('Provide a project store or repository.');
@@ -183,6 +188,8 @@ class MyApp extends StatefulWidget {
   final ThemeController? themeController;
   final ProjectRepository? projectRepository;
   final ProjectDraftStorage? projectDraftStorage;
+  final FileLoader fileLoader;
+  final FileSaver fileSaver;
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -278,7 +285,13 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
         ),
-        Provider<FileSaver>.value(value: const FilePickerSaver()),
+        Provider<FileSaver>.value(value: widget.fileSaver),
+        Provider<ProjectFileTransfer>.value(
+          value: ProjectFileTransfer(
+            loader: widget.fileLoader,
+            saver: widget.fileSaver,
+          ),
+        ),
         ChangeNotifierProvider<ProjectStore>.value(value: _projectStore),
         ChangeNotifierProvider<ThemeController>.value(value: _themeController),
         if (auth != null)

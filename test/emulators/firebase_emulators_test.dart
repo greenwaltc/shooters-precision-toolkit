@@ -11,6 +11,7 @@ import 'package:bramwells_precision_test_kit/features/auth/presentation/auth_pag
 import 'package:bramwells_precision_test_kit/features/experiments/api/project_repository.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/data/firestore_project_repository.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/domain/project_file_codec.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/projects/project_home_page.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/saved_project.dart';
@@ -459,6 +460,7 @@ void main() {
       String? id;
       String? copyId;
       String? cloneId;
+      String? importId;
       try {
         await auth.register(email, 'Local-test-password-123!');
         final response = await web.window
@@ -633,10 +635,31 @@ void main() {
           'Clone of Recover as separate project',
         );
         expect(cloned.project.matrixState['range_0'], '1.25');
+
+        final imported = await workspace.importProject(
+          ProjectFileCodec.decode(ProjectFileCodec.encode(clone)),
+        );
+        importId = imported.id;
+        expect(imported.id, isNot(clone.id));
+        final cloudImport = await repository
+            .watchProject(imported.id)
+            .firstWhere((record) => record != null && !record.isFromCache)
+            .timeout(const Duration(seconds: 10));
+        expect(cloudImport!.revision, 1);
+        expect(cloudImport.project.displayName, cloned.project.displayName);
+        expect(cloudImport.project.matrixState['range_0'], '1.25');
       } finally {
         store?.dispose();
         final user = services.auth.currentUser;
         if (user != null) {
+          if (importId != null) {
+            await services.db
+                .collection('users')
+                .doc(user.uid)
+                .collection('projects')
+                .doc(importId)
+                .delete();
+          }
           if (cloneId != null) {
             await services.db
                 .collection('users')

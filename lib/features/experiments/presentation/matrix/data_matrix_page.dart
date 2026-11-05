@@ -24,6 +24,7 @@ import '../../../../shared/ui/theme/theme_extensions/pluto_grid_theme.dart';
 import '../../../../shared/ui/theme/tokens/app_spacing.dart';
 import '../../../../shared/ui/theme/tokens/app_text_styles.dart';
 import '../../domain/range_value_parser.dart';
+import '../project_file_transfer.dart';
 import '../project_store.dart';
 import '../results/services/anomr_calculator.dart';
 import '../saved_project.dart';
@@ -366,6 +367,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   _ScrollCueState _scrollCues = const _ScrollCueState();
 
   bool _randomizeOrder = false;
+  bool _exportingProject = false;
   late final math.Random _random = context.read<math.Random>();
   bool _gridWasEditing = false;
   Timer? _rangeEditSelectionGuardTimer;
@@ -1517,6 +1519,34 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     }
   }
 
+  Future<void> _exportProject() async {
+    if (_exportingProject) return;
+    final transfer = context.read<ProjectFileTransfer>();
+    final l10n = context.l10n;
+    setState(() => _exportingProject = true);
+    try {
+      _commitActiveRangeEdit();
+      _flushAllRangeValuesToProject();
+      final destination = await transfer.exportProject(
+        widget.project,
+        l10n.exportProjectTitle,
+      );
+      if (mounted && destination != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.projectExportSuccess)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.projectExportFailure)));
+      }
+    } finally {
+      if (mounted) setState(() => _exportingProject = false);
+    }
+  }
+
   void _showResults(BuildContext context) {
     _commitActiveRangeEdit();
     _flushAllRangeValuesToProject();
@@ -1607,6 +1637,14 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         AppLayoutMetrics.of(context).isDesktop &&
         MediaQuery.textScalerOf(context).scale(1) <= 1.3;
     final nonMobile = !widget.isMobile;
+    final actions = _MatrixActions(
+      compact: widget.isMobile,
+      onShowResults: _stateManager == null ? null : () => _showResults(context),
+      onExportProject: _stateManager == null || _exportingProject
+          ? null
+          : _exportProject,
+      onClearRanges: _clearRanges,
+    );
     final content = AppLayoutBuilder(
       builder: (context, layout) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1640,20 +1678,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                         : _onRandomizeToggled,
                   ),
                   const SizedBox(width: AppSpacing.lg),
-                  OutlinedButton.icon(
-                    onPressed: _clearRanges,
-                    icon: const Icon(Icons.clear_all),
-                    label: Text(AppCopy.english.clear),
-                    style: _clearButtonStyle(scheme),
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  FilledButton.icon(
-                    onPressed: _stateManager == null
-                        ? null
-                        : () => _showResults(context),
-                    icon: const Icon(Icons.analytics),
-                    label: Text(AppCopy.english.results),
-                  ),
+                  actions,
                 ],
               ),
             ),
@@ -1666,25 +1691,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                 spacing: AppSpacing.xl,
                 runSpacing: AppSpacing.md,
                 children: [
-                  Wrap(
-                    spacing: AppSpacing.lg,
-                    runSpacing: AppSpacing.md,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _clearRanges,
-                        icon: const Icon(Icons.clear_all),
-                        label: Text(AppCopy.english.clear),
-                        style: _clearButtonStyle(scheme),
-                      ),
-                      FilledButton.icon(
-                        onPressed: _stateManager == null
-                            ? null
-                            : () => _showResults(context),
-                        icon: const Icon(Icons.analytics),
-                        label: Text(AppCopy.english.results),
-                      ),
-                    ],
-                  ),
+                  actions,
                   _RandomizeOrderToggle(
                     value: _randomizeOrder,
                     onChanged: _stateManager == null
@@ -1706,13 +1713,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               ),
             ),
           Expanded(child: _buildGridArea(plutoTheme, scheme)),
-          if (widget.isMobile)
-            _MatrixActions(
-              layout: layout,
-              canShowResults: _stateManager != null,
-              onShowResults: () => _showResults(context),
-              onClearRanges: _clearRanges,
-            ),
+          if (widget.isMobile) actions,
         ],
       ),
     );
@@ -1871,90 +1872,92 @@ ButtonStyle _clearButtonStyle(ColorScheme scheme) => OutlinedButton.styleFrom(
 
 class _MatrixActions extends StatelessWidget {
   const _MatrixActions({
-    required this.layout,
-    required this.canShowResults,
+    required this.compact,
     required this.onShowResults,
+    required this.onExportProject,
     required this.onClearRanges,
   });
 
-  final AppLayoutMetrics layout;
-  final bool canShowResults;
-  final VoidCallback onShowResults;
+  final bool compact;
+  final VoidCallback? onShowResults;
+  final VoidCallback? onExportProject;
   final VoidCallback onClearRanges;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final clearStyle = _clearButtonStyle(scheme);
-    final showResults = FilledButton.icon(
-      onPressed: canShowResults ? onShowResults : null,
-      icon: const Icon(Icons.analytics),
-      label: Text(AppCopy.english.results),
-    );
-    final clearAll = OutlinedButton.icon(
-      onPressed: onClearRanges,
-      icon: const Icon(Icons.clear_all),
-      label: Text(AppCopy.english.clear),
-      style: clearStyle,
-    );
-
-    if (layout.isMobile) {
-      final style = ButtonStyle(
-        minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        ),
-      );
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                flex: 4,
-                child: OutlinedButton(
-                  onPressed: onClearRanges,
-                  style: clearStyle.merge(style),
-                  child: Text(
-                    AppCopy.english.clear,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                flex: 6,
-                child: FilledButton(
-                  onPressed: canShowResults ? onShowResults : null,
-                  style: style,
-                  child: Text(
-                    AppCopy.english.results,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ],
+    final l10n = context.l10n;
+    final clearStyle = _clearButtonStyle(Theme.of(context).colorScheme);
+    if (!compact) {
+      return Wrap(
+        spacing: AppSpacing.lg,
+        runSpacing: AppSpacing.md,
+        children: [
+          OutlinedButton.icon(
+            onPressed: onClearRanges,
+            icon: const Icon(Icons.clear_all),
+            label: Text(l10n.clear),
+            style: clearStyle,
           ),
-        ),
+          Tooltip(
+            message: l10n.exportProjectTitle,
+            child: OutlinedButton.icon(
+              onPressed: onExportProject,
+              icon: const Icon(Icons.download_outlined),
+              label: Text(l10n.export),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: onShowResults,
+            icon: const Icon(Icons.analytics),
+            label: Text(l10n.results),
+          ),
+        ],
       );
     }
-    final children = <Widget>[clearAll, showResults];
 
-    return Padding(
-      padding: EdgeInsets.only(
-        top: layout.preferCompactChrome
-            ? AppSpacing.sm
-            : (layout.isMobile ? AppSpacing.md : AppSpacing.lg),
-        // Footer already separates actions from the window edge.
-        bottom: layout.preferCompactChrome ? 0 : AppSpacing.sm,
+    final style = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(
+        Size(0, kMinInteractiveDimension),
       ),
-      child: SizedBox(
-        width: double.infinity,
-        child: AppResponsiveActions(
-          layout: layout,
-          desktopAlignment: WrapAlignment.spaceBetween,
-          children: children,
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
+        ),
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: IntrinsicHeight(
+        child: Row(
+          spacing: AppSpacing.md,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: onClearRanges,
+                style: clearStyle.merge(style),
+                child: Text(l10n.clear, textAlign: TextAlign.center),
+              ),
+            ),
+            Expanded(
+              child: Tooltip(
+                message: l10n.exportProjectTitle,
+                child: OutlinedButton(
+                  onPressed: onExportProject,
+                  style: style,
+                  child: Text(l10n.export, textAlign: TextAlign.center),
+                ),
+              ),
+            ),
+            Expanded(
+              child: FilledButton(
+                onPressed: onShowResults,
+                style: style,
+                child: Text(l10n.results, textAlign: TextAlign.center),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -24,11 +24,17 @@ tasks:
     cmds:
       - node scripts/check_architecture.mjs
 
+  project-schema:update:
+    desc: Increment the project file schema version when its contract changes
+    cmds:
+      - node scripts/project_file_schema.mjs --update{{if .BASE}} --base {{shellQuote .BASE}}{{end}}
+
   check:
     desc: Check generated code, architecture, repository hygiene, tests, and coverage
     cmds:
       - task: deps
       - node scripts/check_generated.mjs
+      - node scripts/project_file_schema.mjs
       - node scripts/check_architecture.mjs
       - node scripts/check_repository.mjs
       - dart format --output=none --set-exit-if-changed lib test integration_test test_driver

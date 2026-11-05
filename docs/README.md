@@ -29,6 +29,7 @@ definitions of the same rule.
 
 - [Application configuration](guides/app_configuration.md)
 - [Web releases](guides/web_releases.md)
+- [Portable project files](guides/project_files.md)
 - [Security and diagnostic operations](guides/security_operations.md)
 - [Firebase migration](guides/firebase_migration_guide.md)
 

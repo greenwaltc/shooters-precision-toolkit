@@ -1168,6 +1168,72 @@ abstract class AppLocalizations {
   /// **'Clone project'**
   String get cloneProjectAction;
 
+  /// No description provided for @importProjectAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get importProjectAction;
+
+  /// No description provided for @importingProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing…'**
+  String get importingProject;
+
+  /// No description provided for @importProjectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Import project from JSON'**
+  String get importProjectTitle;
+
+  /// No description provided for @exportProjectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export project to JSON'**
+  String get exportProjectTitle;
+
+  /// No description provided for @projectImportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Project imported.'**
+  String get projectImportSuccess;
+
+  /// No description provided for @projectFileInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is not a valid project JSON file or exceeds the {limitKiB} KiB limit.'**
+  String projectFileInvalid(int limitKiB);
+
+  /// No description provided for @projectFileVersionMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'This file uses project format {version}. This app supports version {supported}.'**
+  String projectFileVersionMismatch(int version, int supported);
+
+  /// No description provided for @projectImportFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import the project. Check your connection and project list before trying again.'**
+  String get projectImportFailure;
+
+  /// No description provided for @projectFileReadFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the file. Choose it again and retry.'**
+  String get projectFileReadFailure;
+
+  /// No description provided for @projectExportFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export this project. Try again.'**
+  String get projectExportFailure;
+
+  /// No description provided for @projectExportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Project file ready.'**
+  String get projectExportSuccess;
+
   /// No description provided for @cloneOfProject.
   ///
   /// In en, this message translates to:

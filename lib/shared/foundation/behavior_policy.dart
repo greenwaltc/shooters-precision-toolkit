@@ -4,6 +4,9 @@ abstract final class BehaviorPolicy {
   /// Maximum project title length accepted by the project storage rules.
   static const maxProjectTitleLength = 200;
 
+  /// Upper bound for reading and writing a portable project file, in bytes.
+  static const maxProjectFileBytes = 256 * 1024;
+
   static const initialCloudLoadTimeout = Duration(seconds: 15);
   static const saveDebounce = Duration(seconds: 2);
   static const emailCooldown = Duration(seconds: 60);

@@ -640,6 +640,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloneProjectAction => 'Clone project';
 
   @override
+  String get importProjectAction => 'Import';
+
+  @override
+  String get importingProject => 'Importing…';
+
+  @override
+  String get importProjectTitle => 'Import project from JSON';
+
+  @override
+  String get exportProjectTitle => 'Export project to JSON';
+
+  @override
+  String get projectImportSuccess => 'Project imported.';
+
+  @override
+  String projectFileInvalid(int limitKiB) {
+    return 'This file is not a valid project JSON file or exceeds the $limitKiB KiB limit.';
+  }
+
+  @override
+  String projectFileVersionMismatch(int version, int supported) {
+    return 'This file uses project format $version. This app supports version $supported.';
+  }
+
+  @override
+  String get projectImportFailure =>
+      'Could not import the project. Check your connection and project list before trying again.';
+
+  @override
+  String get projectFileReadFailure =>
+      'Could not read the file. Choose it again and retry.';
+
+  @override
+  String get projectExportFailure =>
+      'Could not export this project. Try again.';
+
+  @override
+  String get projectExportSuccess => 'Project file ready.';
+
+  @override
   String cloneOfProject(String projectName) {
     return 'Clone of $projectName';
   }

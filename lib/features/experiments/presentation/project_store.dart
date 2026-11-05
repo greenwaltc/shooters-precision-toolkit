@@ -551,6 +551,26 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
           ? title
           : '${String.fromCharCodes(characters.take(limit - 1))}…',
     );
+    return _saveNewCopy(copy);
+  }
+
+  /// Saves a validated portable [snapshot] as a separate workspace project.
+  ///
+  /// Keeps the file's title and data, assigns a new identity and timestamps,
+  /// and leaves selection unchanged. Throws [FormatException] if the file
+  /// claims a complete design with missing or invalid design fields. The
+  /// workspace must be loaded and the write must succeed before the copy is
+  /// added to the list.
+  Future<SavedProject> importProject(ProjectSnapshot snapshot) async {
+    _requireLoaded();
+    final copy = _newProjectCopy(snapshot);
+    if (copy.setupComplete && !copy.formModel.isSetupValid) {
+      throw const FormatException('The imported design is incomplete.');
+    }
+    return _saveNewCopy(copy);
+  }
+
+  Future<SavedProject> _saveNewCopy(SavedProject copy) async {
     await _enqueue(() async {
       if (_disposed) {
         throw StateError('Workspace is disposed.');
@@ -579,7 +599,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   /// Copies persisted fields into a new editable model with its own identity.
-  SavedProject _newProjectCopy(SavedProject original) {
+  SavedProject _newProjectCopy(ProjectDocument original) {
     final now = clock.now().toUtc().toIso8601String();
     final json = decodeJsonObject(jsonEncode(original.toJson()))
       ..['id'] = repository.newProjectId()

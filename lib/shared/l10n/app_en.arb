@@ -382,6 +382,26 @@
   },
   "copyrightCredit": "© 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt",
   "cloneProjectAction": "Clone project",
+  "importProjectAction": "Import",
+  "importingProject": "Importing…",
+  "importProjectTitle": "Import project from JSON",
+  "exportProjectTitle": "Export project to JSON",
+  "projectImportSuccess": "Project imported.",
+  "projectFileInvalid": "This file is not a valid project JSON file or exceeds the {limitKiB} KiB limit.",
+  "@projectFileInvalid": {
+    "placeholders": { "limitKiB": { "type": "int" } }
+  },
+  "projectFileVersionMismatch": "This file uses project format {version}. This app supports version {supported}.",
+  "@projectFileVersionMismatch": {
+    "placeholders": {
+      "version": { "type": "int" },
+      "supported": { "type": "int" }
+    }
+  },
+  "projectImportFailure": "Could not import the project. Check your connection and project list before trying again.",
+  "projectFileReadFailure": "Could not read the file. Choose it again and retry.",
+  "projectExportFailure": "Could not export this project. Try again.",
+  "projectExportSuccess": "Project file ready.",
   "cloneOfProject": "Clone of {projectName}",
   "@cloneOfProject": {
     "placeholders": {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../shared/foundation/behavior_policy.dart';
 import '../../../../shared/l10n/app_copy.dart';
 import '../../../../shared/ui/app_bar_actions.dart';
 import '../../../../shared/ui/app_brand_bar.dart';
@@ -13,6 +14,8 @@ import '../../../../shared/ui/theme/theme_controller.dart';
 import '../../../../shared/ui/theme/tokens/app_headings.dart';
 import '../../../../shared/ui/theme/tokens/app_radius.dart';
 import '../../../../shared/ui/theme/tokens/app_spacing.dart';
+import '../../domain/project_file_codec.dart';
+import '../project_file_transfer.dart';
 import '../project_store.dart';
 import '../saved_project.dart';
 import '../widgets/confirm_delete_project_dialog.dart';
@@ -34,6 +37,8 @@ class ProjectHomePage extends StatefulWidget {
 
 class _ProjectHomePageState extends State<ProjectHomePage> {
   final _cloningProjects = <String>{};
+  bool _importing = false;
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<ProjectStore>();
@@ -173,15 +178,7 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                         ),
                       ),
                       SizedBox(height: blockGap),
-                      FilledButton.icon(
-                        onPressed: () => _createProject(context, store),
-                        icon: const Icon(Icons.add),
-                        label: Text(
-                          ProjectConfigurationScope.of(
-                            context,
-                          ).uiCopy.createProjectLabel,
-                        ),
-                      ),
+                      _projectActions(context, store, layout),
                     ],
                   ),
                 ),
@@ -214,27 +211,17 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                           style: AppHeadings.h3(context),
                         ),
                       ),
-                      FilledButton.icon(
-                        onPressed: () => _createProject(context, store),
-                        icon: const Icon(Icons.add),
-                        label: Text(
-                          ProjectConfigurationScope.of(
-                            context,
-                          ).uiCopy.createProjectLabel,
+                      const SizedBox(width: AppSpacing.lg),
+                      Flexible(
+                        flex: 3,
+                        child: Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: _projectActions(context, store, layout),
                         ),
                       ),
                     ],
                   ),
-                if (!layout.isDesktop)
-                  FilledButton.icon(
-                    onPressed: () => _createProject(context, store),
-                    icon: const Icon(Icons.add),
-                    label: Text(
-                      ProjectConfigurationScope.of(
-                        context,
-                      ).uiCopy.createProjectLabel,
-                    ),
-                  ),
+                if (!layout.isDesktop) _projectActions(context, store, layout),
                 SizedBox(
                   height: layout.isMobile ? AppSpacing.md : AppSpacing.xl,
                 ),
@@ -282,6 +269,96 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
         );
       },
     );
+  }
+
+  Widget _projectActions(
+    BuildContext context,
+    ProjectStore store,
+    AppLayoutMetrics layout,
+  ) {
+    Widget action(String label, IconData icon, VoidCallback? onPressed) {
+      if (layout.isMobile) {
+        return FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.lg,
+            ),
+          ),
+          child: Text(label, textAlign: TextAlign.center),
+        );
+      }
+      return FilledButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label, textAlign: TextAlign.center),
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: action(
+            _importing
+                ? context.l10n.importingProject
+                : context.l10n.importProjectAction,
+            Icons.file_open_outlined,
+            _importing ? null : () => _importProject(store),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Flexible(
+          flex: 2,
+          child: action(
+            ProjectConfigurationScope.of(context).uiCopy.createProjectLabel,
+            Icons.add,
+            () => _createProject(context, store),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _importProject(ProjectStore store) async {
+    if (_importing) return;
+    final transfer = context.read<ProjectFileTransfer>();
+    final l10n = context.l10n;
+    var readComplete = false;
+    setState(() => _importing = true);
+    void showMessage(String message) {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+      }
+    }
+
+    try {
+      final snapshot = await transfer.pickProject(l10n.importProjectTitle);
+      if (snapshot == null || !mounted) return;
+      readComplete = true;
+      await store.importProject(snapshot);
+      showMessage(l10n.projectImportSuccess);
+    } on UnsupportedProjectFileVersion catch (error) {
+      showMessage(
+        l10n.projectFileVersionMismatch(
+          error.version,
+          ProjectFileCodec.supportedVersion,
+        ),
+      );
+    } on FormatException {
+      showMessage(
+        l10n.projectFileInvalid(BehaviorPolicy.maxProjectFileBytes ~/ 1024),
+      );
+    } catch (_) {
+      showMessage(
+        readComplete ? l10n.projectImportFailure : l10n.projectFileReadFailure,
+      );
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
   }
 
   /// Clones this row's project without changing the current route or selection.

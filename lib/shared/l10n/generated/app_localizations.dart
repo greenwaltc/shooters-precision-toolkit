@@ -103,7 +103,7 @@ abstract class AppLocalizations {
   /// No description provided for @contactDentonBramwell.
   ///
   /// In en, this message translates to:
-  /// **'Contact Denton Bramwell'**
+  /// **'Contact Us'**
   String get contactDentonBramwell;
 
   /// No description provided for @contactUnavailable.
@@ -115,7 +115,7 @@ abstract class AppLocalizations {
   /// No description provided for @contactDeliveryNotice.
   ///
   /// In en, this message translates to:
-  /// **'Send a question or share feedback. Web3Forms delivers your name, email address, and message to Denton Bramwell.'**
+  /// **'Send a question or share feedback. Your message will be emailed to the site owner.'**
   String get contactDeliveryNotice;
 
   /// No description provided for @contactName.

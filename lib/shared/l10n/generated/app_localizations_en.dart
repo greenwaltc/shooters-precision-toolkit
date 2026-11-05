@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contact => 'Contact';
 
   @override
-  String get contactDentonBramwell => 'Contact Denton Bramwell';
+  String get contactDentonBramwell => 'Contact Us';
 
   @override
   String get contactUnavailable =>
@@ -20,7 +20,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get contactDeliveryNotice =>
-      'Send a question or share feedback. Web3Forms delivers your name, email address, and message to Denton Bramwell.';
+      'Send a question or share feedback. Your message will be emailed to the site owner.';
 
   @override
   String get contactName => 'Name';

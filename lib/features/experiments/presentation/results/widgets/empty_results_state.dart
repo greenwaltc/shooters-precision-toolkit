@@ -10,6 +10,7 @@ import '../../../../../shared/ui/theme/tokens/app_spacing.dart';
 
 /// Placeholder shown when the project has no usable range data to summarize.
 class EmptyResultsState extends StatelessWidget {
+  /// Creates the notice shown when there are no results to display.
   const EmptyResultsState({super.key});
 
   /// Size of the leading icon on the empty state.

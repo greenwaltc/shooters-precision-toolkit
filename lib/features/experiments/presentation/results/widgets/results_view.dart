@@ -35,6 +35,8 @@ import 'results_chart_card.dart';
 /// Body widget rendered when a project is selected. Wires the calculator's
 /// summary to the visual building blocks and drives the export flow.
 class ResultsView extends StatefulWidget {
+  /// Creates the results view for the selected project's available
+  /// measurements.
   const ResultsView({super.key});
 
   @override

@@ -10,7 +10,10 @@ import '../../../shared/ui/theme/layout/app_layout.dart';
 import '../../../shared/ui/theme/tokens/app_spacing.dart';
 import '../api/contact_sender.dart';
 
+/// A public contact screen with a form when sending is configured.
 class ContactPage extends StatelessWidget {
+  /// Creates the contact screen. A null [sender] displays an unavailable
+  /// notice.
   const ContactPage({super.key, this.sender});
 
   final ContactSender? sender;
@@ -103,6 +106,10 @@ class _ContactFormState extends State<_ContactForm> {
     super.dispose();
   }
 
+  /// Keeps the message available until the service confirms receipt.
+  ///
+  /// The request can outlive this route. A late completion must leave the
+  /// disposed form and its text controllers alone.
   Future<void> _send() async {
     if (_submission == _Submission.sending || !_form.currentState!.validate()) {
       return;

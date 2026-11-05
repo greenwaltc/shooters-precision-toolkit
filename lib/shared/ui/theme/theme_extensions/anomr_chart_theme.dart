@@ -16,6 +16,7 @@ import '../tokens/app_opacity.dart';
 /// (responsive) and structural geometry lives in `ChartLayout`.
 @immutable
 class AnomrChartTheme extends ThemeExtension<AnomrChartTheme> {
+  /// Creates chart styling and copies both dash patterns into read-only lists.
   AnomrChartTheme({
     required this.dotOutlineColor,
     required this.gridLineOpacity,

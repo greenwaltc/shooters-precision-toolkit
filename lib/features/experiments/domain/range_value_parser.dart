@@ -5,16 +5,19 @@
 
 /// Result of parsing a range cell input string.
 class RangeValueParseResult {
+  /// Represents an empty cell with no display value or number.
   const RangeValueParseResult.empty()
     : displayValue = null,
       numericValue = null,
       invalid = false;
 
+  /// Represents nonempty input that cannot be used as a measurement.
   const RangeValueParseResult.invalid()
     : displayValue = null,
       numericValue = null,
       invalid = true;
 
+  /// Represents a normalized cell value and its numeric measurement.
   const RangeValueParseResult.valid({
     required this.displayValue,
     required this.numericValue,
@@ -30,12 +33,16 @@ class RangeValueParseResult {
   final bool invalid;
 }
 
-/// Parses and normalizes user-entered range values (Excel-style).
+/// A parser for group sizes entered in the matrix or pasted from a spreadsheet.
 class RangeValueParser {
   const RangeValueParser._();
 
   static final RegExp _fractionPattern = RegExp(r'^(-?\d+)\s*/\s*(\d+)$');
 
+  /// Parses a cell entry as a finite number or a simple fraction.
+  ///
+  /// Null and whitespace-only input count as empty. An invalid entry returns a
+  /// result marked invalid.
   static RangeValueParseResult parse(Object? raw) {
     if (raw == null) {
       return const RangeValueParseResult.empty();
@@ -57,6 +64,7 @@ class RangeValueParser {
     );
   }
 
+  /// Returns the parsed measurement, or null for empty or invalid input.
   static double? toDouble(Object? raw) => parse(raw).numericValue;
 
   static double? _parseNumeric(String text) {

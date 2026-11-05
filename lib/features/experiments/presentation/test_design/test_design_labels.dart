@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import '../../../../shared/l10n/app_copy.dart';
 import '../../api/test_design.dart';
 
+/// English labels for the kinds of experiment supported by Test Design.
 extension ExperimentStructureLabels on ExperimentStructure {
+  /// The English description for this experiment structure.
   String get label => switch (this) {
     ExperimentStructure.simpleABComparison =>
       AppCopy.english.testHowOneFactorTwoStatesInfluencesPrecision,
@@ -16,7 +18,10 @@ extension ExperimentStructureLabels on ExperimentStructure {
   };
 }
 
+/// English descriptions of sample plans and their detectable differences.
 extension SampleSizeLabels on SampleSizeOption {
+  /// Describes the sample plan using the group or replicate wording for
+  /// [structure].
   String labelFor(ExperimentStructure structure) {
     if (structure == ExperimentStructure.simpleABComparison) {
       final replicates = _formatSampleValue(groupSize);
@@ -30,6 +35,7 @@ extension SampleSizeLabels on SampleSizeOption {
     return label;
   }
 
+  /// The sample count and replicate breakdown for a multi-factor plan.
   String get label {
     final replicates = _formatSampleValue(rangesPerGroup);
     return AppCopy.english.replicateSamples(
@@ -39,6 +45,7 @@ extension SampleSizeLabels on SampleSizeOption {
     );
   }
 
+  /// A compact sample-size label for use in the design form.
   String formOptionLabel(ExperimentStructure structure) {
     if (structure == ExperimentStructure.simpleABComparison) {
       final replicates = _formatSampleValue(groupSize);
@@ -52,10 +59,14 @@ extension SampleSizeLabels on SampleSizeOption {
     return AppCopy.english.sampleCount('$totalSamples');
   }
 
+  /// Formats the plan's detectable difference at [riskLevel] as a percentage
+  /// band.
   String detectableDifferenceLabel(RiskLevel riskLevel) {
     return formatFraction(detectableDifferenceFor(riskLevel));
   }
 
+  /// Converts a fractional difference to a percentage band, with up to one
+  /// decimal place.
   static String formatFraction(double fraction) {
     final percent = fraction * 100;
     final rendered = percent == percent.roundToDouble()
@@ -72,7 +83,9 @@ extension SampleSizeLabels on SampleSizeOption {
   }
 }
 
+/// English display labels for experiment risk levels.
 extension RiskLevelLabels on RiskLevel {
+  /// The risk probability formatted as a percentage.
   String get label => NumberFormat.percentPattern(
     AppCopy.english.localeName,
   ).format(probability);

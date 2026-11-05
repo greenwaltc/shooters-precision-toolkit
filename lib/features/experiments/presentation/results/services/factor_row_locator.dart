@@ -11,6 +11,7 @@ import '../models/factor_row.dart';
 ///
 /// Used by the chart's tooltip and tick-label callbacks.
 class FactorRowLocator {
+  /// Creates a lookup for matching chart positions to the supplied [rows].
   const FactorRowLocator(this.rows);
 
   final List<FactorRow> rows;

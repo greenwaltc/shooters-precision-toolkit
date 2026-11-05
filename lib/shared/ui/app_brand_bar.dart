@@ -18,8 +18,10 @@ import 'theme/tokens/app_spacing.dart';
 abstract final class AppBrandAssets {
   static BrandConfiguration get _brand => BrandConfiguration.defaults;
 
+  /// The asset path for the full-width brand logo.
   static String get bannerLogo => _brand.bannerLogoAsset;
 
+  /// The asset path for the square brand icon used in tight layouts.
   static String get compactIcon => _brand.compactLogoAsset;
 
   /// Screen-reader label for banner and compact logo images.
@@ -28,6 +30,7 @@ abstract final class AppBrandAssets {
   /// Tagline rendered beneath the logo on the projects banner.
   static String get projectsSubtext => _brand.tagline;
 
+  /// The intrinsic width divided by height of the banner logo.
   static double get bannerAspectRatio => _brand.bannerLogoAspectRatio;
 
   /// Whether the projects banner is laid out at a mobile width.
@@ -122,6 +125,7 @@ abstract final class AppBrandAssets {
 
 /// Banner or compact app icon, chosen from the space available at [height].
 class AppBrandLogo extends StatelessWidget {
+  /// Creates a brand image with the requested logical [height] and [alignment].
   const AppBrandLogo({
     super.key,
     required this.height,
@@ -161,6 +165,7 @@ class AppBrandLogo extends StatelessWidget {
 /// Logo height and toolbar height the projects banner needs in a viewport.
 @immutable
 class ProjectsBannerMetrics {
+  /// Sets the Projects banner heights and whether it shows the tagline.
   const ProjectsBannerMetrics({
     required this.logoHeight,
     required this.toolbarHeight,
@@ -250,6 +255,7 @@ class ProjectsBannerMetrics {
 
 /// Projects-page banner: logo (or compact icon) with tagline directly beneath.
 class AppProjectsBannerTitle extends StatelessWidget {
+  /// Creates the Projects banner title with a logo and optional tagline.
   const AppProjectsBannerTitle({
     super.key,
     required this.logoHeight,
@@ -293,6 +299,7 @@ class AppProjectsBannerTitle extends StatelessWidget {
 /// scaffold uses [Scaffold.extendBodyBehindAppBar].
 class ProjectsBannerAppBar extends StatelessWidget
     implements PreferredSizeWidget {
+  /// Creates the Projects app bar using the supplied sizing and actions.
   const ProjectsBannerAppBar({
     super.key,
     required this.metrics,
@@ -329,6 +336,7 @@ class ProjectsBannerAppBar extends StatelessWidget
 
 /// Left-aligned logo for standard app bars on non-home routes.
 class AppBrandTitleLogo extends StatelessWidget {
+  /// Creates a title logo that fits within [maxWidth].
   const AppBrandTitleLogo({
     super.key,
     this.height = AppDesign.appBarLogoHeight,
@@ -371,6 +379,8 @@ class AppBrandTitleLogo extends StatelessWidget {
 /// toolbar height that fits the chosen arrangement.
 @immutable
 class AppBrandTitleMetrics {
+  /// Describes the sizes and spacing for the chosen brand and title
+  /// arrangement.
   const AppBrandTitleMetrics({
     required this.stacked,
     required this.toolbarHeight,
@@ -535,11 +545,13 @@ class AppBrandTitleMetrics {
   }
 }
 
-/// Standard app-bar title: brand mark plus a page-specific label.
+/// An app bar title with a brand mark and a page label.
 ///
-/// When [metrics.stacked] is true the logo sits above the label (start-aligned)
-/// so the label is not forced into a single-line ellipsis beside a wide mark.
+/// In a stacked layout, the logo sits above the label so the label has the
+/// full title width.
 class AppBrandTitle extends StatelessWidget {
+  /// Creates a banner title with brand artwork, [label], and an optional
+  /// trailing widget.
   const AppBrandTitle({
     super.key,
     required this.label,
@@ -551,6 +563,7 @@ class AppBrandTitle extends StatelessWidget {
   final AppBrandTitleMetrics metrics;
   final Widget? trailing;
 
+  /// The logo height selected by the title layout, in logical pixels.
   static double get logoHeight => AppDesign.appBarLogoHeight;
 
   /// Default (row) app-bar height. Prefer [AppBrandTitleMetrics.toolbarHeight]

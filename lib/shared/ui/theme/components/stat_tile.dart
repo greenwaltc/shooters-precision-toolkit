@@ -13,6 +13,8 @@ import '../tokens/app_text_styles.dart';
 ///
 /// Pure styling — callers pass formatted strings.
 class StatTile extends StatelessWidget {
+  /// Displays a statistic with its descriptive [label] and preformatted
+  /// [value].
   const StatTile({super.key, required this.label, required this.value});
 
   final String label;

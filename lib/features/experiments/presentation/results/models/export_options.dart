@@ -13,8 +13,10 @@ enum ExportFormat {
   jpeg('jpg'),
   pdf('pdf');
 
+  /// Associates an export format with its file extension.
   const ExportFormat(this.extension);
 
+  /// The English label shown when choosing this export format.
   String get label => switch (this) {
     png => AppCopy.english.pNGImage,
     jpeg => AppCopy.english.jPEGImage,
@@ -26,6 +28,8 @@ enum ExportFormat {
 /// User-selected export configuration.
 @immutable
 class ExportOptions {
+  /// Selects an export format and whether tabular measurements should be
+  /// included.
   const ExportOptions({required this.format, required this.includeMatrix});
 
   final ExportFormat format;

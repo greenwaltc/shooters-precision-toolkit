@@ -1,9 +1,9 @@
 {
   "@@locale": "en",
   "contact": "Contact",
-  "contactDentonBramwell": "Contact Denton Bramwell",
+  "contactDentonBramwell": "Contact Us",
   "contactUnavailable": "The contact form is unavailable in this build.",
-  "contactDeliveryNotice": "Send a question or share feedback. Web3Forms delivers your name, email address, and message to Denton Bramwell.",
+  "contactDeliveryNotice": "Send a question or share feedback. Your message will be emailed to the site owner.",
   "contactName": "Name",
   "contactEmail": "Email",
   "contactMessage": "Message",

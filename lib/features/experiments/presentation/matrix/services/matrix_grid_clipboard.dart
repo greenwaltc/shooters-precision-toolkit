@@ -15,6 +15,8 @@ import 'matrix_grid_history.dart';
 
 /// Target rows captured before edit mode is cleared for paste.
 class MatrixGridPasteTarget {
+  /// Captures the row span and column eligibility for a paste before the
+  /// selection changes.
   const MatrixGridPasteTarget({
     required this.rowBounds,
     required this.hasSelectingPosition,
@@ -35,6 +37,10 @@ class MatrixGridClipboard {
 
   static const _rangeField = 'range';
 
+  /// Attempts to place [text] on the clipboard.
+  ///
+  /// Expected platform failures are ignored because web copy can use a native
+  /// clipboard event.
   static Future<void> copy(String text) async {
     try {
       await Clipboard.setData(ClipboardData(text: text));
@@ -103,6 +109,9 @@ class MatrixGridClipboard {
   static final pasteRestrictionMessage =
       AppCopy.english.pasteIsOnlyPermittedToTheGroupSize;
 
+  /// Splits clipboard text into lines and tab-separated cells.
+  ///
+  /// Handles common line endings and ignores one final line terminator.
   static List<List<String>> parsePaste(String text) {
     var normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     // Excel adds a final row terminator; it is not an extra empty cell.
@@ -112,11 +121,15 @@ class MatrixGridClipboard {
     return normalized.split('\n').map((row) => row.split('\t')).toList();
   }
 
+  /// Checks that [target] contains only measurement cells and each pasted row
+  /// contains one value.
   static bool permitsPaste(
     MatrixGridPasteTarget target,
     List<List<String>> rows,
   ) => target.rangeOnly && rows.every((row) => row.length == 1);
 
+  /// Captures the current selection for a paste, or returns null when no row is
+  /// selected.
   static MatrixGridPasteTarget? capturePasteTarget(
     PlutoGridStateManager manager,
   ) {
@@ -233,6 +246,8 @@ class MatrixGridClipboard {
 
 /// Copies the visible selection, including read-only columns.
 class MatrixGridCopyValuesAction extends PlutoGridShortcutAction {
+  /// Creates the shortcut action that copies selected matrix cells with their
+  /// headings.
   const MatrixGridCopyValuesAction();
 
   @override
@@ -262,11 +277,19 @@ class MatrixGridCopyValuesAction extends PlutoGridShortcutAction {
 
 /// Pastes clipboard values into selected range cells.
 class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
+  /// Creates a paste action with optional undo history and rejection feedback.
+  ///
+  /// [canApply] can reject a paste when its grid is no longer active.
   MatrixGridPasteValuesAction({this.history, this.onRejected, this.canApply});
   final MatrixGridHistoryController? history;
   final VoidCallback? onRejected;
   final bool Function()? canApply;
 
+  /// Applies [text] to the captured or current selection.
+  ///
+  /// Returns false when there is nothing to paste or the selection or clipboard
+  /// format is rejected. Accepted changes share one undo step when history is
+  /// supplied.
   bool applyText(
     PlutoGridStateManager manager,
     String? text, {
@@ -311,6 +334,9 @@ class MatrixGridPasteValuesAction extends PlutoGridShortcutAction {
     pasteFromClipboard(stateManager);
   }
 
+  /// Starts a platform clipboard read and applies its text to the current grid.
+  ///
+  /// On web, a native paste event provides the text instead.
   void pasteFromClipboard(PlutoGridStateManager stateManager) {
     // A shortcut cannot await. This boundary reports unexpected failures and
     // canApply rejects late completions after the owning grid loses focus.

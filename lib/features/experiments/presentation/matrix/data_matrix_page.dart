@@ -44,6 +44,7 @@ import 'widgets/grid_scroll_cue.dart';
 
 /// Route that renders the selected project's ANOMR data-entry matrix.
 class AnomrMatrix extends StatelessWidget {
+  /// Creates the matrix page for the project selected in the workspace.
   const AnomrMatrix({super.key});
 
   @override
@@ -329,6 +330,9 @@ class _MatrixHeader extends StatelessWidget {
 
 /// Interactive Pluto grid used to enter range values for each factor state.
 class AnomrMatrixGrid extends StatefulWidget {
+  /// Creates a measurement grid for [project].
+  ///
+  /// [isMobile] selects the compact interaction and layout.
   const AnomrMatrixGrid({
     super.key,
     required this.project,
@@ -614,9 +618,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   void _handleScroll() => _scheduleGridUpdate();
 
+  /// Combines grid notifications into one update after layout finishes.
+  ///
+  /// Column sizing can trigger scroll and resize events during layout. Waiting
+  /// until the frame ends lets the scroll hints use the final measurements.
   void _scheduleGridUpdate({bool resize = false}) {
-    // Column autosizing can notify scroll/resize listeners during grid layout.
-    // Coalesce those notifications and update our chrome after layout finishes.
     _pendingGridResize = _pendingGridResize || resize;
     if (_gridUpdateScheduled) {
       return;

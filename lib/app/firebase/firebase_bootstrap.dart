@@ -11,7 +11,11 @@ import 'auth_emulator_hint_stub.dart'
 import 'firebase_options_dev.dart' as dev;
 import 'firebase_options_prod.dart' as prod;
 
+/// The initialized Firebase app, account service, and project database for one
+/// configuration.
 class FirebaseServices {
+  /// Groups clients that have already been configured for the same Firebase
+  /// app.
   FirebaseServices({
     required this.app,
     required this.auth,
@@ -46,6 +50,12 @@ String firebaseProjectFor({
   }
 }
 
+/// Initializes Firebase and configures authentication and project storage.
+///
+/// If [config] is omitted, reads the build configuration. Throws [StateError]
+/// if the native flavor or initialized Firebase project disagrees with that
+/// configuration. When emulators are enabled, connects both services before
+/// returning.
 Future<FirebaseServices> bootstrapFirebase({AppConfig? config}) async {
   final settings = config ?? loadBuildConfig();
   final environment = settings.environment.name;

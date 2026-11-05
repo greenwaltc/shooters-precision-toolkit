@@ -2,8 +2,13 @@ import '../api/effect_status.dart';
 import '../api/factor_stats.dart';
 import '../api/test_design.dart';
 
-/// Numeric input in canonical measurement units; no grid cells or chart colors.
+/// One measured or unmeasured run of an experiment, with its factor states.
 final class MatrixObservation {
+  /// Creates an observation from the row's factor states and optional group
+  /// size.
+  ///
+  /// Copies the factor states into a read-only list. A null [groupSize] marks
+  /// an unmeasured row. Throws [ArgumentError] if a supplied size is not finite.
   MatrixObservation({
     required List<String> factorStates,
     required this.groupSize,
@@ -16,7 +21,10 @@ final class MatrixObservation {
   final double? groupSize;
 }
 
+/// The measurements and risk bounds used to summarize an experiment.
 final class PrecisionSummary {
+  /// Creates a summary from measurements, their grand mean, and the calculated
+  /// bounds.
   PrecisionSummary({
     required List<double> ranges,
     required this.grandMean,
@@ -31,8 +39,14 @@ final class PrecisionSummary {
   final double fraction;
 }
 
-/// ANOMR arithmetic. Risk bounds are inclusive; no rounding occurs here.
+/// Calculations for analysis of means for ranges (ANOMR).
+///
+/// Compares average group sizes across factor states using the chosen risk
+/// bounds. A mean on a bound counts as inside. Rounding is left to the display.
 abstract final class PrecisionCalculator {
+  /// Returns the arithmetic mean of [values], or NaN when the list is empty.
+  ///
+  /// Throws [ArgumentError] if any measurement is not finite.
   static double mean(List<double> values) {
     if (values.isEmpty) {
       return double.nan;
@@ -55,6 +69,10 @@ abstract final class PrecisionCalculator {
     return (scaled / values.length) * magnitude;
   }
 
+  /// Collects group sizes in row order.
+  ///
+  /// With [imputeMissingData] enabled, fills missing measurements with the
+  /// observed mean when at least one measurement exists.
   static List<double> collectRanges(
     List<MatrixObservation> rows, {
     bool imputeMissingData = false,
@@ -72,6 +90,11 @@ abstract final class PrecisionCalculator {
         .toList(growable: false);
   }
 
+  /// Calculates means and counts for [firstState] and [secondState] at
+  /// [factorIndex].
+  ///
+  /// Skips rows without that factor or a matching state. Missing group sizes
+  /// use [imputeWith] when supplied.
   static FactorStats statsFor({
     required List<MatrixObservation> rows,
     required int factorIndex,
@@ -103,6 +126,10 @@ abstract final class PrecisionCalculator {
     );
   }
 
+  /// Classifies the two state means against [lowerBound] and [upperBound].
+  ///
+  /// Values on either bound count as inside. A missing state yields an
+  /// insufficient result.
   static EffectStatus computeStatus({
     required FactorStats stats,
     required double lowerBound,
@@ -124,6 +151,10 @@ abstract final class PrecisionCalculator {
     return EffectStatus.marginal;
   }
 
+  /// Summarizes the observations with bounds based on [sample] and [risk].
+  ///
+  /// The grand mean uses observed values. [imputeMissingData] affects the
+  /// returned measurement list.
   static PrecisionSummary summarize({
     required List<MatrixObservation> rows,
     required SampleSizeOption sample,

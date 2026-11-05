@@ -3,6 +3,7 @@ enum FeatureFlag {
   imputeMissingData('impute_missing_data'),
   themeModeToggle('theme_mode_toggle');
 
+  /// Associates a feature with its public configuration key.
   const FeatureFlag(this.key);
 
   final String key;
@@ -14,6 +15,7 @@ enum FeatureFlag {
 /// lookup API so overrides (environment, remote config, etc.) can be added
 /// later without changing call sites.
 class FeatureFlags {
+  /// Creates immutable feature settings from a copy of [values].
   FeatureFlags({required Map<FeatureFlag, bool> values})
     : _values = Map.unmodifiable(values);
 
@@ -26,5 +28,6 @@ class FeatureFlags {
 
   final Map<FeatureFlag, bool> _values;
 
+  /// Whether [flag] is explicitly enabled. Omitted flags are disabled.
   bool isEnabled(FeatureFlag flag) => _values[flag] ?? false;
 }

@@ -14,6 +14,7 @@ import 'conclusion_row.dart';
 
 /// Stacked list of [ConclusionRow]s, one per factor, under a section title.
 class ConclusionList extends StatelessWidget {
+  /// Creates the factor-by-factor conclusions for the selected [riskLevel].
   const ConclusionList({
     super.key,
     required this.factorRows,

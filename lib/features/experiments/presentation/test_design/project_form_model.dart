@@ -22,6 +22,10 @@ export 'test_design_labels.dart'
 
 /// Mutable project setup state used by the form and downstream matrix.
 class ProjectFormModel extends ChangeNotifier {
+  /// Creates an editable design with defaults for a two-state comparison.
+  ///
+  /// If [sampleSizeOption] is omitted, the model selects the default for the
+  /// chosen structure.
   ProjectFormModel({
     this.projectTitle = '',
     this.featureFlags = FeatureFlags.defaults,

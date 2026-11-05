@@ -28,6 +28,9 @@ enum OutlinedSurfaceVariant {
 /// shape, elevation, and border are consistent across all surface cards so
 /// they read as one family.
 class OutlinedSurfaceCard extends StatelessWidget {
+  /// Creates a card with a flat surface, an outline, and optional tint.
+  ///
+  /// If [borderColor] is omitted, uses the theme outline color.
   const OutlinedSurfaceCard({
     super.key,
     required this.child,

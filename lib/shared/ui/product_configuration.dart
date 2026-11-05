@@ -17,6 +17,8 @@ export '../foundation/feature_flags.dart' show FeatureFlag, FeatureFlags;
 /// single-file change. Sizing of the branding lives in `AppDesign` instead;
 /// this holds only the content and the assets it points at.
 class BrandConfiguration {
+  /// Defines the supplied brand image assets and the full logo's intrinsic
+  /// aspect ratio.
   const BrandConfiguration({
     required this.bannerLogoAsset,
     required this.compactLogoAsset,
@@ -70,6 +72,7 @@ class BrandConfiguration {
 /// Kept here (rather than scattered string literals) so labels stay consistent
 /// across every entry point that shares the same action.
 class UiCopyConfiguration {
+  /// Creates the shared set of interface labels.
   const UiCopyConfiguration();
 
   static const UiCopyConfiguration defaults = UiCopyConfiguration();
@@ -80,6 +83,8 @@ class UiCopyConfiguration {
 
 /// Application-wide configuration for project behavior.
 class ProjectConfiguration {
+  /// Groups the feature switches, brand assets, and text used across the
+  /// workspace.
   const ProjectConfiguration({
     required this.featureFlags,
     required this.brand,
@@ -100,12 +105,17 @@ class ProjectConfiguration {
 
 /// UI-only distribution of immutable product policy. Core logic receives values.
 class ProjectConfigurationScope extends InheritedWidget {
+  /// Makes [configuration] available to the widgets below this scope.
   const ProjectConfigurationScope({
     super.key,
     required this.configuration,
     required super.child,
   });
   final ProjectConfiguration configuration;
+
+  /// Reads the nearest project configuration.
+  ///
+  /// Throws [StateError] if [context] has no enclosing scope.
   static ProjectConfiguration of(BuildContext context) {
     final scope = context
         .dependOnInheritedWidgetOfExactType<ProjectConfigurationScope>();

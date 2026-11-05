@@ -13,6 +13,8 @@ import '../tokens/app_radius.dart';
 /// component theme on [ThemeData].
 @immutable
 class PlutoGridStyleTheme extends ThemeExtension<PlutoGridStyleTheme> {
+  /// Creates the matrix grid's colors, corner shape, cell dimensions, and
+  /// scrollbar styling.
   const PlutoGridStyleTheme({
     required this.borderColor,
     required this.backgroundColor,

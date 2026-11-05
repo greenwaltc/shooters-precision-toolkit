@@ -7,7 +7,15 @@ import '../../../shared/foundation/app_failure.dart';
 import '../../../shared/foundation/diagnostics.dart';
 import '../api/auth_repository.dart';
 
+/// A Firebase implementation of the app's account operations.
+///
+/// Translates Firebase failures into [AuthFailure] so callers can handle them
+/// without displaying provider details.
 class AuthService implements AuthRepository {
+  /// Creates an adapter around an existing [auth] client.
+  ///
+  /// [returnOrigin] is the destination used by verification and password reset
+  /// links.
   AuthService(
     this.auth, {
     required this.returnOrigin,
@@ -150,6 +158,9 @@ class AuthService implements AuthRepository {
   }
 }
 
+/// Maps a Firebase error [code] to a safe application error.
+///
+/// Unrecognized codes map to an unknown failure.
 AuthFailure mapAuthFailure(String code) => switch (code) {
   'invalid-email' => const AuthFailure(
     AuthFailureCode.invalidEmail,

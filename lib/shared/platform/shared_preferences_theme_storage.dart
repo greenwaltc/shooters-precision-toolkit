@@ -6,6 +6,8 @@ import '../foundation/theme_preference_storage.dart';
 
 /// Non-sensitive preference only; credentials and project content never use it.
 final class SharedPreferencesThemeStorage implements ThemePreferenceStorage {
+  /// Creates a theme preference adapter that obtains preferences through
+  /// [preferencesLoader].
   const SharedPreferencesThemeStorage({required this.preferencesLoader});
   final Future<SharedPreferences> Function() preferencesLoader;
   static const key = 'anomr_theme_mode_v1';

@@ -147,6 +147,8 @@ final SampleSizeOption _fourFactor48 = SampleSizeOption(
 // Catalog Implementation
 // ---------------------------------------------------------------------------
 
+/// The available sample plans and their detectable differences at each risk
+/// level.
 class SampleSizeCatalog {
   const SampleSizeCatalog._();
 

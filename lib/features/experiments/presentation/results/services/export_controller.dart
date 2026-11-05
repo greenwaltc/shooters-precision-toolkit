@@ -19,19 +19,27 @@ import 'export_chart_renderer.dart';
 
 /// Outcome of a single export attempt.
 sealed class ExportOutcome {
+  /// Creates the base outcome for a completed export attempt.
   const ExportOutcome();
 }
 
+/// The outcome of saving an export through the platform.
 class ExportSucceeded extends ExportOutcome {
+  /// Records the [path] or download name reported by the file-saving service.
   const ExportSucceeded(this.path);
   final String path;
 }
 
+/// The outcome of an export cancelled by the user or an inactive screen.
 class ExportCancelled extends ExportOutcome {
+  /// Creates an outcome with no file result to report.
   const ExportCancelled();
 }
 
+/// The outcome of an export that could not finish, with a message suitable for
+/// display.
 class ExportFailed extends ExportOutcome {
+  /// Creates a failed outcome with the user-facing [message].
   const ExportFailed(this.message);
   final String message;
 }
@@ -39,6 +47,11 @@ class ExportFailed extends ExportOutcome {
 /// Coordinates fixed-layout render → bytes generation → user save dialog for a
 /// single export request. Stateless / pure orchestration: no UI of its own.
 class ExportController {
+  /// Creates an exporter around the current chart, project, and file-saving
+  /// service.
+  ///
+  /// [isActive] determines whether the exporter may continue after asynchronous
+  /// work.
   const ExportController({
     required this.overlay,
     required this.formModel,
@@ -57,6 +70,12 @@ class ExportController {
   final bool Function() isActive;
   final Diagnostics diagnostics;
 
+  /// Renders the chart, builds the requested artifact, and opens the platform
+  /// save flow.
+  ///
+  /// Returns a cancelled outcome if the flow is dismissed or the screen becomes
+  /// inactive. Reports an unsuccessful export as a failed outcome with safe
+  /// display text.
   Future<ExportOutcome> run(ExportOptions options) async {
     final elapsed = Stopwatch()..start();
     if (!isActive()) {

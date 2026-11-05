@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 /// Inclusive Y-axis bounds returned by [ChartYRange.compute].
 @immutable
 class ChartYRangeValues {
+  /// Sets the inclusive minimum and maximum for the vertical axis.
   const ChartYRangeValues({required this.min, required this.max});
 
   final double min;
@@ -21,6 +22,10 @@ class ChartYRangeValues {
 class ChartYRange {
   const ChartYRange._();
 
+  /// Returns padded bounds for finite [candidates].
+  ///
+  /// Uses zero to one when none are finite, and expands a single repeated value
+  /// so the axis has a visible range.
   static ChartYRangeValues compute(Iterable<double> candidates) {
     final finite = candidates.where((value) => value.isFinite).toList();
     if (finite.isEmpty) {

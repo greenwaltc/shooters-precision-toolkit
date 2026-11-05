@@ -23,6 +23,10 @@ import '../../test_design/project_form_model.dart';
 class AnomrPdfBuilder {
   const AnomrPdfBuilder._();
 
+  /// Builds PDF bytes containing the chart and project summary.
+  ///
+  /// Set [includeMatrix] to include the measurement table.
+  /// [detectableDiffPercent] is a fraction of the grand mean.
   static Future<Uint8List> build({
     required String projectTitle,
     required ProjectFormModel formModel,

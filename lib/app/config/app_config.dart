@@ -1,5 +1,6 @@
 import '../../shared/ui/product_configuration.dart';
 
+/// The deployment environment selected when the app is built.
 enum AppEnvironment { dev, prod }
 
 /// Validated, immutable public inputs for one artifact. No credentials belong here.
@@ -37,6 +38,10 @@ final class AppConfig {
     'BUILD_FLUTTER_SDK',
   };
 
+  /// Validates build settings supplied as strings.
+  ///
+  /// Throws [ArgumentError] for unsupported keys, an invalid value, or
+  /// production settings that enable emulators.
   factory AppConfig.fromValues(Map<String, String> values) {
     if (values.keys.any((key) => !keys.contains(key))) {
       throw ArgumentError('Unknown configuration key.');
@@ -125,12 +130,15 @@ final class AppConfig {
   final ProjectConfiguration product;
   final BuildIdentity build;
 
+  /// The Firebase project ID for the selected deployment or local emulator.
   String get projectId => useEmulators
       ? localProjectId
       : switch (environment) {
           AppEnvironment.dev => 'bramwellsprecisiontestkitdev',
           AppEnvironment.prod => 'bramwells-precision-test-kit',
         };
+
+  /// The web origin used for account verification and password reset links.
   Uri get publicOrigin => Uri.parse(
     useEmulators
         ? 'http://127.0.0.1:7357'
@@ -140,6 +148,10 @@ final class AppConfig {
           },
   );
 
+  /// Checks whether the native app flavor matches the selected environment.
+  ///
+  /// Throws [StateError] if the flavor differs or if it is missing when
+  /// [required] is true.
   void validateNativeFlavor(String? flavor, {required bool required}) {
     if ((required && flavor == null) ||
         (flavor != null && flavor != environment.name)) {

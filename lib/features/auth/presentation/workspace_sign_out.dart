@@ -7,6 +7,7 @@ import '../../../shared/ui/workspace_exit.dart';
 
 /// One sign-out operation shared by every route in an account's workspace.
 class WorkspaceSignOut implements WorkspaceExit {
+  /// Creates a sign-out action that calls [flush] before [signOut].
   WorkspaceSignOut({required this.flush, required this.signOut});
 
   final Future<void> Function() flush;

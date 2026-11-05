@@ -16,6 +16,8 @@ import 'anomr_pdf_builder.dart';
 
 /// Result of producing the bytes for a single export operation.
 class ExportArtifact {
+  /// Creates an export artifact with its own copy of the output bytes and the
+  /// file extension.
   ExportArtifact({required Uint8List bytes, required this.extension})
     : bytes = Uint8List.fromList(bytes).asUnmodifiableView();
 

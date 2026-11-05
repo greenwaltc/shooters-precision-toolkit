@@ -9,6 +9,7 @@ import '../../../../../shared/ui/theme/components/scroll_cue_style.dart';
 
 /// Non-interactive edge overlay that hints more content is scrollable.
 class GridScrollCue extends StatelessWidget {
+  /// Creates a scroll hint for [edge] using the active color [scheme].
   const GridScrollCue({super.key, required this.edge, required this.scheme});
 
   /// Edge where the cue is painted.

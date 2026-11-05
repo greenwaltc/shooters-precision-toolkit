@@ -16,6 +16,7 @@ import '../tokens/app_colors.dart';
 /// chart code.
 @immutable
 class FactorPaletteTheme extends ThemeExtension<FactorPaletteTheme> {
+  /// Creates the factor palette from a read-only copy of [colors].
   FactorPaletteTheme({required List<Color> colors})
     : colors = List.unmodifiable(colors) {
     if (colors.isEmpty) {

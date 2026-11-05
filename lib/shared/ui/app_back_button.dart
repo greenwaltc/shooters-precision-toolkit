@@ -12,6 +12,9 @@ import 'package:flutter/material.dart';
 /// Callers provide [onPressed] because the destination differs per page
 /// (popping vs. routing to a specific page).
 class AppBackButton extends StatelessWidget {
+  /// Creates a back button that runs [onPressed] when activated.
+  ///
+  /// An omitted [tooltip] uses the standard localized back label.
   const AppBackButton({super.key, required this.onPressed, this.tooltip});
 
   /// Invoked when the user taps the control.

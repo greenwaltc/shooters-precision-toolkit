@@ -10,6 +10,10 @@ import 'test_design/project_form_model.dart';
 
 /// User-created project plus its setup and matrix entry state.
 class SavedProject implements ProjectDocument {
+  /// Creates an editable project from its saved or initial state.
+  ///
+  /// Keeps the supplied form model, matrix map, and run sequence by reference.
+  /// If [matrixState] is omitted, the project starts with an empty matrix.
   SavedProject({
     required this.id,
     required this.createdAt,

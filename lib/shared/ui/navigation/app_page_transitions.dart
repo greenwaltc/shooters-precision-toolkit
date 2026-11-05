@@ -14,6 +14,7 @@ import '../theme/app_design.dart';
 /// page stays visible while it scoots left. This builder keeps the atmosphere
 /// steady and only cross-fades the new route.
 class AppPageTransitionsBuilder extends PageTransitionsBuilder {
+  /// Creates the transition policy shared by app routes.
   const AppPageTransitionsBuilder();
 
   @override
@@ -68,6 +69,8 @@ PageTransitionsTheme buildAppPageTransitionsTheme() {
 
 /// Named-route page that uses the app fade transition and motion durations.
 class AppPageRoute<T> extends MaterialPageRoute<T> {
+  /// Creates a route with the app's standard transition and [builder] for its
+  /// contents.
   AppPageRoute({required super.builder, super.settings});
 
   @override

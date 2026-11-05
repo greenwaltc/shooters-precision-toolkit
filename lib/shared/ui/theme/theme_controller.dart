@@ -17,6 +17,10 @@ import 'app_design.dart';
 /// Pending reads are ignored after a newer selection or disposal. Writes
 /// requested before disposal finish in order; later requests are no-ops.
 class ThemeController extends ChangeNotifier {
+  /// Creates a theme controller backed by [storage].
+  ///
+  /// Omit [initialMode] to follow the system until a saved preference is
+  /// loaded.
   ThemeController({ThemeMode? initialMode, required this.storage})
     : _themeMode = initialMode ?? AppDesign.defaultThemeMode;
 

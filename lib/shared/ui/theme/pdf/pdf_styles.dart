@@ -44,26 +44,33 @@ class PdfStyles {
   static const double tableBorderWidth = 0.5;
 
   // Typography
+  /// The text style for the report's main title.
   static pw.TextStyle title() => pw.TextStyle(
     fontSize: 22,
     fontWeight: pw.FontWeight.bold,
     color: titleColor,
   );
 
+  /// The text style for the line beneath the report title.
   static pw.TextStyle subtitle() =>
       const pw.TextStyle(fontSize: 14, color: subtitleColor);
 
+  /// The heading style for sections within the PDF.
   static pw.TextStyle sectionHeader() =>
       pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold);
 
+  /// The style for labels alongside report statistics.
   static pw.TextStyle statLabel() =>
       pw.TextStyle(fontSize: 9, color: statLabelColor, letterSpacing: 0.8);
 
+  /// The style for the values of report statistics.
   static pw.TextStyle statValue() =>
       pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold);
 
+  /// The text style for column headings in PDF tables.
   static pw.TextStyle tableHeaderCellText() =>
       pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10);
 
+  /// The text style for measurement cells in PDF tables.
   static pw.TextStyle tableBodyCellText() => const pw.TextStyle(fontSize: 10);
 }

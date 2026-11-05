@@ -7,6 +7,8 @@ enum ExperimentStructure {
   threeFactors(3),
   fourFactors(4);
 
+  /// Associates an experiment structure with the number of factors it can
+  /// compare.
   const ExperimentStructure(this.factorCount);
   final int factorCount;
 
@@ -25,6 +27,7 @@ enum RiskLevel {
   fivePercent(0.05),
   onePercent(0.01);
 
+  /// Pairs the displayed risk level with its probability.
   const RiskLevel(this.probability);
 
   final double probability;
@@ -53,8 +56,10 @@ enum SampleSizeFamily {
 }
 
 /// Name and state labels for one factor in the experiment design.
-
 final class FactorDefinition {
+  /// Creates a factor definition with a label and names for both states.
+  ///
+  /// Omitted labels start blank so an unfinished design can be edited.
   const FactorDefinition({
     this.name = '',
     this.firstState = '',
@@ -106,6 +111,8 @@ final class FactorDefinition {
 /// purposes.
 
 final class SampleSizeOption {
+  /// Creates a measurement plan with the number of groups and its detectable
+  /// differences.
   SampleSizeOption({
     required this.numFactors,
     required this.numSets,
@@ -169,6 +176,7 @@ final class SampleSizeOption {
     return value;
   }
 
+  /// Reconstructs a measurement plan from stored values.
   factory SampleSizeOption.fromJson(Map<String, Object?> json) {
     final persistedGroupSize = (optionalJsonValue<int>(json, 'setSize')) ?? 0;
     final numFactorsFromJson = optionalJsonValue<int>(json, 'numFactors');

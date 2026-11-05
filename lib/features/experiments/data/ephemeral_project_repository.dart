@@ -7,6 +7,8 @@ import '../api/project_repository.dart';
 /// Volatile adapter for assembled tests and previews. Production is cloud-only.
 /// The creator injects time/IDs and closes the adapter after its consumers stop.
 class EphemeralProjectRepository implements ProjectRepository {
+  /// Creates an empty, account-independent repository for one in-memory
+  /// workspace.
   EphemeralProjectRepository({
     required Clock clock,
     required String Function() newId,
@@ -92,5 +94,7 @@ class EphemeralProjectRepository implements ProjectRepository {
     _changes.add(null);
   }
 
+  /// Releases the repository's change stream. Call this when the owning
+  /// workspace is done with it.
   Future<void> dispose() => _changes.close();
 }

@@ -3,6 +3,10 @@ import '../api/project_draft_storage.dart';
 export '../api/project_draft_storage.dart'
     show ProjectDraft, ProjectDraftStorage;
 
+/// Draft storage for one workspace session.
+///
+/// Drafts remain in memory and disappear when the storage instance is
+/// discarded.
 class InMemoryProjectDraftStorage implements ProjectDraftStorage {
   final _drafts = <String, ProjectDraft>{};
 

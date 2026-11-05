@@ -11,6 +11,8 @@ import '../services/factor_row_locator.dart';
 class ChartXAxis {
   const ChartXAxis._();
 
+  /// Builds the horizontal axis labels, adapting their placement to
+  /// [plotWidth].
   static AxisTitles build({
     required BuildContext context,
     required FactorRowLocator locator,

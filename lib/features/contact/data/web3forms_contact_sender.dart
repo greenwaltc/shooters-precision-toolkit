@@ -9,7 +9,14 @@ import '../../../shared/foundation/diagnostics.dart';
 import '../../../shared/foundation/json_object.dart';
 import '../api/contact_sender.dart';
 
+/// A contact sender that submits messages to Web3Forms.
+///
+/// The request has a deadline. Rejected or unconfirmed submissions surface as
+/// app failures, and diagnostic events omit the message and form key.
 final class Web3FormsContactSender implements ContactSender {
+  /// Creates a sender for the form identified by [accessKey].
+  ///
+  /// The caller owns [client] and is responsible for closing it.
   Web3FormsContactSender({
     required http.Client client,
     required String accessKey,
@@ -64,6 +71,9 @@ final class Web3FormsContactSender implements ContactSender {
     }
   }
 
+  /// Confirms receipt only when the provider returns HTTP 200 and a JSON
+  /// success flag. Bounds the response because the provider can echo the
+  /// submitted fields.
   Future<void> _submit(http.AbortableRequest request) async {
     final response = await _client.send(request);
     final body = BytesBuilder(copy: false);

@@ -4,8 +4,13 @@ import 'test_design.dart';
 /// A write input is synchronously frozen before an adapter starts asynchronous
 /// work. Implementations must never retain the mutable input after this call.
 abstract interface class ProjectDocument {
+  /// The stable identifier used to store and retrieve the project.
   String get id;
+
+  /// Serializes the document as project data with string keys.
   Map<String, Object?> toJson();
+
+  /// Captures an immutable version suitable for passing to asynchronous work.
   ProjectSnapshot freeze();
 }
 
@@ -13,6 +18,11 @@ abstract interface class ProjectDocument {
 /// Dates are UTC instants; group sizes retain canonical English numeric strings
 /// or finite numbers in the user's chosen measurement unit (no conversion).
 final class ProjectSnapshot implements ProjectDocument {
+  /// Creates a project snapshot with UTC timestamps and read-only copies of its
+  /// sequence and matrix values.
+  ///
+  /// Throws [FormatException] if [id] is empty or contains a slash, or if a
+  /// matrix value is neither null, text, nor a finite number.
   ProjectSnapshot({
     required this.id,
     required DateTime createdAt,
@@ -49,8 +59,14 @@ final class ProjectSnapshot implements ProjectDocument {
   final bool randomizeOrder;
   final List<int>? randomizeSequence;
   final Map<String, Object?> matrixState;
+
+  /// The project title to show when listing or opening this project.
   String get displayName => formModel.projectTitle.trim();
 
+  /// Reconstructs a project snapshot from its stored representation.
+  ///
+  /// Throws [FormatException] for invalid fields such as missing timestamps or
+  /// negative row indexes.
   factory ProjectSnapshot.fromJson(Map<String, Object?> json) {
     DateTime instant(String key) {
       final raw = optionalJsonValue<String>(json, key);
@@ -100,6 +116,8 @@ final class ProjectSnapshot implements ProjectDocument {
 /// Persisted design data. An absent sample choice is represented explicitly;
 /// presentation resolves it against the versioned calibration catalog on load.
 final class TestDesignSnapshot {
+  /// Creates a design snapshot and takes a read-only copy of its factor
+  /// definitions.
   TestDesignSnapshot({
     required this.projectTitle,
     required this.experimentStructure,
@@ -115,6 +133,7 @@ final class TestDesignSnapshot {
   final List<FactorDefinition> factorDefinitions;
   final bool imputeMissingData;
 
+  /// Reads the saved experiment design and its factor labels.
   factory TestDesignSnapshot.fromJson(Map<String, Object?> json) {
     final option = json['sampleSizeOption'];
     return TestDesignSnapshot(
@@ -137,6 +156,8 @@ final class TestDesignSnapshot {
           optionalJsonValue<bool>(json, 'imputeMissingData') ?? false,
     );
   }
+
+  /// Serializes the experiment design into the fields stored with the project.
   Map<String, Object?> toJson() => {
     'projectTitle': projectTitle,
     'experimentStructure': experimentStructure.name,

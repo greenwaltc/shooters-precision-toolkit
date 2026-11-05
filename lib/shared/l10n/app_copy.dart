@@ -12,8 +12,13 @@ abstract final class AppCopy {
   static final AppLocalizations english = AppLocalizationsEn();
 }
 
+/// Translations and number formatting for the active widget locale.
 extension LocalizedPresentation on BuildContext {
+  /// The translations available to this widget.
   AppLocalizations get l10n => AppLocalizations.of(this);
+
+  /// Formats [value] using the active locale and the requested number of
+  /// decimal places.
   String decimal(num value, {int places = 4}) =>
       NumberFormat.decimalPatternDigits(
         locale: Localizations.localeOf(this).toLanguageTag(),

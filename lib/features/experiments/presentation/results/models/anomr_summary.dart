@@ -11,6 +11,8 @@ import 'factor_row.dart';
 /// for a given (PlutoGrid state manager + project form model) combination.
 @immutable
 class AnomrSummary {
+  /// Creates a summary with read-only copies of the measurements and chart
+  /// rows.
   AnomrSummary({
     required List<double> ranges,
     required this.grandMean,
@@ -35,6 +37,8 @@ class AnomrSummary {
 
   final List<FactorRow> factorRows;
 
+  /// Whether a chart can be built from the available measurements, mean, and
+  /// factor rows.
   bool get hasEnoughData =>
       ranges.isNotEmpty && grandMean.isFinite && factorRows.isNotEmpty;
 }

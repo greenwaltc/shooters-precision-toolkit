@@ -20,14 +20,18 @@ import 'test_design/project_form_model.dart';
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+/// The status displayed for edits to a project.
 enum ProjectSaveState { saved, dirty, saving, conflict, error }
 
+/// The loading and availability states for the workspace's project list.
 enum WorkspaceLoadState { loading, empty, ready, error }
 
 /// A point-in-time view of one editable project's persistence state.
 /// The project is the live editing model; the metadata is captured by value.
 @immutable
 class ProjectEditState {
+  /// Captures the edit and save status of a project while retaining its
+  /// editable model.
   const ProjectEditState({
     required this.project,
     required this.revision,
@@ -45,8 +49,12 @@ class ProjectEditState {
   final bool isSaving;
   final Object? error;
   final Object? draftError;
+
+  /// Whether the cloud version conflicts with this local edit.
   bool get hasConflict => error is ProjectConflict;
 
+  /// The state to show for this edit, taking any pending save or error into
+  /// account.
   ProjectSaveState get saveState {
     if (isSaving) {
       return ProjectSaveState.saving;
@@ -65,6 +73,11 @@ class ProjectEditState {
 /// Disposing invalidates listener generations immediately. Already-started I/O
 /// may finish, but must not notify or update a disposed workspace.
 class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
+  /// Creates a workspace store and attaches a Flutter lifecycle observer.
+  ///
+  /// Call [load] to start reading projects and dispose the store when the
+  /// workspace ends. [saveDebounce] delays automatic saves and
+  /// [initialLoadTimeout] limits the wait for the first result.
   ProjectStore({
     required this.repository,
     required this.draftStorage,
@@ -87,7 +100,15 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _initialLoadDeadline;
   bool _recentFromCache = true;
   bool? _selectedFromCache;
+
+  /// Whether the recent-project list has a current server result and no load
+  /// error.
   bool get hasCurrentCloudData => !_recentFromCache && _loadError == null;
+
+  /// Checks whether the workspace can treat its data for [id] as current.
+  ///
+  /// For the selected project, an explicit cache result from its own listener
+  /// also makes it stale.
   bool isProjectCurrent(String id) =>
       hasCurrentCloudData &&
       (id != _selectedProjectId || _selectedFromCache != true);
@@ -130,11 +151,23 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   bool _draftsLoaded = false;
   bool _disposed = false;
 
+  /// Whether an initial project list has been received.
   bool get isLoaded => _isLoaded;
+
+  /// Whether a request for an older page is in progress.
   bool get isLoadingOlder => _isLoadingOlder;
+
+  /// Whether another page of older projects may be available.
   bool get hasMoreProjects => _hasMoreProjects;
+
+  /// The last error while loading older projects, or null when no such error is
+  /// recorded.
   Object? get olderProjectsError => _olderProjectsError;
+
+  /// The current workspace loading error, or null when no error is recorded.
   Object? get loadError => _loadError;
+
+  /// The state to display for the project list, including an empty workspace.
   WorkspaceLoadState get loadState {
     if (_loadError != null) {
       return WorkspaceLoadState.error;
@@ -147,11 +180,21 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         : WorkspaceLoadState.ready;
   }
 
+  /// Whether any project still has edits awaiting a save.
   bool get hasUnsavedChanges => _dirty.isNotEmpty;
+
+  /// The editable project currently selected, or null when nothing is selected.
   SavedProject? get selectedProject => _projects[_selectedProjectId];
+
+  /// The known cloud revision for [id], or zero when no revision is recorded.
   int revisionFor(String id) => _revisions[id] ?? 0;
+
+  /// The current draft or save error for [id], or null when neither is
+  /// recorded. Draft errors take priority.
   Object? saveErrorFor(String id) => _draftErrors[id] ?? _saveErrors[id];
 
+  /// Captures the current edit state for [id], or returns null when the project
+  /// is unknown.
   ProjectEditState? editStateFor(String id) {
     final project = _projects[id];
     if (project == null) {
@@ -168,9 +211,14 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
+  /// The display status for [id]. Unknown projects default to saved.
   ProjectSaveState saveStateFor(String id) =>
       editStateFor(id)?.saveState ?? ProjectSaveState.saved;
 
+  /// Checks whether a conflict can be discarded in favor of a newer server
+  /// version or confirmed deletion.
+  ///
+  /// Returns false during a save or deletion.
   bool canDiscardDraft(String id) =>
       !_saving.contains(id) &&
       !_deleting.contains(id) &&
@@ -178,7 +226,12 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
           (_pendingRemote[id]?.isFromCache == false &&
               (_pendingRemote[id]?.revision ?? 0) > revisionFor(id)));
 
-  /// Preserve a conflicted draft under a fresh ID, never recreating its old ID.
+  /// Saves a conflicted draft as a new project and selects the copy.
+  ///
+  /// Throws [StateError] if the workspace is unavailable or the project has no
+  /// conflict ready to resolve. If saving the copy fails, it remains in the
+  /// workspace as a draft the user can retry. Later edits to the original are
+  /// preserved.
   Future<SavedProject> saveConflictAsNewProject(String id) async {
     _requireLoaded();
     final original = _projects[id];
@@ -211,7 +264,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return copy;
   }
 
-  /// Used only after the user confirms discarding a conflicting draft.
+  /// Replaces a conflicting draft with the current server version or removes
+  /// it if the server confirmed its deletion.
+  ///
+  /// Call this after user confirmation. Throws [StateError] if the draft
+  /// cannot be discarded yet.
   void discardConflictingDraft(String id) {
     if (_disposed || !canDiscardDraft(id)) {
       throw StateError('An acknowledged cloud version is not available yet.');
@@ -234,6 +291,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _notifyIfActive();
   }
 
+  /// The projects currently known to the workspace in newest-first order.
+  ///
+  /// The list is read-only, but its projects remain editable.
   List<SavedProject> get projects => _sortedProjects ??= UnmodifiableListView(
     _projects.values.toList()..sort((a, b) {
       final byDate = b.updatedAt.compareTo(a.updatedAt);
@@ -280,6 +340,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  /// Restores drafts once and attaches the recent-project listener.
+  ///
+  /// Each attempt has its own [generation]. Work that finishes after a retry
+  /// or disposal must leave the current workspace alone.
   Future<void> _subscribe(int generation) async {
     try {
       await _projectsSubscription?.cancel();
@@ -387,6 +451,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _olderProjectsError = null;
   }
 
+  /// Requests the next page of older projects if loading can proceed.
+  ///
+  /// A failure is stored in [olderProjectsError] so the existing list remains
+  /// usable.
   Future<void> loadOlderProjects() async {
     final cursor = _olderCursor;
     if (_disposed ||
@@ -444,6 +512,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _notifyIfActive();
   }
 
+  /// Creates and selects a new project, then attempts its first cloud save.
+  ///
+  /// The workspace must be loaded before creating a project. If the cloud
+  /// save fails, the future reports the error and the new draft stays selected.
   Future<SavedProject> createProject() async {
     _requireLoaded();
     final now = clock.now().toUtc();
@@ -463,6 +535,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return project;
   }
 
+  /// Selects a known project and listens for updates to it.
+  ///
+  /// An unknown ID or an already selected project leaves the selection
+  /// unchanged.
   Future<void> selectProject(String projectId) async {
     if (_disposed || !_projects.containsKey(projectId)) {
       return;
@@ -539,6 +615,10 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         );
   }
 
+  /// Applies a cloud record when it is safe to replace the local model.
+  ///
+  /// If a local edit or save is pending, holds the incoming version for
+  /// reconciliation so a remote update cannot overwrite work in progress.
   void _acceptRemote(CloudProject record) {
     final id = record.project.id;
     if (_deleting.contains(id) || record.hasPendingWrites) {
@@ -576,6 +656,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     _sortedProjects = null;
   }
 
+  /// Requests deletion of [projectId] using its known revision.
+  ///
+  /// Returns true if the deleted project was selected. An unknown project or
+  /// one already being deleted returns false. A write failure is recorded and
+  /// rethrown.
   Future<bool> deleteProject(String projectId) async {
     _requireLoaded();
     if (!_projects.containsKey(projectId) || _deleting.contains(projectId)) {
@@ -648,6 +733,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     await _queueSave(id);
   }
 
+  /// Marks the selected project's design complete and waits for the session
+  /// draft update.
+  ///
+  /// Returns false if no project is selected or its design is invalid.
+  /// Completion does not wait for cloud acknowledgement.
   Future<bool> completeProjectSetup() async {
     final project = selectedProject;
     if (project == null || !project.formModel.isSetupValid) {
@@ -699,6 +789,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _queueSave(String id, {bool automatic = false}) =>
       _enqueue(() => _saveProject(id, automatic: automatic));
 
+  /// Saves a frozen revision and only clears the edits that revision contains.
+  ///
+  /// If an edit arrives while the request is pending, its draft is kept and
+  /// rebased on the acknowledged revision. Automatic saves leave errors for
+  /// the user to resolve rather than retrying a failed operation repeatedly.
   Future<void> _saveProject(String id, {bool automatic = false}) async {
     if (_disposed || _deleting.contains(id)) {
       return;

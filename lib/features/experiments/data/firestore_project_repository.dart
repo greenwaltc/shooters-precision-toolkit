@@ -9,7 +9,12 @@ import '../api/project_repository.dart';
 export '../api/project_repository.dart'
     show CloudProject, ProjectConflict, ProjectRepository;
 
+/// The Firestore repository for one account's projects.
+///
+/// Reads are scoped to that account. Conditional writes protect against
+/// replacing a newer revision.
 class FirestoreProjectRepository implements ProjectRepository {
+  /// Binds the repository to [uid] in an existing Firestore database [db].
   FirestoreProjectRepository({required this.db, required this.uid});
   final FirebaseFirestore db;
   final String uid;
@@ -207,6 +212,7 @@ final class _FirestoreProjectCursor implements ProjectCursor {
   final DocumentSnapshot<Map<String, dynamic>> document;
 }
 
+/// Converts a Firebase failure into an app-owned failure category.
 AppFailure mapProjectFailure(String code) => AppFailure(switch (code) {
   'permission-denied' => FailureKind.denied,
   'unauthenticated' => FailureKind.unauthenticated,

@@ -13,7 +13,9 @@ import 'workspace_footer.dart';
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+/// A workspace page shown when the requested action needs a selected project.
 class NoSelectedProjectPage extends StatelessWidget {
+  /// Creates the empty-selection page with the requested page [title].
   const NoSelectedProjectPage({super.key, required this.title});
 
   final String title;

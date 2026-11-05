@@ -13,6 +13,9 @@ import '../../../../shared/ui/theme/tokens/app_text_styles.dart';
 
 /// Context for a single matrix range cell shown in [showRangeEntrySheet].
 class RangeEntryContext {
+  /// Describes the row to edit and the measurement already in it.
+  ///
+  /// Set [showReplicate] to false to omit the replicate number.
   const RangeEntryContext({
     required this.rowIndex,
     required this.replicateIndex,
@@ -30,8 +33,10 @@ class RangeEntryContext {
   final bool showReplicate;
 }
 
+/// The name and selected state of one factor in a measurement row.
 @immutable
 class FactorStateEntry {
+  /// Pairs the displayed [factorName] and [state].
   const FactorStateEntry({required this.factorName, required this.state});
 
   final String factorName;
@@ -65,7 +70,9 @@ Future<String?> showRangeEntrySheet(
   );
 }
 
+/// A bottom sheet for entering one group-size measurement.
 class RangeEntrySheet extends StatefulWidget {
+  /// Creates an editor initialized from [entry].
   const RangeEntrySheet({super.key, required this.entry});
 
   final RangeEntryContext entry;

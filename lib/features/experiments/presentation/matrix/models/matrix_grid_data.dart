@@ -9,6 +9,8 @@ import 'package:pluto_grid/pluto_grid.dart';
 /// Immutable row payload used to initialize the ANOMR matrix grid.
 @immutable
 class MatrixGridData {
+  /// Copies the row list into read-only order while retaining the original cell
+  /// objects.
   MatrixGridData({required List<PlutoRow> rows, required this.totalSamples})
     : rows = List.unmodifiable(rows);
 

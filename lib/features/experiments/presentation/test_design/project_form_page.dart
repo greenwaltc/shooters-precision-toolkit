@@ -21,6 +21,7 @@ import 'project_form_model.dart';
 
 /// Route that hosts setup editing for the selected project.
 class ProjectFormPage extends StatelessWidget {
+  /// Opens the test design for the selected project.
   const ProjectFormPage({super.key});
 
   @override

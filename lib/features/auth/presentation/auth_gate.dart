@@ -3,7 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../shared/l10n/app_copy.dart';
 import '../api/auth_repository.dart';
 
+/// A screen boundary that shows the appropriate account state.
+///
+/// A signed-in account reaches the protected workspace only after its
+/// verification claim is confirmed.
 class AuthGate extends StatefulWidget {
+  /// Supplies the screens to show when signed out, awaiting verification, or
+  /// signed in.
   const AuthGate({
     super.key,
     required this.auth,

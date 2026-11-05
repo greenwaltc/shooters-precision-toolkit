@@ -19,6 +19,7 @@ import 'widgets/results_view.dart';
 /// form model + state manager into the widget tree, and delegates rendering
 /// to [ResultsView]. All real work lives under `lib/widgets/anomr_results/`.
 class AnomrResultsPage extends StatelessWidget {
+  /// Opens the results page for the selected project.
   const AnomrResultsPage({super.key});
 
   @override

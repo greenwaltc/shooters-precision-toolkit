@@ -10,6 +10,9 @@ import 'legend_painter.dart';
 
 /// A single legend entry: small line indicator plus a label.
 class LegendChip extends StatelessWidget {
+  /// Creates a legend marker and label.
+  ///
+  /// [maxWidth] can constrain the label in a narrow layout.
   const LegendChip({
     super.key,
     required this.label,

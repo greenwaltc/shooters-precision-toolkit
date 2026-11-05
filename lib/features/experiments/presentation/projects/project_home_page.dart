@@ -25,6 +25,7 @@ import '../widgets/workspace_footer.dart';
 
 /// Home route listing saved projects and the create-project action.
 class ProjectHomePage extends StatefulWidget {
+  /// Opens the project list and creation actions for the current workspace.
   const ProjectHomePage({super.key});
 
   @override

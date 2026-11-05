@@ -39,7 +39,15 @@ class AnomrCalculator {
       ),
   ];
 
+  /// Returns the mean of finite [values], or NaN for an empty list.
+  ///
+  /// Throws [ArgumentError] for nonfinite values.
   static double mean(List<double> values) => PrecisionCalculator.mean(values);
+
+  /// Reads usable measurements from the grid in row order.
+  ///
+  /// With [imputeMissingData] enabled, substitutes the observed mean for
+  /// missing values when possible.
   static List<double> collectRanges(
     PlutoGridStateManager manager, {
     bool imputeMissingData = false,
@@ -47,9 +55,16 @@ class AnomrCalculator {
     _observations(manager),
     imputeMissingData: imputeMissingData,
   );
+
+  /// Checks for an empty grid or any row without a usable measurement.
   static bool hasMissingRangeData(PlutoGridStateManager manager) =>
       manager.rows.isEmpty ||
       _observations(manager).any((row) => row.groupSize == null);
+
+  /// Calculates means and counts for the two named states in [factorField].
+  ///
+  /// Use a grid field of the form `factor_N`, where N is its zero-based index.
+  /// Missing measurements can use [imputeWith].
   static FactorStats statsFor({
     required PlutoGridStateManager manager,
     required String factorField,
@@ -64,16 +79,21 @@ class AnomrCalculator {
     imputeWith: imputeWith,
   );
 
+  /// Uses the factor name or a numbered fallback based on its zero-based
+  /// [index].
   static String factorDisplayName(FactorDefinition factor, int index) {
     return factor.name.trim().isEmpty
         ? AppCopy.english.factorNumber(index + 1)
         : factor.name;
   }
 
+  /// Uses [state] as the label or [fallbackIndex] as text when the name is
+  /// blank.
   static String stateDisplayName(String state, int fallbackIndex) {
     return state.trim().isEmpty ? '$fallbackIndex' : state;
   }
 
+  /// Classifies the state means against the inclusive risk bounds.
   static EffectStatus computeStatus({
     required FactorStats stats,
     required double lowerBound,
@@ -84,6 +104,9 @@ class AnomrCalculator {
     upperBound: upperBound,
   );
 
+  /// Builds chart rows in [factors] order with positions from [layout].
+  ///
+  /// Each row includes statistics, status, labels, and a color.
   static List<FactorRow> buildFactorRows({
     required List<FactorDefinition> factors,
     required PlutoGridStateManager manager,

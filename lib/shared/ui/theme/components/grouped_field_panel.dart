@@ -14,6 +14,8 @@ import '../tokens/app_spacing.dart';
 /// (e.g. each factor's name + states). Pure styling shell — callers stack
 /// their own children inside.
 class GroupedFieldPanel extends StatelessWidget {
+  /// Wraps [child] in a grouped field surface with separate outer and inner
+  /// padding.
   const GroupedFieldPanel({
     super.key,
     required this.child,

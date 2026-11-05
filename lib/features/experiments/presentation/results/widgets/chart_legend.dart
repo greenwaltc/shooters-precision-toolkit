@@ -14,6 +14,7 @@ import 'legend_painter.dart';
 /// Wrap of legend chips: one per factor, plus the shared grand-mean and
 /// risk-bound entries.
 class ChartLegend extends StatelessWidget {
+  /// Creates a chart key for factor colors and statistical reference lines.
   const ChartLegend({
     super.key,
     required this.factorRows,

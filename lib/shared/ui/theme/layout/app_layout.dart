@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../tokens/app_spacing.dart';
 
+/// Builds a widget using the space and breakpoint information available to it.
 typedef AppLayoutWidgetBuilder =
     Widget Function(BuildContext context, AppLayoutMetrics layout);
 
@@ -19,6 +20,7 @@ typedef AppLayoutWidgetBuilder =
 /// thresholds.
 @immutable
 class AppLayoutMetrics {
+  /// Describes a layout with [width] and [height] in logical pixels.
   const AppLayoutMetrics({required this.width, required this.height});
 
   /// Content/viewport width used for breakpoints.
@@ -30,13 +32,17 @@ class AppLayoutMetrics {
   static const double mobileBreakpoint = 720;
   static const double desktopBreakpoint = 1024;
 
+  /// Reads the viewport dimensions available from [context].
   factory AppLayoutMetrics.of(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     return AppLayoutMetrics(width: size.width, height: size.height);
   }
 
+  /// Whether the available width calls for the compact layout.
   bool get isMobile =>
       width < mobileBreakpoint || (width < desktopBreakpoint && height < 500);
+
+  /// Whether the available width reaches the desktop breakpoint.
   bool get isDesktop => width >= desktopBreakpoint;
 
   /// Mobile width with a landscape viewport — prioritize body height.
@@ -45,9 +51,13 @@ class AppLayoutMetrics {
   /// Shrink app bars, banners, and vertical page padding.
   bool get preferCompactChrome => isMobileLandscape;
 
+  /// Whether the form can place related fields in two columns.
   bool get useTwoColumnForms => width >= 900;
+
+  /// Whether action buttons should be arranged vertically.
   bool get useStackedActions => width < 560;
 
+  /// The horizontal page margin in logical pixels for this layout.
   double get pageGutter =>
       isMobile ? AppSpacing.lg : (isDesktop ? 24 : AppSpacing.xxxxl);
 
@@ -55,14 +65,22 @@ class AppLayoutMetrics {
   double get pageGutterVertical =>
       isMobile ? AppSpacing.md : (isDesktop ? 12 : pageGutter);
 
+  /// The page margins for this layout as padding.
   EdgeInsets get pagePadding => EdgeInsets.symmetric(
     horizontal: pageGutter,
     vertical: pageGutterVertical,
   );
 
+  /// The maximum content width for the project list.
   double get homeMaxWidth => isDesktop ? 1200 : double.infinity;
+
+  /// The maximum content width for the test design form.
   double get formMaxWidth => isDesktop ? 1280 : double.infinity;
+
+  /// The maximum content width for results.
   double get resultsMaxWidth => isDesktop ? 1180 : double.infinity;
+
+  /// The maximum content width for the matrix header.
   double get matrixHeaderMaxWidth => isDesktop ? 1440 : double.infinity;
 
   /// Help instructions sheet uses full width on mobile; 80% of the viewport
@@ -71,7 +89,9 @@ class AppLayoutMetrics {
       isMobile ? double.infinity : width * 0.8;
 }
 
+/// A builder that supplies responsive metrics for the available layout space.
 class AppLayoutBuilder extends StatelessWidget {
+  /// Creates a layout-aware widget using [builder].
   const AppLayoutBuilder({super.key, required this.builder});
 
   final AppLayoutWidgetBuilder builder;
@@ -93,7 +113,10 @@ class AppLayoutBuilder extends StatelessWidget {
   }
 }
 
+/// A centered content area with viewport padding and a responsive width limit.
 class AppResponsiveBody extends StatelessWidget {
+  /// Creates a content area that derives its width from [maxWidth] for the
+  /// current layout.
   const AppResponsiveBody({
     super.key,
     required this.builder,
@@ -141,7 +164,10 @@ class AppResponsiveBody extends StatelessWidget {
   }
 }
 
+/// A group of controls that can stack or wrap according to available width.
 class AppResponsiveActions extends StatelessWidget {
+  /// Arranges [children] for [layout] and uses [desktopAlignment] when they
+  /// wrap horizontally.
   const AppResponsiveActions({
     super.key,
     required this.children,

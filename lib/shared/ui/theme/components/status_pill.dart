@@ -15,6 +15,9 @@ import '../tokens/app_spacing.dart';
 /// All visual decisions (fill alpha, border alpha, radius, sizing) live
 /// here so callers only choose the semantic [color] and the contents.
 class StatusPill extends StatelessWidget {
+  /// Creates a status label and icon with a color accent.
+  ///
+  /// [iconSize] and [fontSize] override the sizes derived from [scale].
   const StatusPill({
     super.key,
     required this.label,

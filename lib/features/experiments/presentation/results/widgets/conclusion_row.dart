@@ -18,6 +18,8 @@ import 'legend_painter.dart';
 /// Single per-factor conclusion row: colored line indicator + factor name &
 /// state transition + status pill.
 class ConclusionRow extends StatelessWidget {
+  /// Creates a result row with state measurements and the factor's effect
+  /// status.
   const ConclusionRow({super.key, required this.row, required this.scale});
 
   final FactorRow row;

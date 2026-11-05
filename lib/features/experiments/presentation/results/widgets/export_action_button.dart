@@ -10,6 +10,10 @@ import '../../../../../shared/l10n/app_copy.dart';
 /// Right-aligned export control shown below the results chart. Shows a small
 /// spinner and disables itself while [isExporting] is `true`.
 class ExportActionButton extends StatelessWidget {
+  /// Creates the export action.
+  ///
+  /// While [isExporting] is true, the action shows progress and cannot start
+  /// another export.
   const ExportActionButton({
     super.key,
     required this.onPressed,

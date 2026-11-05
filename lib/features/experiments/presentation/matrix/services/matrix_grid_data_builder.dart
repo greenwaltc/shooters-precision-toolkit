@@ -50,7 +50,7 @@ class MatrixGridDataBuilder {
     return 'range_${rowNumber - 1}';
   }
 
-  /// Writes every Group Size cell from [rows] into [project.matrixState].
+  /// Copies the Group Size cells from [rows] into the project's saved matrix.
   ///
   /// Returns `true` when at least one stored value changed. Callers should
   /// persist afterwards when they need the update durable.

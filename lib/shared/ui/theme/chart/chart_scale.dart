@@ -24,6 +24,8 @@ class ChartScale {
     this.desktopChartHeight,
   });
 
+  /// Computes sizing from the chart's available width, viewport, and user text
+  /// scale.
   factory ChartScale.of(BuildContext context, BoxConstraints constraints) {
     final width = constraints.hasBoundedWidth
         ? constraints.maxWidth
@@ -74,70 +76,126 @@ class ChartScale {
   final double textScale;
 
   // Layout sizes
+  /// The chart height in logical pixels, adjusted for the viewport and text
+  /// scale.
   double get chartHeight =>
       (desktopChartHeight ??
           (isCompact
               ? (360 * scale).clamp(300.0, 390.0)
               : (340 * scale).clamp(280.0, 540.0))) *
       textScale;
+
+  /// The space around the chart content in logical pixels.
   double get chartOuterPadding => isCompact
       ? (14 * scale).clamp(10.0, 18.0)
       : (18 * scale).clamp(14.0, 28.0);
 
   // Font sizes
+  /// The base font size for tick and axis labels before system text scaling.
   double get axisLabelFontSize => isCompact
       ? (10.5 * scale).clamp(9.5, 11.5)
       : (11 * scale).clamp(10.5, 15.0);
+
+  /// The base font size for individual factor state labels.
   double get stateLabelFontSize => isCompact
       ? (11 * scale).clamp(10.0, 12.0)
       : (12 * scale).clamp(11.0, 16.0);
+
+  /// The base font size for the factor names below the state labels.
   double get factorLabelFontSize => isCompact
       ? (12 * scale).clamp(11.0, 13.0)
       : (13 * scale).clamp(12.0, 17.0);
 
   // Stroke / dot sizes
+  /// The radius of a plotted measurement marker in logical pixels.
   double get dotRadius => (5.5 * scale).clamp(4.5, 8.0);
+
+  /// The outline thickness of a plotted measurement marker.
   double get dotStroke => (2.5 * scale).clamp(2.0, 3.5);
+
+  /// The thickness of lines connecting a factor's two means.
   double get lineWidth => (3 * scale).clamp(2.5, 4.5);
+
+  /// The thickness of the chart's horizontal reference lines.
   double get meanLineWidth => (1.5 * scale).clamp(1.2, 2.4);
 
   // Axis reserves
+  /// Horizontal space reserved for the vertical axis tick labels, including
+  /// text scaling.
   double get leftAxisReserve =>
       (isCompact ? 42 : (52 * scale).clamp(46.0, 72.0)) * textScale;
+
+  /// Horizontal space reserved for the vertical axis title, including text
+  /// scaling.
   double get yAxisNameReserve =>
       (isCompact ? 20 : (26 * scale).clamp(22.0, 36.0)) * textScale;
 
   // Bottom axis is two stacked rows: state labels on top, factor names below.
+  /// The space above the row of state labels.
   double get stateLabelTopPad => 6.0;
+
+  /// The width budget for a state label after text scaling.
   double get stateLabelMaxWidth =>
       (isCompact ? 68 : (92 * scale).clamp(78.0, 130.0)) * textScale;
+
+  /// The width budget for a factor name after text scaling.
   double get factorLabelMaxWidth =>
       (isCompact ? 34 : (128 * scale).clamp(96.0, 160.0)) * textScale;
+
+  /// The height of the state label row, with room for angled labels in compact
+  /// charts.
   double get stateLabelRowHeight => isCompact
       ? stateLabelMaxWidth + stateLabelTopPad + 4
       : stateLabelFontSize * textScale + stateLabelTopPad + 6;
+
+  /// The vertical gap between the state labels and factor names.
   double get factorLabelGap => (10 * scale).clamp(8.0, 14.0);
+
+  /// The height reserved for factor names below the state label row.
   double get factorLabelRowHeight => factorLabelFontSize * textScale + 6;
+
+  /// The total height reserved for both bottom label rows and the gap between
+  /// them.
   double get bottomStateLabelReserve =>
       stateLabelRowHeight + factorLabelGap + factorLabelRowHeight;
 
   // Legend
+  /// The horizontal space used by a legend marker.
   double get legendIconWidth => (28 * scale).clamp(24.0, 38.0);
+
+  /// The height of a legend marker in logical pixels.
   double get legendIconHeight => 14;
+
+  /// The gap between a legend marker and its text.
   double get legendIconLabelGap => 6;
+
+  /// The horizontal gap between legend items on one line.
   double get legendItemSpacing => isCompact ? 10 : 18;
+
+  /// The vertical gap when legend items wrap to another line.
   double get legendRunSpacing => isCompact ? 8 : 10;
 
   // Conclusion row
+  /// The gap between the factor marker and its conclusion text.
   double get conclusionRowFactorGap => 10;
+
+  /// The space before the conclusion's status pill.
   double get conclusionRowPillGap => 12;
+
+  /// The gap between labels within a factor conclusion.
   double get conclusionRowLabelGap => 2;
 
   /// Axis label paddings reused by the chart's axes and reference lines.
   EdgeInsets get axisNamePadding => const EdgeInsets.only(bottom: 6);
+
+  /// Padding between the vertical axis tick labels and the plot.
   EdgeInsets get yTickPadding => const EdgeInsets.only(right: 6);
+
+  /// Padding that positions a label above a horizontal reference line.
   EdgeInsets get topRefLabelPadding =>
       const EdgeInsets.only(right: 6, bottom: 2);
+
+  /// Padding that positions a label below a horizontal reference line.
   EdgeInsets get bottomRefLabelPadding =>
       const EdgeInsets.only(right: 6, top: 2);
 }

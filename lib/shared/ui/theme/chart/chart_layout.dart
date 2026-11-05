@@ -44,7 +44,11 @@ class ChartLayout {
   static double secondXFor(int index) => firstXFor(index) + segmentSpan;
 }
 
+/// Horizontal chart coordinates for pairs of factor states and the gaps between
+/// them.
 class ChartLayoutGeometry {
+  /// Defines the distance between states, space between factors, and chart edge
+  /// padding in chart units.
   const ChartLayoutGeometry({
     required this.segmentSpan,
     required this.groupGap,
@@ -55,7 +59,9 @@ class ChartLayoutGeometry {
   final double groupGap;
   final double edgePad;
 
+  /// The first state position for a factor at zero-based [index].
   double firstXFor(int index) => index * (segmentSpan + groupGap);
 
+  /// The second state position for a factor at zero-based [index].
   double secondXFor(int index) => firstXFor(index) + segmentSpan;
 }

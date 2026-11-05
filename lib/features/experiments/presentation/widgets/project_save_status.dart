@@ -9,6 +9,8 @@ import '../project_store.dart';
 /// Floats save feedback over the footer without reserving a second footer row.
 /// Its presence and height never change the Navigator's available space.
 class ProjectWorkspaceFrame extends StatelessWidget {
+  /// Wraps workspace content so the save status can be presented where
+  /// appropriate.
   const ProjectWorkspaceFrame({
     super.key,
     required this.child,
@@ -50,6 +52,8 @@ enum _ConflictChoice { keepEditing, loadCloud, saveCopy }
 
 /// Save feedback in a project banner or floating over the workspace footer.
 class ProjectSaveStatus extends StatelessWidget {
+  /// Creates a save indicator that can adapt to a compact layout or appear in a
+  /// banner.
   const ProjectSaveStatus({
     super.key,
     this.navigatorKey,

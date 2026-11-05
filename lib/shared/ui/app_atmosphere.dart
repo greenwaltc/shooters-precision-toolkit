@@ -14,6 +14,7 @@ import 'theme/app_design.dart';
 /// transparent [Scaffold] / app bar so the image shows through chrome without
 /// changing page layout.
 class AppAtmosphere extends StatelessWidget {
+  /// Creates the app's decorative background artwork.
   const AppAtmosphere({super.key});
 
   @override

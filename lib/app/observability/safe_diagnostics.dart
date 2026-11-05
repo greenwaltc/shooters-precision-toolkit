@@ -7,6 +7,10 @@ import '../config/app_config.dart';
 /// Local structured diagnostics only. Never serializes an exception, URL,
 /// user identifier, request body or arbitrary stack text. No offline buffer.
 final class SafeDiagnostics implements Diagnostics {
+  /// Creates a reporter that sends sanitized events to [write].
+  ///
+  /// Pass null for [configuration] when startup could not load a valid
+  /// configuration.
   SafeDiagnostics({
     required AppConfig? configuration,
     required void Function(String) write,

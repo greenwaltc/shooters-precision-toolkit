@@ -12,6 +12,7 @@ import '../tokens/app_text_styles.dart';
 /// Heading shown above a form section. Standard padding + `titleMedium`
 /// styling so all section titles read as siblings.
 class SectionTitle extends StatelessWidget {
+  /// Creates a section heading with the supplied text and surrounding padding.
   const SectionTitle(
     this.title, {
     super.key,

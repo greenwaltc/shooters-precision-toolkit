@@ -21,6 +21,7 @@ import 'conclusion_list.dart';
 
 /// Card surface that wraps the chart, legend, and per-factor conclusion list.
 class ResultsChartCard extends StatelessWidget {
+  /// Creates the results card around the chart and factor conclusions.
   const ResultsChartCard({
     super.key,
     required this.factorRows,

@@ -14,6 +14,7 @@ import '../models/export_options.dart';
 /// include the ANOMR data matrix. Returns an [ExportOptions] (or `null` if
 /// the user cancels) via [Navigator.pop].
 class ExportDialog extends StatefulWidget {
+  /// Creates the dialog where the user chooses export options.
   const ExportDialog({super.key});
 
   @override

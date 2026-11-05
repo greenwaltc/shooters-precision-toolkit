@@ -55,6 +55,8 @@ Future<void> showHelpInstructionsSheet(BuildContext context) {
 
 /// Bottom-sheet shell that hosts the scrollable help content.
 class HelpInstructionsSheet extends StatelessWidget {
+  /// Creates the instructions sheet using the scroll controller supplied by its
+  /// parent.
   const HelpInstructionsSheet({super.key, required this.scrollController});
 
   final ScrollController scrollController;
@@ -94,6 +96,8 @@ class HelpInstructionsSheet extends StatelessWidget {
 
 /// Markdown renderer for bundled help instructions.
 class HelpInstructions extends StatefulWidget {
+  /// Creates the bundled instructions view. An optional [scrollController]
+  /// controls its scroll position.
   const HelpInstructions({super.key, this.scrollController});
 
   final ScrollController? scrollController;

@@ -15,6 +15,7 @@ enum LegendStyle { solid, dashed, solidDots }
 /// Paints a thin horizontal indicator (solid line, dashed line, or solid
 /// line with a dot at each end) used by legend chips and conclusion rows.
 class LegendPainter extends CustomPainter {
+  /// Creates the painter for a legend line or factor marker in [color].
   LegendPainter({required this.color, required this.style});
 
   final Color color;

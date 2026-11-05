@@ -18,6 +18,7 @@ import 'theme/tokens/app_spacing.dart';
 /// This is also the single owner of bottom system-inset clearance (taskbar /
 /// gesture bar) so page bodies do not pad a second time above the footer.
 class AppCopyrightFooter extends StatelessWidget {
+  /// Creates the copyright footer and optionally gives space to [status].
   const AppCopyrightFooter({
     super.key,
     this.showSaveStatus = true,

@@ -24,6 +24,10 @@ import 'services/project_form_validator.dart';
 
 /// Test Design form for experiment design, risk, and sample-size choices.
 class ProjectForm extends StatefulWidget {
+  /// Creates the experiment-design form around [formModel].
+  ///
+  /// [onSubmit], when supplied, lets the parent decide what happens when the
+  /// user submits it.
   const ProjectForm({super.key, required this.formModel, this.onSubmit});
 
   /// Mutable setup state shared with the selected project.

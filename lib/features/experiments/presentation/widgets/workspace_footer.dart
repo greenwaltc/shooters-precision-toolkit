@@ -7,6 +7,7 @@ import 'project_save_status.dart';
 
 /// Workspace composes save feedback; the shared credit component knows no store.
 class WorkspaceFooter extends StatelessWidget {
+  /// Creates a workspace footer with an optional save-status display.
   const WorkspaceFooter({super.key, this.showSaveStatus = true});
   final bool showSaveStatus;
   @override

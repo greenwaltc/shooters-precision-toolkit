@@ -8,6 +8,10 @@ import '../saved_project.dart';
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
+/// Shows a confirmation dialog for deleting [project].
+///
+/// Returns true only when the user confirms. Dismissing the dialog returns
+/// false.
 Future<bool> confirmDeleteProject(
   BuildContext context,
   SavedProject project,

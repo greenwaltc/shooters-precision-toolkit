@@ -52,6 +52,10 @@ import 'firebase/firebase_bootstrap.dart';
 
 /// Firebase services and one repository per signed-in account.
 class FirebaseApplication extends StatelessWidget {
+  /// Creates the application around initialized Firebase [services].
+  ///
+  /// Supply [repositoryForUser] to select a different project repository for
+  /// each signed-in account.
   const FirebaseApplication({
     super.key,
     required this.services,
@@ -150,6 +154,11 @@ final Map<String, WidgetBuilder> _appRoutes = {
 /// Root widget that owns the project store and theme controller unless they
 /// are injected (e.g. for tests).
 class MyApp extends StatefulWidget {
+  /// Creates a workspace for one account.
+  ///
+  /// Supply [projectStore] or [projectRepository]. An injected store or theme
+  /// controller stays owned by its caller. The workspace disposes instances it
+  /// creates.
   MyApp({
     super.key,
     required this.config,

@@ -5,6 +5,7 @@ import 'theme/layout/app_viewport.dart';
 
 /// Shared photographic background and viewport treatment for app and auth.
 class AppBackground extends StatelessWidget {
+  /// Displays [child] over the shared app background.
   const AppBackground({super.key, required this.child});
 
   final Widget? child;

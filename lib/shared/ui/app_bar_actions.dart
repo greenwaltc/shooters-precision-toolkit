@@ -20,6 +20,9 @@ import 'workspace_exit.dart';
 /// One declarative app-bar action that can render inline or inside an overflow
 /// menu when the bar is too narrow to show every control.
 class AppBarActionItem {
+  /// Describes one banner action for inline display or an overflow menu.
+  ///
+  /// Set [filledInline] to emphasize the action when it fits in the banner.
   const AppBarActionItem({
     required this.label,
     required this.icon,
@@ -40,8 +43,7 @@ class AppBarActionItem {
   final bool filledInline;
 }
 
-/// Builds app-bar [actions], collapsing them into a hamburger [PopupMenuButton]
-/// on mobile when the inline controls would steal too much title space.
+/// App bar actions that move into a menu when the title needs more room.
 abstract final class AppBarActionBar {
   /// Estimated width of a standard [IconButton] app-bar action.
   static const double iconActionWidth = kMinInteractiveDimension;
@@ -119,6 +121,7 @@ abstract final class AppBarActionBar {
     );
   }
 
+  /// Creates the navigation action that opens the public Contact page.
   static AppBarActionItem contact(BuildContext context) => AppBarActionItem(
     label: context.l10n.contact,
     icon: Icons.contact_mail_outlined,
@@ -132,6 +135,7 @@ abstract final class AppBarActionBar {
     BehaviorPolicy.donationsPath,
   );
 
+  /// Creates the action that opens the configured donation link.
   static AppBarActionItem donations(BuildContext context) => AppBarActionItem(
     label: context.l10n.donations,
     icon: Icons.volunteer_activism_outlined,
@@ -187,6 +191,8 @@ abstract final class AppBarActionBar {
 /// Width / collapse decision for a set of app-bar actions.
 @immutable
 class AppBarActionsMetrics {
+  /// Records the space available to the title and whether actions move into a
+  /// menu.
   const AppBarActionsMetrics({
     required this.collapsed,
     required this.actionsWidth,
@@ -197,6 +203,9 @@ class AppBarActionsMetrics {
   final double actionsWidth;
   final double titleMaxWidth;
 
+  /// Calculates banner action and title widths for the available layout.
+  ///
+  /// Set [hasLeading] when a back or navigation control also needs space.
   factory AppBarActionsMetrics.of(
     BuildContext context, {
     required AppLayoutMetrics layout,

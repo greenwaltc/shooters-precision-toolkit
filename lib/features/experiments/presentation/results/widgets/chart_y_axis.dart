@@ -17,6 +17,8 @@ import '../../../../../shared/ui/theme/chart/chart_scale.dart';
 class ChartYAxis {
   const ChartYAxis._();
 
+  /// Builds the vertical measurement axis with text and spacing adapted to
+  /// [scale].
   static AxisTitles build({
     required BuildContext context,
     required ChartScale scale,

@@ -15,7 +15,13 @@ import '../../../shared/ui/theme/layout/app_layout.dart';
 import '../../../shared/ui/theme/tokens/app_spacing.dart';
 import '../api/auth_repository.dart';
 
+/// The account screen for sign-in, registration, password reset, and email
+/// verification.
 class AuthPage extends StatefulWidget {
+  /// Opens the account screen.
+  ///
+  /// Set [verification] to show the email verification controls.
+  /// [contactBuilder] supplies the public Contact route.
   const AuthPage({
     super.key,
     this.verification = false,

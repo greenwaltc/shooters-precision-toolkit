@@ -14,6 +14,8 @@ import 'effect_status.dart';
 /// conclusion within the combined results chart.
 @immutable
 class FactorRow {
+  /// Combines one factor's statistics with the labels, color, and positions
+  /// used to draw it.
   const FactorRow({
     required this.index,
     required this.factor,
@@ -38,5 +40,6 @@ class FactorRow {
   final String secondLabel;
   final String displayName;
 
+  /// The horizontal chart position halfway between the factor's two states.
   double get midpointX => (firstX + secondX) / 2;
 }

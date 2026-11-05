@@ -15,6 +15,7 @@ import '../../../../../shared/ui/theme/theme_extensions/anomr_chart_theme.dart';
 class ChartReferenceLines {
   const ChartReferenceLines._();
 
+  /// Builds the mean and risk reference lines with labels scaled for the chart.
   static ExtraLinesData build({
     required BuildContext context,
     required ChartScale scale,

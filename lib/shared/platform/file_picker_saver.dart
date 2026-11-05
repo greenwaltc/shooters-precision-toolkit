@@ -4,7 +4,9 @@ import 'package:file_picker/file_picker.dart';
 
 import '../foundation/file_saver.dart';
 
+/// A file saver that delegates to the platform's file picker or download flow.
 final class FilePickerSaver implements FileSaver {
+  /// Creates a file saver with no resources to initialize or close.
   const FilePickerSaver();
   @override
   Future<String?> save({

@@ -13,6 +13,8 @@ import '../../../../../shared/foundation/behavior_policy.dart';
 
 /// A single committed range-cell value change.
 class MatrixRangeChange {
+  /// Records one row's previous and replacement group size. A null value
+  /// represents a blank cell.
   const MatrixRangeChange({
     required this.rowIdx,
     required this.previousValue,
@@ -26,9 +28,11 @@ class MatrixRangeChange {
 
 /// One undo/redo step, possibly spanning multiple cells.
 class MatrixHistoryEntry {
+  /// Copies the changes that belong to one undo or redo step.
   MatrixHistoryEntry(List<MatrixRangeChange> changes)
     : changes = List.unmodifiable(changes);
 
+  /// Wraps one cell change as a complete history step.
   factory MatrixHistoryEntry.single(MatrixRangeChange change) {
     return MatrixHistoryEntry([change]);
   }
@@ -36,6 +40,7 @@ class MatrixHistoryEntry {
   final List<MatrixRangeChange> changes;
 }
 
+/// Applies a value at a grid row and optionally records it in history.
 typedef MatrixRangeApply =
     void Function(int rowIdx, Object? value, {bool recordHistory});
 
@@ -48,6 +53,7 @@ class MatrixGridHistoryController {
   final List<MatrixRangeChange> _batchBuffer = [];
   int _batchDepth = 0;
 
+  /// Drops all recorded edits and resets any active batch.
   void clear() {
     _undoStack.clear();
     _redoStack.clear();
@@ -55,10 +61,14 @@ class MatrixGridHistoryController {
     _batchDepth = 0;
   }
 
+  /// Starts a batch so multiple edits can be undone together. Batches may be
+  /// nested.
   void beginBatch() {
     _batchDepth += 1;
   }
 
+  /// Ends one batch level. The outermost call records the collected changes as
+  /// one step.
   void endBatch() {
     if (_batchDepth == 0) {
       return;
@@ -75,6 +85,9 @@ class MatrixGridHistoryController {
     _batchBuffer.clear();
   }
 
+  /// Records a changed cell or appends it to the active batch.
+  ///
+  /// Committing a new step clears the redo stack. Unchanged values are ignored.
   void record(MatrixRangeChange change) {
     if (change.previousValue == change.newValue) {
       return;
@@ -96,6 +109,8 @@ class MatrixGridHistoryController {
     _redoStack.clear();
   }
 
+  /// Removes and returns the newest undo step, or null when no undo step is
+  /// available.
   MatrixHistoryEntry? popUndo() {
     if (_undoStack.isEmpty) {
       return null;
@@ -103,6 +118,8 @@ class MatrixGridHistoryController {
     return _undoStack.removeLast();
   }
 
+  /// Removes and returns the newest redo step, or null when no redo step is
+  /// available.
   MatrixHistoryEntry? popRedo() {
     if (_redoStack.isEmpty) {
       return null;
@@ -110,10 +127,13 @@ class MatrixGridHistoryController {
     return _redoStack.removeLast();
   }
 
+  /// Adds [entry] to the redo stack after an undo.
   void pushRedo(MatrixHistoryEntry entry) {
     _redoStack.add(entry);
   }
 
+  /// Adds [entry] back to the undo stack after a redo, within the history
+  /// limit.
   void pushUndo(MatrixHistoryEntry entry) {
     _undoStack.add(entry);
     if (_undoStack.length > _maxEntries) {

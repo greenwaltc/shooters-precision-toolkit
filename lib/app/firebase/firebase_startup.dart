@@ -6,6 +6,8 @@ import 'firebase_bootstrap.dart';
 
 /// Shows startup failures without exposing SDK errors or configuration to users.
 class FirebaseStartup extends StatefulWidget {
+  /// Creates a startup screen that waits for [initialize] before calling
+  /// [applicationBuilder].
   const FirebaseStartup({
     super.key,
     required this.initialize,

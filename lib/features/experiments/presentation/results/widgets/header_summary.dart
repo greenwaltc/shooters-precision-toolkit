@@ -16,6 +16,8 @@ import '../../test_design/project_form_model.dart';
 /// Summary card displayed at the top of the results page: title, sample-size
 /// description, and a row (or column on narrow viewports) of stat tiles.
 class HeaderSummary extends StatelessWidget {
+  /// Creates the results summary with the mean, risk, detectable difference,
+  /// and sample-size label.
   const HeaderSummary({
     super.key,
     required this.grandMean,

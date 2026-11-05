@@ -21,6 +21,8 @@ import 'chart_y_range.dart';
 /// Single fl_chart `LineChart` rendering one colored line segment per factor
 /// over a shared grand-mean / risk-bound reference frame.
 class CombinedLineChart extends StatelessWidget {
+  /// Creates a chart with one segment per factor and reference lines for the
+  /// mean and risk bounds.
   const CombinedLineChart({
     super.key,
     required this.factorRows,

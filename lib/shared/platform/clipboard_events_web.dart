@@ -11,6 +11,8 @@ import '../foundation/clipboard_events.dart';
 /// Read only user-initiated clipboard events, while this matrix has focus.
 /// Using paste-event data avoids stale internal copies and clipboard prompts.
 final class BrowserClipboardEvents implements ClipboardEvents {
+  /// Creates a clipboard adapter that listens for browser events when
+  /// registered.
   const BrowserClipboardEvents();
   @override
   void Function() register({

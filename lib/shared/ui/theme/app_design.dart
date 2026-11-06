@@ -85,6 +85,10 @@ class AppDesign {
   /// image (PNG/JPEG).
   static const Color exportImageBackground = Color(0xFFFFFFFF);
 
+  /// Fixed paper and ink colors for the copyright strip in every theme.
+  static const Color copyrightBackground = Colors.white;
+  static const Color copyrightForeground = Colors.black;
+
   /// Stroke painted around chart/legend marker dots for clean separation.
   static const Color chartDotOutline = Color(0xFFFFFFFF);
 

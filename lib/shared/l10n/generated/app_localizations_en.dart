@@ -94,6 +94,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verificationEmailRequested => 'Verification email requested.';
 
   @override
+  String get sendingVerificationEmail => 'Sending verification email…';
+
+  @override
   String get sendVerificationEmail => 'Send verification email';
 
   @override
@@ -216,6 +219,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get saveConflictYourDraftIsKept =>
       'Save conflict. Your draft is kept.';
+
+  @override
+  String get projectEditingElsewhere =>
+      'Editing is active in another session. Save any changes there before editing here.';
+
+  @override
+  String get projectEditingReadOnly => 'This project is open for viewing.';
+
+  @override
+  String get projectEditingStarting => 'Opening for editing…';
+
+  @override
+  String get projectEditingHandoffFailed =>
+      'Could not start editing. Check your connection and try again.';
+
+  @override
+  String get projectEditingDraftKept =>
+      'Editing moved to another session. Review your unsaved draft in the banner.';
 
   @override
   String get unableToSaveYourChangesAreKept =>

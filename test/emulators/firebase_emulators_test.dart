@@ -18,6 +18,7 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/s
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/shared/foundation/app_failure.dart';
 import 'package:bramwells_precision_test_kit/shared/foundation/json_object.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/workspace_exit.dart';
 import 'package:clock/clock.dart';
@@ -86,6 +87,90 @@ void main() {
     });
     return FirestoreProjectRepository(db: services.db, uid: user.uid);
   });
+
+  test(
+    'editing control follows the active session and retains a displaced draft',
+    () async {
+      final services = emulatorServices;
+      final email =
+          'editing-${DateTime.now().microsecondsSinceEpoch}@example.test';
+      await _registerVerified(services, email, 'Local-editing-password-123!');
+      final user = services.auth.currentUser!;
+      addTearDown(() async {
+        await user.delete();
+        await services.auth.signOut();
+      });
+      final firstRepository = FirestoreProjectRepository(
+        db: services.db,
+        uid: user.uid,
+      );
+      final secondRepository = FirestoreProjectRepository(
+        db: services.db,
+        uid: user.uid,
+      );
+      ProjectStore workspace(ProjectRepository repository) {
+        final store = ProjectStore(
+          clock: Clock.fixed(DateTime.utc(2026, 11, 5)),
+          repository: repository,
+          draftStorage: InMemoryProjectDraftStorage(),
+          saveDebounce: const Duration(minutes: 1),
+        );
+        addTearDown(store.dispose);
+        return store;
+      }
+
+      final first = workspace(firstRepository);
+      final second = workspace(secondRepository);
+      await first.load();
+      final id = (await first.createProject()).id;
+      addTearDown(
+        () => services.db.doc('users/${user.uid}/projects/$id').delete(),
+      );
+      expect(await first.claimProjectEditing(id, allowTakeover: false), isTrue);
+      first.selectedProject!.matrixState['range_0'] = '1.25';
+      first.markProjectChanged(id);
+      await first.saveSelectedProject();
+
+      await second.load();
+      await second.selectProject(id);
+      expect(second.canEditProject(id), isFalse);
+      expect(
+        await second.claimProjectEditing(id, allowTakeover: false),
+        isFalse,
+      );
+      first.selectedProject!.matrixState['range_1'] = '2.5';
+      first.markProjectChanged(id);
+      final displacedDraft = first.selectedProject!.freeze();
+
+      expect(await second.claimProjectEditing(id, allowTakeover: true), isTrue);
+      expect(second.selectedProject!.matrixState['range_0'], '1.25');
+      expect(second.selectedProject!.matrixState['range_1'], isNull);
+      await expectLater(
+        firstRepository.saveProject(
+          displacedDraft,
+          expectedRevision: second.revisionFor(id),
+        ),
+        throwsA(isA<ProjectConflict>()),
+      );
+      await _waitForStore(
+        () => !first.canEditProject(id) && first.editStateFor(id)!.hasConflict,
+        describe: () => 'first editor did not observe the handoff',
+      );
+      expect(first.selectedProject!.matrixState['range_1'], '2.5');
+      expect(first.canDiscardDraft(id), isTrue);
+      second.selectedProject!.matrixState['range_1'] = '3.75';
+      second.markProjectChanged(id);
+      await second.saveSelectedProject();
+      first.discardConflictingDraft(id);
+      expect(await first.claimProjectEditing(id, allowTakeover: true), isTrue);
+      expect(first.selectedProject!.matrixState['range_1'], '3.75');
+      await _waitForStore(
+        () => !second.canEditProject(id),
+        describe: () => 'second editor did not observe the return handoff',
+      );
+      expect(second.saveStateFor(id), ProjectSaveState.saved);
+    },
+  );
 
   testWidgets('stale hot-restart hint cannot skip Auth emulator connection', (
     tester,
@@ -312,6 +397,12 @@ void main() {
         const Duration(seconds: 5),
       );
       expect(find.byType(ProjectFormPage), findsOneWidget);
+      await _pumpUntil(
+        tester,
+        () => store.canEditProject(createdProjectId!),
+        'the newly opened Test Design did not acquire editing control',
+      );
+      await tester.pump();
       final oldNavigator = Navigator.of(
         tester.element(find.byType(ProjectFormPage)),
       );
@@ -418,6 +509,16 @@ void main() {
         await expectLater(
           alicePath.get(const GetOptions(source: Source.server)),
           throwsA(denied),
+        );
+        await expectLater(
+          alice.claimEditing(experiment.id, allowTakeover: true),
+          throwsA(
+            isA<AppFailure>().having(
+              (error) => error.kind,
+              'kind',
+              FailureKind.denied,
+            ),
+          ),
         );
         await expectLater(alicePath.delete(), throwsA(denied));
         await services.auth.currentUser!.delete();

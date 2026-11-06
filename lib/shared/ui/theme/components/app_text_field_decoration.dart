@@ -21,13 +21,11 @@ InputDecoration buildAppTextFieldDecoration({
     labelText: labelText,
     hintText: hintText,
     prefixIcon: prefixIcon,
-    suffixIcon: IconButton(
-      icon: const Icon(Icons.clear),
-      onPressed: () {
-        if (controller != null) {
-          controller.clear();
-        }
-      },
-    ),
+    suffixIcon: controller == null
+        ? null
+        : IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: controller.clear,
+          ),
   );
 }

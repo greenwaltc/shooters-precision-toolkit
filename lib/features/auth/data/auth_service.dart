@@ -30,6 +30,15 @@ class AuthService implements AuthRepository {
   final Clock clock;
   final FirebaseAuth auth;
   final Diagnostics diagnostics;
+  Future<void>? _pendingRegistration;
+  final _verificationRetryTimes = <String, DateTime>{};
+
+  @override
+  Future<void>? get pendingRegistration => _pendingRegistration;
+
+  @override
+  DateTime? get verificationEmailRetryAt =>
+      _verificationRetryTimes[auth.currentUser?.uid];
 
   @override
   String get sessionNamespace => auth.app.options.projectId;
@@ -83,8 +92,18 @@ class AuthService implements AuthRepository {
   }
 
   @override
-  Future<void> register(String email, String password) =>
-      _guard(() => _register(email, password));
+  Future<void> register(String email, String password) async {
+    final request = _guard(() => _register(email, password));
+    _pendingRegistration = request;
+    try {
+      await request;
+    } finally {
+      if (identical(_pendingRegistration, request)) {
+        _pendingRegistration = null;
+      }
+    }
+  }
+
   @override
   Future<void> signIn(String email, String password) =>
       _guard(() => _signIn(email, password));
@@ -103,7 +122,9 @@ class AuthService implements AuthRepository {
       email: email.trim(),
       password: password,
     );
-    await credential.user!.sendEmailVerification(_emailActionSettings);
+    final user = credential.user!;
+    await user.sendEmailVerification(_emailActionSettings);
+    _startVerificationCooldown(user.uid);
   }
 
   Future<void> _signIn(String email, String password) async {
@@ -120,7 +141,22 @@ class AuthService implements AuthRepository {
       throw StateError('Sign in before requesting verification.');
     }
 
+    if (_pendingRegistration != null ||
+        (_verificationRetryTimes[user.uid]?.isAfter(clock.now()) ?? false)) {
+      throw const AuthFailure(
+        AuthFailureCode.rateLimited,
+        FailureKind.unavailable,
+      );
+    }
+
+    _startVerificationCooldown(user.uid);
     await user.sendEmailVerification(_emailActionSettings);
+  }
+
+  void _startVerificationCooldown(String uid) {
+    final now = clock.now();
+    _verificationRetryTimes.removeWhere((_, retryAt) => !retryAt.isAfter(now));
+    _verificationRetryTimes[uid] = now.add(emailCooldown);
   }
 
   Future<bool> _refreshVerification() async {

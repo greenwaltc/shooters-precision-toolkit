@@ -250,6 +250,12 @@ abstract class AppLocalizations {
   /// **'Verification email requested.'**
   String get verificationEmailRequested;
 
+  /// No description provided for @sendingVerificationEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending verification email…'**
+  String get sendingVerificationEmail;
+
   /// No description provided for @sendVerificationEmail.
   ///
   /// In en, this message translates to:
@@ -465,6 +471,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save conflict. Your draft is kept.'**
   String get saveConflictYourDraftIsKept;
+
+  /// No description provided for @projectEditingElsewhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing is active in another session. Save any changes there before editing here.'**
+  String get projectEditingElsewhere;
+
+  /// No description provided for @projectEditingReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'This project is open for viewing.'**
+  String get projectEditingReadOnly;
+
+  /// No description provided for @projectEditingStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening for editing…'**
+  String get projectEditingStarting;
+
+  /// No description provided for @projectEditingHandoffFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start editing. Check your connection and try again.'**
+  String get projectEditingHandoffFailed;
+
+  /// No description provided for @projectEditingDraftKept.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing moved to another session. Review your unsaved draft in the banner.'**
+  String get projectEditingDraftKept;
 
   /// No description provided for @unableToSaveYourChangesAreKept.
   ///

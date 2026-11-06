@@ -7,6 +7,7 @@ import '../../../../../shared/foundation/file_saver.dart';
 import '../../../../../shared/l10n/app_copy.dart';
 import '../../../../../shared/ui/app_bar_actions.dart';
 import '../../../../../shared/ui/app_brand_bar.dart';
+import '../../../../../shared/ui/app_copyright_footer.dart';
 import '../../../../../shared/ui/app_nav_chrome.dart';
 import '../../../../../shared/ui/navigation/app_routes.dart';
 import '../../../../../shared/ui/theme/chart/chart_layout.dart';
@@ -16,7 +17,7 @@ import '../../../../../shared/ui/theme/tokens/app_spacing.dart';
 import '../../matrix/services/matrix_grid_data_builder.dart';
 import '../../project_store.dart';
 import '../../test_design/project_form_model.dart';
-import '../../widgets/workspace_footer.dart';
+import '../../widgets/project_save_status.dart';
 import '../models/anomr_summary.dart';
 import '../models/export_options.dart';
 import '../services/anomr_calculator.dart';
@@ -84,6 +85,7 @@ class _ResultsViewState extends State<ResultsView> {
           items: actionItems,
           hasLeading: hasLeading,
           titleSpacing: titleSpacing,
+          hasTitleStatus: layout.isMobile,
         );
         final titleMetrics = AppBrandTitleMetrics.of(
           context,
@@ -111,7 +113,7 @@ class _ResultsViewState extends State<ResultsView> {
                   ),
                 )
               : const SafeArea(bottom: false, child: EmptyResultsState()),
-          bottomNavigationBar: const WorkspaceFooter(),
+          bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );
@@ -232,13 +234,20 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
       titleSpacing: titleSpacing,
       automaticallyImplyLeading: false,
       leading: AppNavChrome.backLeading(context),
-      title: AppBrandTitle(label: label, metrics: titleMetrics),
+      title: AppBrandTitle(
+        label: label,
+        metrics: titleMetrics,
+        trailing: layout.isMobile
+            ? const ProjectSaveStatus(inBanner: true, compact: true)
+            : null,
+      ),
       actions: AppBarActionBar.build(
         context,
         layout: layout,
         items: actionItems,
         hasLeading: hasLeading,
         titleSpacing: titleSpacing,
+        hasTitleStatus: layout.isMobile,
       ),
     );
   }

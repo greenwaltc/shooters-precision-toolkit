@@ -5,6 +5,7 @@ import '../../../../shared/foundation/behavior_policy.dart';
 import '../../../../shared/l10n/app_copy.dart';
 import '../../../../shared/ui/app_bar_actions.dart';
 import '../../../../shared/ui/app_brand_bar.dart';
+import '../../../../shared/ui/app_copyright_footer.dart';
 import '../../../../shared/ui/format_timestamp.dart';
 import '../../../../shared/ui/navigation/app_routes.dart';
 import '../../../../shared/ui/product_configuration.dart';
@@ -19,7 +20,6 @@ import '../project_file_transfer.dart';
 import '../project_store.dart';
 import '../saved_project.dart';
 import '../widgets/confirm_delete_project_dialog.dart';
-import '../widgets/workspace_footer.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
 // Use of this source code is governed by a proprietary license that can be
@@ -103,7 +103,7 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                     clearFloatingAction: false,
                   ),
           ),
-          bottomNavigationBar: const WorkspaceFooter(showSaveStatus: false),
+          bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );

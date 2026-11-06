@@ -41,8 +41,16 @@ abstract interface class AuthRepository {
   /// The clock used to determine when account actions can be retried.
   Clock get clock;
 
-  /// The wait between requests to resend a verification email.
+  /// The wait between email requests.
   Duration get emailCooldown;
+
+  /// The signup request, including its initial verification email, while it
+  /// is pending. It completes with the same result as [register].
+  Future<void>? get pendingRegistration;
+
+  /// The earliest retry time for the current account's verification email,
+  /// or null when it has no recorded cooldown in this app session.
+  DateTime? get verificationEmailRetryAt;
 
   /// The scope used to distinguish accounts that belong to different backends.
   String get sessionNamespace;
@@ -77,7 +85,7 @@ abstract interface class AuthRepository {
   /// Requests a verification email for the current account.
   ///
   /// Requires a signed-in account. The Firebase implementation reports missing
-  /// sign-in as a [StateError].
+  /// sign-in as a [StateError] and an active cooldown as an [AuthFailure].
   Future<void> sendVerification();
 
   /// Reloads the current account and refreshes its token when verified.

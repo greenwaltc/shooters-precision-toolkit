@@ -3,8 +3,6 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,19 +10,9 @@ import 'package:provider/provider.dart';
 import '../../emulator_presentation.dart';
 import '../tokens/app_spacing.dart';
 
-/// Viewport and safe-area helpers for browser builds.
-///
-/// Windows desktop browsers often report zero bottom insets even when the
-/// taskbar overlaps the page. Inflating [MediaQuery] padding at the app root
-/// keeps scaffold bodies, scroll views, and floating actions clear of that
-/// region. macOS and other platforms rely on the browser-reported insets only.
+/// Text scaling and viewport spacing policies shared by app layouts.
 class AppViewport {
   const AppViewport._();
-
-  /// Minimum bottom clearance applied on Windows web when the platform reports
-  /// none. Kept modest — the copyright footer owns the visible bottom pad, and
-  /// a large inset here used to stack empty space above that footer.
-  static const double webMinimumBottomInset = 16;
 
   /// Cap applied to the copyright footer so OS-level large text does not make
   /// the pinned bar dominate short viewports (especially Windows).
@@ -40,10 +28,6 @@ class AppViewport {
   /// surfaces scroll/reflow rather than shrinking the user's preference.
   static const double maxTextScaleFactor = double.infinity;
 
-  /// Whether this build should add artificial bottom clearance in the browser.
-  static bool get needsWebBottomClearance =>
-      kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-
   /// The Auth emulator adds a DOM banner outside Flutter. Its message wraps
   /// to two lines on phones; reserve that space for auth and workspace routes.
   static double emulatorBannerInset(BuildContext context) =>
@@ -51,30 +35,12 @@ class AppViewport {
       ? (MediaQuery.sizeOf(context).width < 600 ? 40 : 20)
       : 0;
 
-  /// Applies web-safe bottom insets and a clamped text scaler to [mediaQuery].
+  /// Applies a supported text scaler to [mediaQuery].
   ///
   /// The text-scale clamp keeps the app responsive to magnification while
   /// guaranteeing layouts stay usable; see [clampTextScaler].
-  static MediaQueryData applyWebSafeArea(MediaQueryData mediaQuery) {
-    final scaled = mediaQuery.copyWith(
-      textScaler: clampTextScaler(mediaQuery.textScaler),
-    );
-
-    if (!needsWebBottomClearance) {
-      return scaled;
-    }
-
-    final reportedBottom = math.max(
-      scaled.padding.bottom,
-      scaled.viewPadding.bottom,
-    );
-    final bottom = math.max(reportedBottom, webMinimumBottomInset);
-
-    return scaled.copyWith(
-      padding: scaled.padding.copyWith(bottom: bottom),
-      viewPadding: scaled.viewPadding.copyWith(bottom: bottom),
-    );
-  }
+  static MediaQueryData withSupportedTextScale(MediaQueryData mediaQuery) =>
+      mediaQuery.copyWith(textScaler: clampTextScaler(mediaQuery.textScaler));
 
   /// Constrains [scaler] to the supported [minTextScaleFactor]..
   /// [maxTextScaleFactor] range so magnified text remains legible without
@@ -86,16 +52,9 @@ class AppViewport {
     );
   }
 
-  /// Bottom inset after [applyWebSafeArea] has been applied.
-  static double bottomInset(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    return math.max(mediaQuery.padding.bottom, mediaQuery.viewPadding.bottom);
-  }
-
   /// Extra padding for the last item in a scroll view above a pinned action.
   ///
-  /// Does not include [bottomInset] — pages that pin
-  /// [AppCopyrightFooter] as `bottomNavigationBar` already clear the system
+  /// Pages that pin the copyright footer as `bottomNavigationBar` already clear the system
   /// gesture/taskbar region in the footer, and re-adding that inset here only
   /// created a dead band above the pinned button.
   static EdgeInsets scrollBottomPadding(BuildContext context) {

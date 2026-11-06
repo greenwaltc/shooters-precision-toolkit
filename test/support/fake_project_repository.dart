@@ -27,8 +27,21 @@ class FakeProjectRepository implements ProjectRepository {
 
   ProjectSnapshot _copy(ProjectDocument project) => project.freeze();
 
-  CloudProject _copyRecord(CloudProject record) =>
-      CloudProject(_copy(record.project), record.revision, false);
+  CloudProject _copyRecord(CloudProject record) => CloudProject(
+    _copy(record.project),
+    record.revision,
+    false,
+    editorSession: record.editorSession,
+  );
+
+  /// Publishes a project version as if another session wrote it.
+  void publishRemoteProject(CloudProject record) {
+    _records[record.project.id] = _copyRecord(record);
+    _changes.add(null);
+  }
+
+  /// Reads the current server record for [id], if it exists.
+  CloudProject? remoteProject(String id) => _records[id];
 
   Stream<T> _watch<T>(T Function() read) => Stream<T>.multi((listener) {
     final subscription = _changes.stream.listen(
@@ -105,7 +118,12 @@ class FakeProjectRepository implements ProjectRepository {
         ).add(Duration(microseconds: ++_writeSequence)).toIso8601String(),
     );
     final revision = expectedRevision + 1;
-    _records[project.id] = CloudProject(saved, revision, false);
+    _records[project.id] = CloudProject(
+      saved,
+      revision,
+      false,
+      editorSession: current?.editorSession,
+    );
     savedIds.add(project.id);
     _changes.add(null);
     return revision;

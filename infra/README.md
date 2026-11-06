@@ -37,7 +37,7 @@ infra/
     auth-settings.md
 ```
 
-The module manages required APIs, Firebase enablement, one web registration, one Android registration, unique Apple registrations, a protected default Standard Firestore database, payload index exemptions, a Hosting site, and a Firestore ruleset/release. It does not manage billing, Storage buckets, deployed functions, Identity Platform, user accounts, or application data. Hosting content and basic Auth provisioning remain separate from Terraform.
+The module manages required APIs, Firebase enablement, web and native app registrations, a protected default Standard Firestore database, payload index exemptions, a Hosting site, and a Firestore ruleset/release. It does not manage billing, Storage buckets, deployed functions, Identity Platform, user accounts, or application data. Hosting content and basic Auth provisioning remain separate from Terraform.
 
 **Inputs to complete before planning**
 
@@ -55,9 +55,7 @@ npx -y firebase-tools@latest firestore:databases:get '(default)' --project bramw
 gcloud projects describe bramwells-precision-test-kit
 ```
 
-The dev root already includes declarative imports for Firebase enablement and the web/Android/Apple IDs found in `firebase.json`. Those IDs are local configuration evidence; verify the current remote registrations before applying. The Windows-specific web registration remains outside this module. The existing iOS/macOS IDs match, so one Apple registration serves both.
-
-The dev variable file uses the **current unsuffixed native application IDs** so the known registrations can be adopted. When implementing the guide's `.dev` native flavors, plan separate dev registrations and update native service files/import declarations together. Changing an imported registration's package/bundle ID can require replacement; destruction protection will stop that operation.
+The dev root includes declarative imports for the Firebase project, web and native registrations, Hosting site and live channel, default database, index exemptions, and Firestore rules release. Both the original native registrations and the separate `.dev` flavors are included. The Windows-specific web registration remains outside the module. iOS and macOS share the Apple registration for each bundle ID.
 
 **Local initialization and validation**
 
@@ -85,15 +83,9 @@ terraform -chdir=infra/environments/dev init
 terraform -chdir=infra/environments/dev plan -var-file=dev.tfvars -out=dev.tfplan
 ```
 
-Review the imports, proposed creates/updates, and destination project in the saved plan. An existing database or Hosting site needs its own import. For example:
+Review the imports, proposed changes, and destination project in the saved plan. After a partial apply, check the local state and generate a fresh plan. Terraform retains successful operations from the failed apply, and the import blocks adopt the existing resources still missing from state. An HTTP 409 on a planned create means the existing resource needs to be identified and adopted before retrying.
 
-```bash
-terraform -chdir=infra/environments/dev import -var-file=dev.tfvars module.firebase.google_firestore_database.projects 'projects/bramwellsprecisiontestkitdev/databases/(default)'
-terraform -chdir=infra/environments/dev import -var-file=dev.tfvars module.firebase.google_firebase_hosting_site.web projects/bramwellsprecisiontestkitdev/sites/bramwellsprecisiontestkitdev
-terraform -chdir=infra/environments/dev import -var-file=dev.tfvars module.firebase.google_firebaserules_release.firestore projects/bramwellsprecisiontestkitdev/releases/cloud.firestore
-```
-
-Run imports for confirmed existing resources and inspect field overrides before adopting or replacing them. The production root declares imports for Firebase enablement, the Hosting site, the app registrations used by the production build, the default database, and the Firestore rules release. Review the import IDs and check the local state before applying a plan from another checkout.
+The production root declares imports for Firebase enablement, the Hosting site and live channel, the app registrations used by the production build, the default database, and the Firestore rules release. Review the import IDs and check the local state before applying a plan from another checkout.
 
 Only after reviewing the plan, apply that exact saved plan:
 
@@ -111,4 +103,4 @@ Terraform owns the rules release and index overrides once applied. Avoid deployi
 
 Full implementation instructions: [Firebase migration guide](../docs/guides/firebase_migration_guide.md). Provider documentation: [Google 8.9.0](https://registry.terraform.io/providers/hashicorp/google/8.9.0/docs), [Google Beta 8.9.0](https://registry.terraform.io/providers/hashicorp/google-beta/8.9.0/docs).
 
-Current verification: dev and prod are applied; both plans reported no changes on October 29, 2026. Basic email/password is enabled in both, but prod reports Identity Platform Auth with billing disabled. See the environment Auth checklists for verified settings and remaining manual checks.
+Both environments reported no changes on October 29, 2026. On November 6, the dev app registrations, database location and edition, index exemptions, and rules release were verified against the live project during recovery of a partial apply. See the environment Auth checklists for verified settings and remaining manual checks.

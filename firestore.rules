@@ -4,6 +4,8 @@ service cloud.firestore {
     // Assumed model: private user project documents; schema/revision ints;
     // timestamps; setup/randomize booleans; nullable randomized index list;
     // a form map and matrix map. createdAt is immutable after creation.
+    // editorSession is an optional 20-character workspace ID. An editor claim
+    // advances the revision and leaves project content and timestamps intact.
     // Imports: immutable receipts with schemaVersion, projectId, completedAt.
     function owns(uid) {
       return request.auth != null && request.auth.uid == uid &&
@@ -60,14 +62,27 @@ service cloud.firestore {
           'randomizeSequence', 'formModel', 'matrixState']) &&
           d.keys().hasOnly(['schemaVersion', 'revision', 'createdAt',
           'updatedAt', 'setupComplete', 'randomizeOrder',
-          'randomizeSequence', 'formModel', 'matrixState']) &&
+          'randomizeSequence', 'formModel', 'matrixState', 'editorSession']) &&
+          (!('editorSession' in d) || validEditorSession(d.editorSession)) &&
           d.schemaVersion == 1 && d.revision is int && d.revision >= 1 &&
-          d.createdAt is timestamp && d.updatedAt == request.time &&
+          d.createdAt is timestamp && d.updatedAt is timestamp &&
           d.setupComplete is bool && d.randomizeOrder is bool &&
           (d.randomizeSequence == null ||
               (d.randomizeSequence is list && d.randomizeSequence.size() <= 4096)) &&
           validForm(d.formModel) && d.matrixState is map &&
           d.matrixState.size() <= 4096;
+    }
+    function validEditorSession(session) {
+      return session is string && session.matches('^[a-zA-Z0-9]{20}$');
+    }
+    function validProjectChange() {
+      let before = resource.data;
+      let after = request.resource.data;
+      let changed = after.diff(before).affectedKeys();
+      // Claiming never grants access to a different Firebase account.
+      return (changed.hasOnly(['revision', 'editorSession']) &&
+              changed.hasAll(['editorSession']) && 'editorSession' in after) ||
+          (!changed.hasAny(['editorSession']) && after.updatedAt == request.time);
     }
     function validImport(d, migrationKey) {
       return d.keys().hasAll(['schemaVersion', 'projectId', 'completedAt']) &&
@@ -88,10 +103,13 @@ service cloud.firestore {
       allow list: if owns(uid) && request.query.limit != null &&
           request.query.limit <= 25;
       allow create: if activeOwner(uid) && validProject(request.resource.data) &&
-          request.resource.data.revision == 1;
+          request.resource.data.revision == 1 &&
+          request.resource.data.updatedAt == request.time &&
+          !('editorSession' in request.resource.data);
       allow update: if activeOwner(uid) && validProject(request.resource.data) &&
           request.resource.data.createdAt == resource.data.createdAt &&
-          request.resource.data.revision == resource.data.revision + 1;
+          request.resource.data.revision == resource.data.revision + 1 &&
+          validProjectChange();
       allow delete: if owns(uid);
     }
     match /users/{uid}/imports/{migrationKey} {

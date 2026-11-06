@@ -207,6 +207,53 @@ void main() {
     );
   }
 
+  for (final (width, scrolls) in [(680.0, false), (390.0, true)]) {
+    testWidgets(
+      'mobile matrix only scrolls horizontally when contents exceed $width px',
+      (tester) async {
+        _configureViewport(tester, size: Size(width, 844), textScale: 1);
+        await _pumpCompletedProject(tester, factorCount: 4, shortLabels: true);
+        await _tapText(tester, 'Bench Rest Comparison');
+        final manager = tester
+            .state<PlutoGridState>(find.byType(PlutoGrid))
+            .stateManager;
+        final horizontal = manager.scroll.bodyRowsHorizontal!;
+        expect(
+          horizontal.position.maxScrollExtent > 1,
+          scrolls,
+          reason:
+              'Viewport ${horizontal.position.viewportDimension}, '
+              'overflow ${horizontal.position.maxScrollExtent}, '
+              'columns ${manager.columns.map((column) => column.width)}',
+        );
+        final contentWidth = manager.columns.fold<double>(
+          0,
+          (sum, column) => sum + column.width,
+        );
+        expect(
+          horizontal.position.maxScrollExtent,
+          closeTo(
+            max(0, contentWidth - horizontal.position.viewportDimension),
+            1,
+          ),
+        );
+        final label = tester.renderObject<RenderParagraph>(find.text('F1'));
+        expect(label.didExceedMaxLines, isFalse);
+        final value = tester.renderObject<RenderParagraph>(
+          find.text('A').hitTestable().first,
+        );
+        expect(
+          value.size.width,
+          greaterThanOrEqualTo(value.getMaxIntrinsicWidth(double.infinity)),
+        );
+        horizontal.jumpTo(horizontal.position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        expect(find.text('Group Size').hitTestable(), findsOneWidget);
+        _expectNoLayoutErrors(tester, 'mobile matrix content fit');
+      },
+    );
+  }
+
   for (final size in [
     const Size(280, 653),
     const Size(390, 844),
@@ -251,11 +298,23 @@ void main() {
           );
           expect(find.text('Yes'), findsNothing);
           expect(find.text('No'), findsNothing);
-          final footerText = tester.widget<Text>(
-            find.text(AppCopyrightFooter.noticeText),
-          );
+          final credit = find.text(AppCopyrightFooter.noticeText);
+          final footerText = tester.widget<Text>(credit);
           expect(footerText.maxLines, 1);
           expect(footerText.softWrap, false);
+          expect(footerText.style!.color, Colors.black);
+          final footer = find.byType(AppCopyrightFooter);
+          final background = find.descendant(
+            of: footer,
+            matching: find.byWidgetPredicate(
+              (widget) => widget is Material && widget.color == Colors.white,
+            ),
+          );
+          expect(background, findsOneWidget);
+          expect(
+            tester.getRect(footer).height,
+            closeTo(tester.getRect(credit).height, 0.1),
+          );
           expect(tester.widget<AppBar>(find.byType(AppBar)).toolbarHeight, 56);
           expect(gridBounds.height, greaterThan(100));
           final original = tester.getRect(grid);
@@ -761,6 +820,7 @@ Future<void> _pumpCompletedProject(
   WidgetTester tester, {
   int factorCount = 1,
   String projectName = 'Bench Rest Comparison',
+  bool shortLabels = false,
 }) async {
   final store = ProjectStore(
     clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
@@ -782,9 +842,9 @@ Future<void> _pumpCompletedProject(
   for (var index = 0; index < factorCount; index++) {
     model.setFactorDefinition(
       index: index,
-      name: 'Factor ${index + 1} name',
-      firstState: 'State A${index + 1}',
-      secondState: 'State B${index + 1}',
+      name: shortLabels ? 'F${index + 1}' : 'Factor ${index + 1} name',
+      firstState: shortLabels ? 'A' : 'State A${index + 1}',
+      secondState: shortLabels ? 'B' : 'State B${index + 1}',
     );
   }
   expect(await store.completeProjectSetup(), isTrue);

@@ -4,13 +4,14 @@ import 'package:provider/provider.dart';
 import '../../../../shared/l10n/app_copy.dart';
 import '../../../../shared/ui/app_bar_actions.dart';
 import '../../../../shared/ui/app_brand_bar.dart';
+import '../../../../shared/ui/app_copyright_footer.dart';
 import '../../../../shared/ui/app_nav_chrome.dart';
 import '../../../../shared/ui/navigation/app_routes.dart';
 import '../../../../shared/ui/theme/layout/app_layout.dart';
 import '../project_store.dart';
 import '../widgets/no_selected_project_page.dart';
+import '../widgets/project_editing_notice.dart';
 import '../widgets/project_save_status.dart';
-import '../widgets/workspace_footer.dart';
 import 'project_form.dart';
 import 'project_form_model.dart';
 
@@ -98,15 +99,27 @@ class ProjectFormPage extends StatelessWidget {
                 ),
                 body: AppResponsiveBody(
                   maxWidth: (layout) => layout.formMaxWidth,
-                  builder: (context, _) => ProjectForm(
-                    formModel: formModel,
-                    showScrollCues: !keyboardCoversBottom,
-                    onSubmit: () => _goToMatrix(context, store),
+                  builder: (context, _) => Column(
+                    children: [
+                      ProjectEditingNotice(projectId: project.id),
+                      Expanded(
+                        child: ProjectForm(
+                          formModel: formModel,
+                          readOnly: !store.canEditProject(project.id),
+                          onReadOnlyFieldActivate: () =>
+                              ProjectEditingNotice.request(
+                                context,
+                                project.id,
+                                allowTakeover: true,
+                              ),
+                          showScrollCues: !keyboardCoversBottom,
+                          onSubmit: () => _goToMatrix(context, store),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                bottomNavigationBar: const WorkspaceFooter(
-                  showSaveStatus: false,
-                ),
+                bottomNavigationBar: const AppCopyrightFooter(),
               );
             },
           );

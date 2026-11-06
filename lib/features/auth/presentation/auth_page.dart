@@ -44,26 +44,32 @@ class _AuthPageState extends State<AuthPage> {
   bool _registering = false;
   bool _busy = false;
   String? _message;
-  DateTime? _nextEmailAt;
+  DateTime? _nextPasswordResetAt;
   Timer? _timer;
 
+  DateTime? get _emailRetryAt => widget.verification
+      ? context.read<AuthRepository>().verificationEmailRetryAt
+      : _nextPasswordResetAt;
+
   int get _emailWait {
-    final next = _nextEmailAt;
+    final next = _emailRetryAt;
     if (next == null) {
       return 0;
     }
 
-    final seconds =
-        next.difference(context.read<AuthRepository>().clock.now()).inSeconds +
-        1;
-    return seconds > 0 ? seconds : 0;
+    final remaining = next.difference(
+      context.read<AuthRepository>().clock.now(),
+    );
+    return remaining > Duration.zero
+        ? (remaining.inMicroseconds / Duration.microsecondsPerSecond).ceil()
+        : 0;
   }
 
   @override
   void initState() {
     super.initState();
     _timer = Timer.periodic(BehaviorPolicy.emailCountdownRefresh, (_) {
-      if (_nextEmailAt != null && mounted) {
+      if (mounted && _emailRetryAt != null) {
         setState(() {});
       }
     });
@@ -88,9 +94,9 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _run(
     Future<String?> Function(AuthRepository service) action, {
-    bool sendsEmail = false,
+    bool resetsPassword = false,
   }) async {
-    if (_busy || (sendsEmail && _emailWait > 0)) {
+    if (_busy || (resetsPassword && _emailWait > 0)) {
       return;
     }
 
@@ -99,10 +105,8 @@ class _AuthPageState extends State<AuthPage> {
     setState(() {
       _busy = true;
       _message = null;
-      if (sendsEmail) {
-        _nextEmailAt = context.read<AuthRepository>().clock.now().add(
-          context.read<AuthRepository>().emailCooldown,
-        );
+      if (resetsPassword) {
+        _nextPasswordResetAt = service.clock.now().add(service.emailCooldown);
       }
     });
 
@@ -159,8 +163,31 @@ class _AuthPageState extends State<AuthPage> {
     await _run((service) async {
       await service.resetPassword(email);
       return AppCopy.english.ifThatAddressHasAnAccountAReset;
-    }, sendsEmail: true);
+    }, resetsPassword: true);
   }
+
+  Widget _verificationButton(AuthRepository service) => FutureBuilder<void>(
+    future: service.pendingRegistration,
+    builder: (context, snapshot) {
+      final sending = snapshot.connectionState == ConnectionState.waiting;
+      final wait = _emailWait;
+      return FilledButton(
+        onPressed: _busy || sending || wait > 0
+            ? null
+            : () => _run((service) async {
+                await service.sendVerification();
+                return AppCopy.english.verificationEmailRequested;
+              }),
+        child: Text(
+          sending
+              ? AppCopy.english.sendingVerificationEmail
+              : wait > 0
+              ? AppCopy.english.sendAgainSeconds(wait)
+              : AppCopy.english.sendVerificationEmail,
+        ),
+      );
+    },
+  );
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -212,7 +239,8 @@ class _AuthPageState extends State<AuthPage> {
   );
 
   Widget _buildBody(BuildContext context) {
-    final user = context.read<AuthRepository>().currentUser;
+    final service = context.read<AuthRepository>();
+    final user = service.currentUser;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xxxl),
@@ -241,19 +269,7 @@ class _AuthPageState extends State<AuthPage> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  FilledButton(
-                    onPressed: _busy || _emailWait > 0
-                        ? null
-                        : () => _run((service) async {
-                            await service.sendVerification();
-                            return AppCopy.english.verificationEmailRequested;
-                          }, sendsEmail: true),
-                    child: Text(
-                      _emailWait > 0
-                          ? AppCopy.english.sendAgainSeconds(_emailWait)
-                          : AppCopy.english.sendVerificationEmail,
-                    ),
-                  ),
+                  _verificationButton(service),
                   OutlinedButton(
                     onPressed: _busy
                         ? null

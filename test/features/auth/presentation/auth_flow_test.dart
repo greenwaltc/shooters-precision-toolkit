@@ -194,6 +194,61 @@ void main() {
   });
 
   testWidgets(
+    'signup disables resend until the initial verification cooldown expires',
+    (tester) async {
+      var now = DateTime.utc(2026);
+      await withClock(Clock(() => now), () async {
+        final initialSend = Completer<void>();
+        final auth = FakeAuth()
+          ..newUserVerificationBarrier = initialSend.future;
+        await _pumpApp(tester, auth);
+        await _tap(
+          tester,
+          find.widgetWithText(TextButton, 'Create an account'),
+        );
+        final fields = find.byType(TextFormField);
+        await tester.enterText(fields.at(0), 'alice@example.test');
+        await tester.enterText(fields.at(1), 'Test-password-123!');
+        await tester.enterText(fields.at(2), 'Test-password-123!');
+        await _tap(tester, find.widgetWithText(FilledButton, 'Create account'));
+
+        FilledButton verificationButton(String label) =>
+            tester.widget(find.widgetWithText(FilledButton, label));
+        final user = auth.currentUser!;
+        expect(user.verificationRequests, 1);
+        expect(
+          verificationButton('Sending verification email…').onPressed,
+          isNull,
+        );
+
+        now = now.add(const Duration(seconds: 10));
+        initialSend.complete();
+        await tester.pumpAndSettle(
+          const Duration(milliseconds: 100),
+          EnginePhase.sendSemanticsUpdate,
+          const Duration(seconds: 5),
+        );
+        expect(verificationButton('Send again in 60s').onPressed, isNull);
+
+        now = now.add(const Duration(seconds: 59));
+        await tester.pump(const Duration(seconds: 59));
+        expect(verificationButton('Send again in 1s').onPressed, isNull);
+        expect(user.verificationRequests, 1);
+
+        now = now.add(const Duration(seconds: 1));
+        await tester.pump(const Duration(seconds: 1));
+        expect(
+          verificationButton('Send verification email').onPressed,
+          isNotNull,
+        );
+        await _tap(tester, find.text('Send verification email'));
+        expect(user.verificationRequests, 2);
+        expect(verificationButton('Send again in 60s').onPressed, isNull);
+      });
+    },
+  );
+
+  testWidgets(
     'verification email failure can be retried without registering again',
     (tester) async {
       var now = DateTime.utc(2026);

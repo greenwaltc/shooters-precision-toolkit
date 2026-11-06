@@ -204,7 +204,7 @@ class _ContactFormState extends State<_ContactForm> {
                   : null;
             },
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.xl),
           Align(
             alignment: AlignmentDirectional.centerEnd,
             child: FilledButton(
@@ -213,7 +213,7 @@ class _ContactFormState extends State<_ContactForm> {
             ),
           ),
           if (status != null) ...[
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.lg),
             Semantics(
               liveRegion: true,
               child: Text(

@@ -13,11 +13,17 @@ export '../api/project_repository.dart'
 ///
 /// Reads are scoped to that account. Conditional writes protect against
 /// replacing a newer revision.
-class FirestoreProjectRepository implements ProjectRepository {
-  /// Binds the repository to [uid] in an existing Firestore database [db].
-  FirestoreProjectRepository({required this.db, required this.uid});
+class FirestoreProjectRepository implements ProjectEditingRepository {
+  /// Binds the repository to [uid] in [db] with a fresh workspace identity.
+  ///
+  /// The SDK generates the identity locally. No document is created for it.
+  FirestoreProjectRepository({required this.db, required this.uid})
+    : editingSessionId = db.collection('users').doc().id;
   final FirebaseFirestore db;
   final String uid;
+
+  @override
+  final String editingSessionId;
 
   // Firestore SDK maps are a dynamic interop boundary. _decode validates data
   // before exposing Object?-typed JSON to domain models.
@@ -70,15 +76,22 @@ class FirestoreProjectRepository implements ProjectRepository {
       .map((doc) => doc.exists ? _decode(doc) : null)
       .transform(_failureBoundary<CloudProject?>());
 
-  CloudProject _decode(DocumentSnapshot<Map<String, dynamic>> doc) {
+  CloudProject _decode(
+    DocumentSnapshot<Map<String, dynamic>> doc, {
+    int? claimedRevision,
+  }) {
     final data = doc.data();
-    final revision = data?['revision'];
+    final revision = claimedRevision ?? data?['revision'];
+    final editor = claimedRevision == null
+        ? (data?['editorSession'])
+        : editingSessionId;
     final createdAt = data?['createdAt'];
     final updatedAt = data?['updatedAt'];
     if (data == null ||
         data['schemaVersion'] != 1 ||
         revision is! int ||
         revision < 1 ||
+        (editor != null && editor is! String) ||
         createdAt is! Timestamp ||
         (updatedAt != null && updatedAt is! Timestamp)) {
       throw FormatException('Unsupported project ${doc.id}');
@@ -91,6 +104,7 @@ class FirestoreProjectRepository implements ProjectRepository {
     final json = Map<String, Object?>.from(data)
       ..remove('schemaVersion')
       ..remove('revision')
+      ..remove('editorSession')
       ..['id'] = doc.id
       ..['createdAt'] = created.toIso8601String()
       ..['updatedAt'] = updated.toIso8601String();
@@ -100,8 +114,53 @@ class FirestoreProjectRepository implements ProjectRepository {
       doc.metadata.hasPendingWrites,
       cursor: _FirestoreProjectCursor(doc),
       isFromCache: doc.metadata.isFromCache,
+      editorSession: editor as String?,
     );
   }
+
+  @override
+  Future<CloudProject> claimEditing(
+    String id, {
+    required bool allowTakeover,
+  }) => _guard(() async {
+    final ref = _projects.doc(id);
+    final result = await db
+        .runTransaction<({CloudProject? record, AppFailure? failure})>((
+          tx,
+        ) async {
+          try {
+            final current = await tx.get(ref);
+            if (!current.exists) {
+              return (record: null, failure: ProjectConflict(id));
+            }
+            final project = _decode(current);
+            if (project.editorSession == editingSessionId ||
+                (project.editorSession != null && !allowTakeover)) {
+              return (record: project, failure: null);
+            }
+            final revision = project.revision + 1;
+            final claimed = _decode(current, claimedRevision: revision);
+            tx.update(ref, {
+              'revision': revision,
+              'editorSession': editingSessionId,
+            });
+            return (record: claimed, failure: null);
+          } on FirebaseException catch (error) {
+            // A Dart exception leaving the callback can become a JS NativeError
+            // on web, including when sign-out interrupts this read.
+            return (record: null, failure: mapProjectFailure(error.code));
+          } on FormatException {
+            return (
+              record: null,
+              failure: const AppFailure(FailureKind.invalidData),
+            );
+          }
+        });
+    if (result.failure case final failure?) {
+      throw failure;
+    }
+    return result.record!;
+  });
 
   Map<String, Object?> _encode(Map<String, Object?> snapshot, int revision) {
     final data = Map<String, Object?>.from(snapshot)
@@ -131,7 +190,9 @@ class FirestoreProjectRepository implements ProjectRepository {
         final current = await transaction.get(ref);
         final currentData = current.data();
         final actualRevision = current.exists ? _revision(currentData) : 0;
-        if (actualRevision != expectedRevision) {
+        final editor = currentData?['editorSession'];
+        if (actualRevision != expectedRevision ||
+            (editor != null && editor != editingSessionId)) {
           // Return the conflict through the SDK boundary. On web, throwing a Dart
           // domain exception inside a JS transaction wraps it as a NativeError.
           return null;
@@ -139,6 +200,9 @@ class FirestoreProjectRepository implements ProjectRepository {
         final data = _encode(snapshot, actualRevision + 1);
         if (current.exists) {
           data['createdAt'] = currentData?['createdAt'];
+          if (editor != null) {
+            data['editorSession'] = editor;
+          }
         }
         transaction.set(ref, data);
         return actualRevision + 1;

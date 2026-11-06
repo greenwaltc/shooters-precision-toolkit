@@ -12,7 +12,7 @@ class AppBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MediaQuery(
-    data: AppViewport.applyWebSafeArea(MediaQuery.of(context)),
+    data: AppViewport.withSupportedTextScale(MediaQuery.of(context)),
     child: Stack(
       fit: StackFit.expand,
       children: [

@@ -197,7 +197,7 @@ class MatrixGridClipboard {
       valueIdx += 1;
 
       final cell = manager.refRows[rowIdx].cells[_rangeField]!;
-      manager.changeCellValue(cell, text.isEmpty ? null : text);
+      manager.changeCellValue(cell, text);
     }
   }
 

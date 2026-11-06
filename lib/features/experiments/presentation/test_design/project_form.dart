@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../shared/l10n/app_copy.dart';
 import '../../../../shared/ui/product_configuration.dart';
@@ -29,11 +30,16 @@ class ProjectForm extends StatefulWidget {
   /// [onSubmit], when supplied, lets the parent decide what happens when the
   /// user submits it from the bottom of the form. Set [showScrollCues] to
   /// false while a mobile keyboard covers the bottom of the screen.
+  /// Set [readOnly] to show the design without allowing changes or submission.
+  /// [onReadOnlyFieldActivate] can request editing access when a text field is
+  /// tapped or activated with Enter.
   const ProjectForm({
     super.key,
     required this.formModel,
     this.onSubmit,
     this.showScrollCues = true,
+    this.readOnly = false,
+    this.onReadOnlyFieldActivate,
   });
 
   /// Mutable setup state shared with the selected project.
@@ -44,6 +50,12 @@ class ProjectForm extends StatefulWidget {
 
   /// Whether to show the indicators for more scrollable content.
   final bool showScrollCues;
+
+  /// Whether editing controls and submission are disabled.
+  final bool readOnly;
+
+  /// Called when the user activates a text field while the form is read-only.
+  final VoidCallback? onReadOnlyFieldActivate;
 
   @override
   State<ProjectForm> createState() => _ProjectFormState();
@@ -97,6 +109,7 @@ class _ProjectFormState extends State<ProjectForm> {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.formModel != widget.formModel) {
+      _isHydratingControllers = true;
       projectTitleController.text = widget.formModel.projectTitle;
       _hydrateFactorControllers();
     }
@@ -114,11 +127,13 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   void _syncProjectTitle() {
-    widget.formModel.setProjectTitle(projectTitleController.text);
+    if (!_isHydratingControllers && !widget.readOnly) {
+      widget.formModel.setProjectTitle(projectTitleController.text);
+    }
   }
 
   void _syncFactorDefinition(int index, {bool trimValues = false}) {
-    if (_isHydratingControllers) {
+    if (_isHydratingControllers || widget.readOnly) {
       return;
     }
     if (index >= widget.formModel.experimentStructure.factorCount) {
@@ -390,7 +405,7 @@ class _ProjectFormState extends State<ProjectForm> {
       child: RadioGroup<ExperimentStructure>(
         groupValue: widget.formModel.experimentStructure,
         onChanged: (structure) {
-          if (structure == null) {
+          if (structure == null || widget.readOnly) {
             return;
           }
 
@@ -412,6 +427,7 @@ class _ProjectFormState extends State<ProjectForm> {
                   ? VisualDensity.compact
                   : null,
               value: structure,
+              enabled: !widget.readOnly,
               title: Text(structure.label),
             );
           }).toList(),
@@ -489,7 +505,7 @@ class _ProjectFormState extends State<ProjectForm> {
       child: RadioGroup<RiskLevel>(
         groupValue: widget.formModel.riskLevel,
         onChanged: (level) {
-          if (level == null) {
+          if (level == null || widget.readOnly) {
             return;
           }
 
@@ -509,6 +525,7 @@ class _ProjectFormState extends State<ProjectForm> {
                   ? VisualDensity.compact
                   : null,
               value: level,
+              enabled: !widget.readOnly,
               title: Text(level.label),
             );
           }).toList(),
@@ -527,7 +544,7 @@ class _ProjectFormState extends State<ProjectForm> {
       child: RadioGroup<SampleSizeOption>(
         groupValue: widget.formModel.sampleSizeOption,
         onChanged: (option) {
-          if (option == null) {
+          if (option == null || widget.readOnly) {
             return;
           }
 
@@ -543,6 +560,7 @@ class _ProjectFormState extends State<ProjectForm> {
       dense: MediaQuery.sizeOf(context).width >= 1024,
       minTileHeight: 56,
       value: option,
+      enabled: !widget.readOnly,
       title: Text(option.formOptionLabel(widget.formModel.experimentStructure)),
       subtitle: Text(
         context.l10n.detectsDifference(
@@ -557,17 +575,19 @@ class _ProjectFormState extends State<ProjectForm> {
       value: widget.formModel.imputeMissingData,
       title: Text(context.l10n.imputeMissingDataWithTheGrandMean),
       controlAffinity: ListTileControlAffinity.leading,
-      onChanged: (value) {
-        setState(() {
-          widget.formModel.setImputeMissingData(value ?? false);
-        });
-      },
+      onChanged: widget.readOnly
+          ? null
+          : (value) {
+              setState(() {
+                widget.formModel.setImputeMissingData(value ?? false);
+              });
+            },
     );
   }
 
   Widget _buildSubmitButton(AppLayoutMetrics layout) {
     final button = FilledButton.icon(
-      onPressed: _onSubmitClicked,
+      onPressed: widget.readOnly ? null : _onSubmitClicked,
       icon: const Icon(Icons.check_rounded),
       label: Text(context.l10n.submit),
     );
@@ -593,18 +613,38 @@ class _ProjectFormState extends State<ProjectForm> {
     IconData? prefixIcon,
     required FormFieldValidator<String> validator,
   }) {
+    final requestEditing = widget.readOnly
+        ? widget.onReadOnlyFieldActivate
+        : null;
+    final field = TextFormField(
+      controller: controller,
+      readOnly: widget.readOnly,
+      onTap: requestEditing,
+      decoration: buildAppTextFieldDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
+        controller: widget.readOnly ? null : controller,
+      ),
+      textInputAction: TextInputAction.next,
+      validator: validator,
+    );
     return Padding(
       padding: AppSpacing.fieldPadding,
-      child: TextFormField(
-        controller: controller,
-        decoration: buildAppTextFieldDecoration(
-          labelText: labelText,
-          hintText: hintText,
-          prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
-          controller: controller,
-        ),
-        textInputAction: TextInputAction.next,
-        validator: validator,
+      child: Focus(
+        canRequestFocus: false,
+        onKeyEvent: requestEditing == null
+            ? null
+            : (_, event) {
+                if (event is KeyDownEvent &&
+                    (event.logicalKey == LogicalKeyboardKey.enter ||
+                        event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+                  requestEditing();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+        child: field,
       ),
     );
   }

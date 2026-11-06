@@ -1,14 +1,146 @@
+import 'dart:math';
+
+import 'package:bramwells_precision_test_kit/features/experiments/api/project_repository.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/data_matrix_page.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/services/matrix_grid_data_builder.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/saved_project.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
+import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 
+import '../../../../support/fake_project_repository.dart';
 import '../../../../support/matrix_test_fixture.dart';
+import '../../../../support/test_configuration.dart';
 
 void main() {
+  for (final mobile in [false, true]) {
+    testWidgets(
+      'tapping a read-only range takes over on ${mobile ? 'mobile' : 'desktop'}',
+      (tester) async {
+        final (store, project, repository) = await _openSharedProject(
+          tester,
+          mobile ? const Size(390, 844) : const Size(1440, 900),
+          setupComplete: true,
+        );
+        final cell = matrixCell(0, 'range');
+        PlutoGridStateManager grid() =>
+            tester.state<PlutoGridState>(find.byType(PlutoGrid)).stateManager;
+
+        final notice = find.text(AppCopy.english.projectEditingElsewhere);
+        expect(notice, findsOneWidget);
+        expect(grid().rows.first.cells['range']!.value, '9.5');
+        repository.publishRemoteProject(
+          CloudProject(
+            SavedProject.fromJson(
+              project.toJson()..['matrixState'] = {'range_0': '9.75'},
+            ),
+            3,
+            false,
+            editorSession: 'other-session',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(grid().rows.first.cells['range']!.value, '9.75');
+        await tester.ensureVisible(cell);
+        await tester.tap(cell);
+        await tester.pumpAndSettle();
+        expect(
+          store.canEditProject(project.id),
+          isTrue,
+          reason:
+              'Claim pending: ${store.isClaimingEditor(project.id)}. '
+              'Draft present: ${store.editStateFor(project.id)?.isDirty}.',
+        );
+        expect(notice, findsNothing);
+        expect(grid().rows.first.cells['range']!.value, '9.75');
+        if (mobile) {
+          await tester.tap(cell);
+          await tester.pump();
+        }
+        final editor = mobile
+            ? find.descendant(of: cell, matching: find.byType(TextField))
+            : find.byType(TextField);
+        expect(tester.widget<TextField>(editor).controller!.text, '9.75');
+        await tester.enterText(editor, '10');
+        await tester.pumpAndSettle();
+        expect(store.selectedProject!.matrixState['range_0'], '10');
+
+        final emptyCell = matrixCell(1, 'range');
+        if (mobile) {
+          await tester.tap(emptyCell);
+        } else {
+          await tester.tap(emptyCell);
+          await tester.pumpAndSettle();
+          await tester.tap(emptyCell);
+        }
+        await tester.pumpAndSettle();
+        final emptyEditor = mobile
+            ? find.descendant(of: emptyCell, matching: find.byType(TextField))
+            : find.byType(TextField);
+        expect(tester.widget<TextField>(emptyEditor).controller!.text, isEmpty);
+      },
+    );
+  }
+
+  testWidgets('Enter takes over editing from the selected Group Size cell', (
+    tester,
+  ) async {
+    final (store, project, _) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: true,
+    );
+    final manager = tester
+        .state<PlutoGridState>(find.byType(PlutoGrid))
+        .stateManager;
+    manager.setCurrentCell(manager.rows.first.cells['range'], 0);
+    manager.gridFocusNode.requestFocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(store.canEditProject(project.id), isTrue);
+    expect(find.byType(TextField), findsOneWidget);
+  });
+
+  for (final keyboard in [false, true]) {
+    testWidgets('activating a read-only Test Design field with '
+        '${keyboard ? 'Enter' : 'a tap'} transfers control', (tester) async {
+      final (store, project, _) = await _openSharedProject(
+        tester,
+        const Size(390, 844),
+        setupComplete: false,
+      );
+      final notice = find.text(AppCopy.english.projectEditingElsewhere);
+      final field = find.byType(TextField).first;
+      expect(notice, findsOneWidget);
+      expect(tester.widget<TextField>(field).readOnly, isTrue);
+
+      if (keyboard) {
+        tester
+            .widget<EditableText>(find.byType(EditableText).first)
+            .focusNode
+            .requestFocus();
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      } else {
+        await tester.tap(field);
+      }
+      await tester.pumpAndSettle();
+
+      expect(store.canEditProject(project.id), isTrue);
+      expect(notice, findsNothing);
+      expect(tester.widget<TextField>(field).readOnly, isFalse);
+    });
+  }
+
   test('factor states change fastest at the left within each replicate', () {
     final form = ProjectFormModel(
       experimentStructure: ExperimentStructure.threeFactors,
@@ -137,4 +269,80 @@ void main() {
     expect(project.matrixState['range_1'], '2');
     expect(project.matrixState['range_2'], '3');
   });
+}
+
+Future<(ProjectStore, SavedProject, _EditingRepository)> _openSharedProject(
+  WidgetTester tester,
+  Size size, {
+  required bool setupComplete,
+}) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetPhysicalSize);
+
+  final now = DateTime.utc(2026, 11, 5);
+  final project = SavedProject(
+    id: 'shared-project',
+    createdAt: now,
+    updatedAt: now,
+    setupComplete: setupComplete,
+    formModel: ProjectFormModel(
+      projectTitle: 'Shared project',
+      factorDefinitions: const [
+        FactorDefinition(name: 'Factor', firstState: 'A', secondState: 'B'),
+      ],
+    ),
+    matrixState: {'range_0': '9.5'},
+  );
+  final repository = _EditingRepository()
+    ..publishRemoteProject(
+      CloudProject(project, 2, false, editorSession: 'other-session'),
+    );
+  final store = ProjectStore(
+    repository: repository,
+    draftStorage: InMemoryProjectDraftStorage(),
+    clock: Clock.fixed(now),
+    saveDebounce: Duration.zero,
+  );
+  addTearDown(store.dispose);
+  await pumpConfiguredWidget(
+    tester,
+    MyApp(
+      clock: Clock.fixed(now),
+      config: testConfig(),
+      random: Random(4729),
+      projectStore: store,
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Shared project'));
+  await tester.pumpAndSettle();
+  return (store, project, repository);
+}
+
+class _EditingRepository extends FakeProjectRepository
+    implements ProjectEditingRepository {
+  @override
+  String get editingSessionId => 'local-session';
+
+  @override
+  Future<CloudProject> claimEditing(
+    String id, {
+    required bool allowTakeover,
+  }) async {
+    final current = remoteProject(id)!;
+    if (current.editorSession == editingSessionId ||
+        (current.editorSession != null && !allowTakeover)) {
+      return current;
+    }
+    final claim = CloudProject(
+      current.project,
+      current.revision + 1,
+      false,
+      editorSession: editingSessionId,
+    );
+    publishRemoteProject(claim);
+    return claim;
+  }
 }

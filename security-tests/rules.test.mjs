@@ -10,6 +10,7 @@ import {
 
 import {
   collection,
+  deleteField,
   deleteDoc,
   doc,
   getDoc,
@@ -244,6 +245,39 @@ test('project list queries require a limit of at most 25', async () => {
   )));
 });
 
+test('an editing claim changes only the editor and revision', async () => {
+  const owner = projectRef(userDb('alice'));
+  const firstSession = 'a'.repeat(20);
+  const secondSession = 'b'.repeat(20);
+  await assertFails(setDoc(owner, { ...validProject(), editorSession: firstSession }));
+  await setDoc(owner, validProject());
+  const original = (await getDoc(owner)).data();
+
+  const claim = { revision: 2, editorSession: firstSession };
+  await assertFails(updateDoc(projectRef(userDb('bob')), claim));
+  await assertFails(updateDoc(projectRef(userDb('alice', false)), claim));
+  await assertFails(updateDoc(projectRef(environment.unauthenticatedContext().firestore()), claim));
+  for (const editorSession of [1, null, '', 'a'.repeat(1000), '../other/workspace']) {
+    await assertFails(updateDoc(owner, { ...claim, editorSession }));
+  }
+  await assertFails(updateDoc(owner, { ...claim, revision: 3 }));
+  await assertFails(updateDoc(owner, { ...claim, matrixState: { range_0: '5' } }));
+  await assertFails(updateDoc(owner, { ...claim, createdAt: serverTimestamp() }));
+  await assertFails(updateDoc(owner, { ...claim, updatedAt: serverTimestamp() }));
+  await assertFails(updateDoc(owner, { ...claim, ownerId: 'bob' }));
+  await assertSucceeds(updateDoc(owner, claim));
+  assert.deepEqual((await getDoc(owner)).data(), { ...original, ...claim });
+
+  await assertFails(updateDoc(owner, { revision: 3, editorSession: deleteField() }));
+  await assertFails(setDoc(owner, { ...validProject(), revision: 3 }));
+  await assertSucceeds(updateDoc(owner, { revision: 3, editorSession: secondSession }));
+  await assertSucceeds(updateDoc(owner, {
+    revision: 4,
+    matrixState: { range_0: '5' },
+    updatedAt: serverTimestamp(),
+  }));
+});
+
 test('import receipts are immutable', async () => {
   const db = userDb('alice');
   const migrationKey = 'a'.repeat(64);
@@ -292,6 +326,7 @@ test('a deletion request blocks new project writes', async () => {
     revision: 2,
     updatedAt: serverTimestamp(),
   }));
+  await assertFails(updateDoc(existing, { revision: 2, editorSession: 'a'.repeat(20) }));
 
   await assertFails(deleteDoc(request));
   await assertFails(updateDoc(request, { status: 'completed' }));

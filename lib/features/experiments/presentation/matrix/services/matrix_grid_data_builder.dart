@@ -238,39 +238,11 @@ class MatrixGridDataBuilder {
         for (var factorIdx = 0; factorIdx < combo.length; factorIdx++)
           'factor_$factorIdx': PlutoCell(value: combo[factorIdx]),
         'range': PlutoCell(
-          value: _savedRangeValue(
-            project: project,
-            rangeIndex: rangeIndex,
-            comboIdx: comboIdx,
-            blockIdx: blockIdx,
-            comboCount: combinations.length,
-            structure: formModel.experimentStructure,
-          ),
+          // Pluto's text editor stringifies the value, including null.
+          value: project.matrixState['range_$rangeIndex']?.toString() ?? '',
         ),
       },
     );
-  }
-
-  static Object? _savedRangeValue({
-    required SavedProject project,
-    required int rangeIndex,
-    required int comboIdx,
-    required int blockIdx,
-    required int comboCount,
-    required ExperimentStructure structure,
-  }) {
-    final primaryValue = project.matrixState['range_$rangeIndex'];
-    if (primaryValue != null) {
-      return primaryValue;
-    }
-    if (structure != ExperimentStructure.simpleABComparison) {
-      return null;
-    }
-
-    // Older one-factor projects used replicate-major keys. Read the legacy
-    // key once and rewrite through the primary key on the next edit.
-    final legacyIndex = blockIdx * comboCount + comboIdx;
-    return project.matrixState['range_$legacyIndex'];
   }
 
   static List<List<String>> _appendFactorStates(

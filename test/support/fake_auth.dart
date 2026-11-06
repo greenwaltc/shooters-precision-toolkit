@@ -25,6 +25,7 @@ class FakeAuth extends Fake implements FirebaseAuth {
   FakeAuthUser? _user;
   int registrations = 0;
   int newUserVerificationFailures = 0;
+  Future<void>? newUserVerificationBarrier;
   final passwordResetRequests = <String>[];
 
   @override
@@ -61,7 +62,8 @@ class FakeAuth extends Fake implements FirebaseAuth {
   }) async {
     registrations++;
     final user = FakeAuthUser(uid: 'created-$registrations', email: email)
-      ..verificationFailures = newUserVerificationFailures;
+      ..verificationFailures = newUserVerificationFailures
+      ..verificationBarrier = newUserVerificationBarrier;
     users[email] = user;
     switchUser(user);
     return _Credential(user);
@@ -116,6 +118,7 @@ class FakeAuthUser extends Fake implements User {
   bool serverVerified;
   int verificationFailures = 0;
   int verificationRequests = 0;
+  Future<void>? verificationBarrier;
   int forcedTokenRefreshes = 0;
   Completer<IdTokenResult>? tokenRefresh;
   void Function()? onReload;
@@ -151,6 +154,7 @@ class FakeAuthUser extends Fake implements User {
   @override
   Future<void> sendEmailVerification([ActionCodeSettings? settings]) async {
     verificationRequests++;
+    await verificationBarrier;
     if (verificationFailures > 0) {
       verificationFailures--;
       throw FirebaseAuthException(code: 'network-request-failed');

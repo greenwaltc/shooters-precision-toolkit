@@ -115,6 +115,8 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   final _projects = <String, SavedProject>{};
   final _projectListeners = <String, VoidCallback>{};
   final _revisions = <String, int>{};
+  final _editorRecords = <String, ({int revision, String? session})>{};
+  final _claimingEditor = <String>{};
   final _editVersions = <String, int>{};
   final _observedContents = <String, String>{};
   final _dirty = <String>{};
@@ -188,6 +190,67 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
 
   /// The known cloud revision for [id], or zero when no revision is recorded.
   int revisionFor(String id) => _revisions[id] ?? 0;
+
+  /// Whether this session can edit [id] without requesting a handoff.
+  ///
+  /// An unsaved new project and repositories without session coordination can
+  /// be edited immediately. Existing coordinated projects need a server claim.
+  bool canEditProject(String id) {
+    final editing = repository;
+    return editing is! ProjectEditingRepository ||
+        revisionFor(id) == 0 ||
+        _editorRecords[id]?.session == editing.editingSessionId;
+  }
+
+  /// Whether an editor page may claim [id] automatically on opening.
+  bool canClaimUnownedProject(String id) =>
+      _editorRecords.containsKey(id) && _editorRecords[id]?.session == null;
+
+  /// Whether a competing session holds the last acknowledged claim for [id].
+  bool isEditingElsewhere(String id) =>
+      !canEditProject(id) && _editorRecords[id]?.session != null;
+
+  /// Whether a request for editing control is pending for [id].
+  bool isClaimingEditor(String id) => _claimingEditor.contains(id);
+
+  /// Requests editing control and loads the acknowledged project before
+  /// returning true. An automatic claim leaves a competing holder in place.
+  ///
+  /// Returns false when the selection changes, another request is pending, or
+  /// a local draft needs review first. Repository failures reach the caller.
+  Future<bool> claimProjectEditing(
+    String id, {
+    required bool allowTakeover,
+  }) async {
+    if (_disposed || _selectedProjectId != id) {
+      return false;
+    }
+    if (canEditProject(id)) {
+      return true;
+    }
+    final editing = repository;
+    if (editing is! ProjectEditingRepository ||
+        _dirty.contains(id) ||
+        _saving.contains(id) ||
+        !_claimingEditor.add(id)) {
+      return false;
+    }
+    _notifyIfActive();
+    try {
+      final record = await editing.claimEditing(
+        id,
+        allowTakeover: allowTakeover,
+      );
+      if (_disposed || !_projects.containsKey(id)) {
+        return false;
+      }
+      _acceptRemote(record);
+      return _selectedProjectId == id && canEditProject(id);
+    } finally {
+      _claimingEditor.remove(id);
+      _notifyIfActive();
+    }
+  }
 
   /// The current draft or save error for [id], or null when neither is
   /// recorded. Draft errors take priority.
@@ -701,13 +764,24 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (_deleting.contains(id) || record.hasPendingWrites) {
       return;
     }
+    final editor = _editorRecords[id];
+    if (repository is ProjectEditingRepository &&
+        !record.isFromCache &&
+        (editor == null || record.revision >= editor.revision)) {
+      _editorRecords[id] = (
+        revision: record.revision,
+        session: record.editorSession,
+      );
+    }
     final existing = _projects[id];
     if (existing != null) {
       _captureChanges(existing);
     }
     if (_dirty.contains(id) || _saving.contains(id)) {
       final pending = _pendingRemote[id];
-      if (pending == null || record.revision >= pending.revision) {
+      if (pending == null ||
+          record.revision > pending.revision ||
+          (record.revision == pending.revision && !record.isFromCache)) {
         _pendingRemote[id] = record;
       }
       if (!_saving.contains(id) && record.revision > revisionFor(id)) {
@@ -783,9 +857,11 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     if (project == null) {
       return;
     }
-    _syncSetupComplete(project);
-    if (markModified) {
-      project.touch(clock.now());
+    if (canEditProject(project.id)) {
+      _syncSetupComplete(project);
+      if (markModified) {
+        project.touch(clock.now());
+      }
     }
     _captureChanges(project);
     _notifyIfActive();
@@ -817,7 +893,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   /// Completion does not wait for cloud acknowledgement.
   Future<bool> completeProjectSetup() async {
     final project = selectedProject;
-    if (project == null || !project.formModel.isSetupValid) {
+    if (project == null ||
+        !canEditProject(project.id) ||
+        !project.formModel.isSetupValid) {
       return false;
     }
     if (!project.setupComplete) {
@@ -940,6 +1018,9 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
         _acceptRemote(remote);
       } else if (remote != null && remote.revision > revisionFor(id)) {
         _pendingRemote[id] = remote;
+        if (isEditingElsewhere(id)) {
+          _saveErrors[id] = ProjectConflict(id);
+        }
       }
       if (_dirty.contains(id) && !_saveErrors.containsKey(id)) {
         // A successful older snapshot must never mark newer edits as saved.
@@ -1022,6 +1103,7 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _removeProject(String id, {bool selectNext = true}) {
+    _editorRecords.remove(id);
     _recentPage = _recentPage
         .where((record) => record.project.id != id)
         .toList();

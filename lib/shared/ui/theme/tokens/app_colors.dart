@@ -31,6 +31,12 @@ class AppColors {
   /// PNG/JPEG export image.
   static const Color exportImageBackground = AppDesign.exportImageBackground;
 
+  /// Background of the copyright strip in every theme.
+  static const Color copyrightBackground = AppDesign.copyrightBackground;
+
+  /// Foreground of the copyright strip in every theme.
+  static const Color copyrightForeground = AppDesign.copyrightForeground;
+
   /// Stroke painted around chart marker dots (and legend dots) to give them
   /// a clean separation from the underlying line.
   static const Color chartDotOutline = AppDesign.chartDotOutline;

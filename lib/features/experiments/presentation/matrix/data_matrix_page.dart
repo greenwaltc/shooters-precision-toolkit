@@ -13,6 +13,7 @@ import '../../../../shared/foundation/clipboard_events.dart';
 import '../../../../shared/l10n/app_copy.dart';
 import '../../../../shared/ui/app_bar_actions.dart';
 import '../../../../shared/ui/app_brand_bar.dart';
+import '../../../../shared/ui/app_copyright_footer.dart';
 import '../../../../shared/ui/app_nav_chrome.dart';
 import '../../../../shared/ui/navigation/app_routes.dart';
 import '../../../../shared/ui/product_configuration.dart';
@@ -30,8 +31,8 @@ import '../results/services/anomr_calculator.dart';
 import '../saved_project.dart';
 import '../test_design/project_form_model.dart';
 import '../widgets/no_selected_project_page.dart';
+import '../widgets/project_editing_notice.dart';
 import '../widgets/project_save_status.dart';
-import '../widgets/workspace_footer.dart';
 import 'services/matrix_grid_clipboard.dart';
 import 'services/matrix_grid_data_builder.dart';
 import 'services/matrix_grid_history.dart';
@@ -109,7 +110,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
       builder: (context, layout) => Scaffold(
         appBar: _buildAppBar(context, layout, store),
         body: _buildBody(context, layout, formModel),
-        bottomNavigationBar: const WorkspaceFooter(showSaveStatus: false),
+        bottomNavigationBar: const AppCopyrightFooter(),
       ),
     );
   }
@@ -242,6 +243,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             ),
             project: project,
             isMobile: layout.isMobile,
+            canEdit: context.read<ProjectStore>().canEditProject(project.id),
           ),
         ),
       ),
@@ -343,15 +345,18 @@ class _MatrixHeader extends StatelessWidget {
 class AnomrMatrixGrid extends StatefulWidget {
   /// Creates a measurement grid for [project].
   ///
-  /// [isMobile] selects the compact interaction and layout.
+  /// [isMobile] selects the compact interaction and layout. Set [canEdit]
+  /// to false to keep browsing and copying available during a handoff.
   const AnomrMatrixGrid({
     super.key,
     required this.project,
     required this.isMobile,
+    this.canEdit = true,
   });
 
   final SavedProject project;
   final bool isMobile;
+  final bool canEdit;
 
   @override
   State<AnomrMatrixGrid> createState() => _AnomrMatrixGridState();
@@ -362,9 +367,13 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   // Every built row has range/storage/index cells; these SDK cells remain
   // mutable, while nullable selection/focus state must be checked separately.
   static const double _desktopMaxWidth = 1180;
+  static const _mobileTitlePadding = EdgeInsets.symmetric(
+    horizontal: AppSpacing.sm,
+  );
   late List<PlutoColumn> _columns;
   late List<PlutoRow> _rows;
-  late final List<int> _defaultRunSequence;
+  List<double>? _mobileContentWidths;
+  late List<int> _defaultRunSequence;
   late List<PlutoColumnGroup> _columnGroups;
   PlutoGridStateManager? _stateManager;
   _ScrollCueState _scrollCues = const _ScrollCueState();
@@ -378,6 +387,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   VoidCallback? _rangeEditSyncListener;
   final MatrixGridHistoryController _history = MatrixGridHistoryController();
   VoidCallback? _removeBrowserClipboard;
+  int? _requestedRange;
+  late final ProjectStore _store;
+  bool _isInTree = true;
+
+  bool get _canWrite => _isInTree && _store.canEditProject(widget.project.id);
 
   static const Duration _rangeEditSelectionGuardDuration =
       BehaviorPolicy.selectionGuard;
@@ -395,7 +409,15 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         !_gridWasEditing &&
         manager.currentColumn?.field == 'range') {
       _beginRangeCellEditSelectionGuard();
-      _attachRangeEditSyncListener();
+      // Pluto mounts its text controller when the editing cell is built.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            identical(manager, _stateManager) &&
+            manager.isEditing &&
+            manager.currentColumn?.field == 'range') {
+          _attachRangeEditSyncListener();
+        }
+      });
     } else if (!isEditing && _gridWasEditing) {
       _endRangeCellEditSelectionGuard();
       _detachRangeEditSyncListener();
@@ -568,14 +590,17 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     return columns.fold<double>(0, (total, column) => total + column.width);
   }
 
+  // Pluto paints the grid border without reserving horizontal layout space.
+  double get _gridHorizontalInset => widget.isMobile
+      ? PlutoGridSettings.gridPadding * 2
+      : PlutoGridSettings.gridInnerSpacing;
+
   double _gridContentWidth({required bool includeVerticalScrollbar}) {
     final plutoTheme = _plutoTheme();
     final scrollbarWidth = includeVerticalScrollbar
         ? plutoTheme.scrollbarThickness
         : 0;
-    return _columnTotalWidth() +
-        PlutoGridSettings.gridInnerSpacing +
-        scrollbarWidth;
+    return _columnTotalWidth() + _gridHorizontalInset + scrollbarWidth;
   }
 
   double _gridContentHeight({
@@ -708,17 +733,22 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   void _attachStateManager(PlutoGridStateManager manager) {
-    _detachScrollListeners();
-    _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
-    _stateManager?.removeListener(_handleRangeCellEditFocus);
-    _endRangeCellEditSelectionGuard();
-    _detachRangeEditSyncListener();
+    _detachStateManager();
     _stateManager = manager;
     _stateManager!.resizingChangeNotifier.addListener(_handleGridResize);
     _stateManager!.setSelectingMode(PlutoGridSelectingMode.cell);
     _gridWasEditing = manager.isEditing == true;
     _stateManager!.addListener(_handleRangeCellEditFocus);
     _attachScrollListeners();
+  }
+
+  void _detachStateManager() {
+    _detachScrollListeners();
+    _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
+    _stateManager?.removeListener(_handleRangeCellEditFocus);
+    _endRangeCellEditSelectionGuard();
+    _detachRangeEditSyncListener();
+    _stateManager = null;
   }
 
   PlutoGridStyleConfig _plutoStyleConfig(PlutoGridStyleTheme plutoTheme) {
@@ -736,6 +766,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       columnTextStyle: AppTextStyles.plutoColumn.copyWith(
         color: scheme.onSurface,
       ),
+      defaultColumnTitlePadding: widget.isMobile ? _mobileTitlePadding : null,
       cellTextStyle: TextStyle(color: scheme.onSurface, fontSize: 14),
       rowHeight: plutoTheme.rowHeight,
       columnHeight: plutoTheme.columnHeight,
@@ -757,6 +788,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           ? KeyEventResult.skipRemainingHandlers
           : KeyEventResult.ignored,
       child: PlutoGrid(
+        key: ObjectKey(_columns),
         columns: _columns,
         rows: _rows,
         columnGroups: widget.isMobile ? const [] : _columnGroups,
@@ -767,7 +799,10 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             if (!mounted) {
               return;
             }
-            _fitIndexColumns();
+            if (!widget.isMobile) {
+              _fitIndexColumns();
+            }
+            _revealRequestedRange();
           });
         },
         configuration: PlutoGridConfiguration(
@@ -778,7 +813,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             scrollbarRadius: plutoTheme.scrollbarRadius,
           ),
           columnSize: PlutoGridColumnSizeConfig(
-            autoSizeMode: PlutoAutoSizeMode.scale,
+            autoSizeMode: widget.isMobile
+                ? PlutoAutoSizeMode.none
+                : PlutoAutoSizeMode.scale,
           ),
           shortcut: PlutoGridShortcut(actions: _shortcutActions()),
         ),
@@ -794,6 +831,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   /// below (or above with Shift). Copy/paste and undo/redo use the platform
   /// modifier.
   Map<ShortcutActivator, PlutoGridShortcutAction> _shortcutActions() {
+    final enter = widget.canEdit
+        ? const _AdvanceRangeCellAction()
+        : _AdvanceRangeCellAction(
+            requestEditing: (row) =>
+                unawaited(_editRangeHere(_storageIndexOf(row))),
+          );
     return {
       ...PlutoGridShortcut.defaultActions,
       for (final modifier in [
@@ -804,11 +847,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             const MatrixGridCopyValuesAction(),
         LogicalKeySet(modifier, LogicalKeyboardKey.keyV): _pasteAction(),
       },
+      if (!widget.isMobile || !widget.canEdit) ...{
+        LogicalKeySet(LogicalKeyboardKey.enter): enter,
+        LogicalKeySet(LogicalKeyboardKey.numpadEnter): enter,
+      },
       if (!widget.isMobile) ...{
-        LogicalKeySet(LogicalKeyboardKey.enter):
-            const _AdvanceRangeCellAction(),
-        LogicalKeySet(LogicalKeyboardKey.numpadEnter):
-            const _AdvanceRangeCellAction(),
         LogicalKeySet(LogicalKeyboardKey.shift, LogicalKeyboardKey.enter):
             const _AdvanceRangeCellAction(),
         LogicalKeySet(LogicalKeyboardKey.tab): const _AdvanceRangeCellAction(),
@@ -899,7 +942,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       enableContextMenu: false,
       enableDropToResize: false,
       suppressedAutoSize: true,
-      minWidth: widget.isMobile ? 64 : PlutoGridSettings.minColumnWidth,
+      cellPadding: widget.isMobile ? EdgeInsets.zero : null,
       width: _initialIndexColumnWidth(title: title, maxValue: maxValue),
       textAlign: PlutoColumnTextAlign.center,
       titleTextAlign: PlutoColumnTextAlign.center,
@@ -933,7 +976,69 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       textDirection: TextDirection.ltr,
       maxLines: 1,
     )..layout();
-    return painter.width;
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
+  /// Fits mobile columns to the widest rendered label or value. Spare width
+  /// fills the viewport; a wider matrix keeps its readable widths and scrolls.
+  void _fitMobileColumns(double viewportWidth, BuildContext context) {
+    final contentWidths = _mobileContentWidths ??= _measureMobileColumns(
+      context,
+    );
+    final available = viewportWidth - _gridHorizontalInset;
+    final contentWidth = contentWidths.fold<double>(
+      0,
+      (sum, width) => sum + width,
+    );
+    final extra = math.max(0.0, available - contentWidth) / _columns.length;
+    var changed = false;
+    for (var i = 0; i < _columns.length; i++) {
+      final width = contentWidths[i] + extra;
+      if (_columns[i].width != width) {
+        _columns[i].width = width;
+        changed = true;
+      }
+    }
+    final manager = _stateManager;
+    if (changed && manager != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && identical(manager, _stateManager)) {
+          manager.notifyResizingListeners();
+        }
+      });
+    }
+  }
+
+  List<double> _measureMobileColumns(BuildContext context) {
+    final defaults = DefaultTextStyle.of(context).style;
+    final headerStyle = defaults.merge(AppTextStyles.plutoColumn);
+    final factorStyle = defaults.merge(AppTextStyles.plutoFactorCell(context));
+    final rangeStyle = defaults.merge(Theme.of(context).textTheme.bodyMedium);
+    final direction = Directionality.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    final locale = Localizations.maybeLocaleOf(context);
+    double widthOf(String text, TextStyle style) => TextPainter.computeWidth(
+      text: TextSpan(text: text, style: style),
+      textDirection: direction,
+      textScaler: scaler,
+      locale: locale,
+    );
+
+    return _columns.map((column) {
+      final style = column.field == 'range' ? rangeStyle : factorStyle;
+      final values = {
+        for (final row in _rows)
+          row.cells[column.field]?.value?.toString() ?? '',
+      };
+      var width =
+          widthOf(column.title, headerStyle) + _mobileTitlePadding.horizontal;
+      for (final value in values) {
+        width = math.max(width, widthOf(value, style) + 2 * AppSpacing.md);
+      }
+      return width.ceilToDouble() + PlutoGridSettings.gridBorderWidth * 2;
+    }).toList();
   }
 
   void _fitIndexColumns() {
@@ -1004,7 +1109,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                 ? manager.style.activatedColor
                 : plutoTheme.factorCellBackground,
             alignment: alignment,
-            padding: AppSpacing.plutoFactorCell,
+            padding: widget.isMobile
+                ? const EdgeInsets.symmetric(horizontal: AppSpacing.md)
+                : AppSpacing.plutoFactorCell,
             child: child,
           );
         },
@@ -1074,7 +1181,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   MatrixGridPasteValuesAction _pasteAction() => MatrixGridPasteValuesAction(
     history: _history,
-    canApply: () => _acceptsGridClipboard,
+    canApply: () => _acceptsGridClipboard && _canWrite,
     onRejected: _showPasteRestriction,
   );
 
@@ -1139,11 +1246,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   @override
   void initState() {
     super.initState();
+    _store = context.read<ProjectStore>();
     _initializeGridData();
     HardwareKeyboard.instance.addHandler(_matrixKeyboardHandler);
     FocusManager.instance.addEarlyKeyEventHandler(_clipboardKeyHandler);
     _removeBrowserClipboard = context.read<ClipboardEvents>().register(
-      acceptsPaste: () => _acceptsGridClipboard,
+      acceptsPaste: () => _acceptsGridClipboard && _canWrite,
       copyText: () => _acceptsGridClipboard && _stateManager?.isEditing != true
           ? MatrixGridClipboard.copyTextForSelection(_stateManager!)
           : null,
@@ -1152,21 +1260,49 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _mobileContentWidths = null;
+  }
+
+  @override
+  void deactivate() {
+    // Pluto can report an edit while disposing its TextField.
+    _isInTree = false;
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _isInTree = true;
+  }
+
+  @override
+  void didUpdateWidget(AnomrMatrixGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // PlutoGrid keeps its own mutable rows and editors. Remount it when the
+    // store replaces the cloud model or revokes this session's editing access.
+    if (oldWidget.project != widget.project ||
+        oldWidget.canEdit != widget.canEdit) {
+      _detachStateManager();
+      _initializeGridData();
+    }
+  }
+
+  @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_matrixKeyboardHandler);
     FocusManager.instance.removeEarlyKeyEventHandler(_clipboardKeyHandler);
     _removeBrowserClipboard?.call();
-    _detachScrollListeners();
-    _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
-    _stateManager?.removeListener(_handleRangeCellEditFocus);
-    _endRangeCellEditSelectionGuard();
-    _detachRangeEditSyncListener();
+    _detachStateManager();
     super.dispose();
   }
 
   void _initializeGridData() {
     _history.clear();
-    final formModel = context.read<ProjectFormModel>();
+    _mobileContentWidths = null;
+    final formModel = widget.project.formModel;
     final gridData = MatrixGridDataBuilder.build(
       formModel: formModel,
       project: widget.project,
@@ -1258,7 +1394,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       enableEditingMode: false,
       enableColumnDrag: false,
       enableContextMenu: false,
-      enableDropToResize: true,
+      enableDropToResize: !widget.isMobile,
+      cellPadding: widget.isMobile ? EdgeInsets.zero : null,
       width: MatrixGridStyle.factorColumnWidth,
       renderer: (rendererContext) => _readOnlyCell(
         rendererContext: rendererContext,
@@ -1276,16 +1413,16 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       field: 'range',
       // Text avoids precision loss during paste; results parse back to double.
       type: PlutoColumnType.text(),
-      readOnly: widget.isMobile,
-      enableEditingMode: !widget.isMobile,
+      readOnly: widget.isMobile || !widget.canEdit,
+      enableEditingMode: !widget.isMobile && widget.canEdit,
       cellPadding: widget.isMobile ? EdgeInsets.zero : null,
       enableColumnDrag: false,
       enableContextMenu: false,
-      enableDropToResize: true,
+      enableDropToResize: !widget.isMobile,
       width: MatrixGridStyle.rangeColumnWidth,
       renderer: (cell) => _mouseSelectionCell(
         cell,
-        widget.isMobile
+        widget.isMobile && widget.canEdit
             ? MobileRangeCell(
                 value: cell.cell.value?.toString() ?? '',
                 onFocused: () {
@@ -1304,19 +1441,88 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                   return cell.cell.value?.toString() ?? '';
                 },
               )
-            : Align(
-                alignment: AlignmentDirectional.centerStart.resolve(
-                  Directionality.of(context),
-                ),
-                child: Text(
-                  cell.cell.value?.toString() ?? '',
-                  style: cell.stateManager.configuration.style.cellTextStyle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+            : _displayRangeCell(cell),
       ),
     );
+  }
+
+  Widget _displayRangeCell(PlutoColumnRendererContext cell) {
+    final value = Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Padding(
+        padding: widget.isMobile
+            ? const EdgeInsets.symmetric(horizontal: AppSpacing.md)
+            : EdgeInsets.zero,
+        child: Text(
+          cell.cell.value?.toString() ?? '',
+          style: widget.isMobile
+              ? Theme.of(context).textTheme.bodyMedium
+              : cell.stateManager.configuration.style.cellTextStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+    if (widget.canEdit) {
+      return value;
+    }
+    return Semantics(
+      label: context.l10n.groupSize,
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _editRangeHere(_storageIndexOf(cell.row)),
+        child: value,
+      ),
+    );
+  }
+
+  Future<void> _editRangeHere(int storageIndex) async {
+    final claimed = await ProjectEditingNotice.request(
+      context,
+      widget.project.id,
+      allowTakeover: true,
+    );
+    if (claimed && mounted) {
+      _requestedRange = storageIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _revealRequestedRange();
+        }
+      });
+    }
+  }
+
+  void _revealRequestedRange() {
+    final storageIndex = _requestedRange;
+    final manager = _stateManager;
+    if (storageIndex == null ||
+        manager == null ||
+        !widget.canEdit ||
+        !_canWrite) {
+      return;
+    }
+    _requestedRange = null;
+    final row = manager.rows.indexWhere(
+      (row) => _storageIndexOf(row) == storageIndex,
+    );
+    if (row < 0) {
+      return;
+    }
+    manager.moveScrollByRow(PlutoMoveDirection.down, row);
+    final rangeColumn = manager.columnIndexesByShowFrozen.indexWhere(
+      (index) => manager.refColumns[index].field == 'range',
+    );
+    if (rangeColumn > 0) {
+      manager.moveScrollByColumn(PlutoMoveDirection.right, rangeColumn - 1);
+    }
+    manager.setCurrentCell(manager.rows[row].cells['range'], row);
+    // A browser may require a fresh touch gesture to open its soft keyboard.
+    if (!widget.isMobile) {
+      manager.setKeepFocus(true);
+      manager.gridFocusNode.requestFocus();
+      manager.setEditing(true);
+    }
   }
 
   void _applyRangeValueForHistory(
@@ -1333,7 +1539,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   // TODO: Repair undo/redo keybindings; tracking: docs/reference/code_maintenance.md#matrix-undo-and-redo.
   bool _matrixKeyboardHandler(KeyEvent event) {
-    if (!mounted) {
+    if (!mounted || !_canWrite) {
       return false;
     }
 
@@ -1378,7 +1584,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     bool persist = true,
   }) {
     final manager = _stateManager;
-    if (manager == null) {
+    if (manager == null || !_canWrite) {
       return;
     }
 
@@ -1396,7 +1602,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     }
 
     final normalizedValue = parsed.displayValue;
-    final cellMatches = _rangeValuesEqual(cellValue, normalizedValue);
+    final displayText = normalizedValue ?? '';
+    final cellMatches = cell.value == displayText;
     final storeMatches = _rangeValuesEqual(
       storedValue?.toString(),
       normalizedValue,
@@ -1425,13 +1632,16 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     }
 
     if (!cellMatches) {
-      cell.value = normalizedValue;
+      cell.value = displayText;
     }
     widget.project.matrixState[storageKey] = normalizedValue;
-    context.read<ProjectStore>().markProjectChanged(widget.project.id);
+    _store.markProjectChanged(widget.project.id);
 
     if (!cellMatches) {
       manager.notifyListeners();
+    }
+    if (!cellMatches || widget.isMobile) {
+      _mobileContentWidths = null;
       setState(() {});
     }
   }
@@ -1442,7 +1652,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   /// lived in the PlutoGrid model.
   void _flushAllRangeValuesToProject({bool persist = true}) {
     final manager = _stateManager;
-    if (manager == null) {
+    if (manager == null || !_canWrite) {
       return;
     }
 
@@ -1475,7 +1685,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   void _handleOnChanged(PlutoGridOnChangedEvent event) {
-    if (event.column.field == 'range') {
+    if (_canWrite &&
+        event.column.field == 'range' &&
+        _columns.contains(event.column)) {
       _applyRangeValue(
         rowIdx: event.rowIdx,
         value: event.value,
@@ -1574,7 +1786,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 
   void _clearAllRangeValues() {
     final manager = _stateManager;
-    if (manager == null) {
+    if (manager == null || !_canWrite) {
       return;
     }
 
@@ -1582,8 +1794,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     try {
       for (var rowIdx = 0; rowIdx < manager.rows.length; rowIdx += 1) {
         final row = manager.rows[rowIdx];
-        final previousValue = row.cells['range']!.value?.toString();
-        if (previousValue == null) {
+        final previousValue = row.cells['range']!.value?.toString() ?? '';
+        if (previousValue.isEmpty) {
           continue;
         }
         _applyRangeValue(rowIdx: rowIdx, value: null);
@@ -1608,7 +1820,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       onExportProject: _stateManager == null || _exportingProject
           ? null
           : _exportProject,
-      onClearRanges: _clearRanges,
+      onClearRanges: widget.canEdit ? _clearRanges : null,
     );
     final content = AppLayoutBuilder(
       builder: (context, layout) => Column(
@@ -1638,7 +1850,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                   _RandomizeOrderToggle(
                     value: _randomizeOrder,
                     compact: true,
-                    onChanged: _stateManager == null
+                    onChanged: _stateManager == null || !widget.canEdit
                         ? null
                         : _onRandomizeToggled,
                   ),
@@ -1659,7 +1871,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
                   actions,
                   _RandomizeOrderToggle(
                     value: _randomizeOrder,
-                    onChanged: _stateManager == null
+                    onChanged: _stateManager == null || !widget.canEdit
                         ? null
                         : _onRandomizeToggled,
                     compact: true,
@@ -1674,9 +1886,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               trailing: _RandomizeOrderToggle(
                 value: _randomizeOrder,
                 compact: true,
-                onChanged: _stateManager == null ? null : _onRandomizeToggled,
+                onChanged: _stateManager == null || !widget.canEdit
+                    ? null
+                    : _onRandomizeToggled,
               ),
             ),
+          ProjectEditingNotice(projectId: widget.project.id),
           Expanded(child: _buildGridArea(plutoTheme, scheme)),
           if (widget.isMobile) actions,
         ],
@@ -1701,7 +1916,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   /// reordered by instance, so range values stay bound to their rows.
   void _onRandomizeToggled(bool value) {
     final manager = _stateManager;
-    if (manager == null) {
+    if (manager == null || !_canWrite) {
       return;
     }
 
@@ -1774,6 +1989,12 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       alignment: Alignment.topCenter,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          if (widget.isMobile) {
+            _fitMobileColumns(
+              math.min(constraints.maxWidth, _desktopMaxWidth),
+              context,
+            );
+          }
           final displaySize = _displaySize(
             maxWidth: constraints.maxWidth,
             maxHeight: constraints.maxHeight,
@@ -1845,7 +2066,7 @@ class _MatrixActions extends StatelessWidget {
   final bool compact;
   final VoidCallback? onShowResults;
   final VoidCallback? onExportProject;
-  final VoidCallback onClearRanges;
+  final VoidCallback? onClearRanges;
 
   @override
   Widget build(BuildContext context) {
@@ -1932,7 +2153,9 @@ class _MatrixActions extends StatelessWidget {
 /// entry. Plain Enter/Tab move down; Shift+Enter/Shift+Tab move up. Committing
 /// any in-progress edit happens implicitly when the current cell changes.
 class _AdvanceRangeCellAction extends PlutoGridShortcutAction {
-  const _AdvanceRangeCellAction();
+  const _AdvanceRangeCellAction({this.requestEditing});
+
+  final ValueChanged<PlutoRow>? requestEditing;
 
   @override
   void execute({
@@ -1941,6 +2164,13 @@ class _AdvanceRangeCellAction extends PlutoGridShortcutAction {
   }) {
     if (stateManager.currentCell == null) {
       stateManager.setCurrentCell(stateManager.firstCell, 0);
+      return;
+    }
+    final row = stateManager.currentRow;
+    if (row != null &&
+        stateManager.currentColumn?.field == 'range' &&
+        requestEditing != null) {
+      requestEditing!(row);
       return;
     }
 

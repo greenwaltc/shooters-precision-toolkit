@@ -60,6 +60,11 @@ task infra:apply
 
 Repeat with `ENV=prod` after independent review. Check whether the plan also changes the Firestore rules release before applying. Keep saved plans and state private and out of Git. Review the full environment plan for routine releases.
 
+Apply the updated Firestore rules before releasing the client that introduces
+[project editing handoffs](../decisions/0003_project_editing_handoff.md).
+Once a project has been claimed, users with an older tab must reload it to edit
+that project.
+
 ## Publish a dev preview or live release
 
 ```sh

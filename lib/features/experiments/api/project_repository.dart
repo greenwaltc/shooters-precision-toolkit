@@ -30,6 +30,7 @@ class CloudProject {
     this.hasPendingWrites, {
     this.cursor,
     this.isFromCache = false,
+    this.editorSession,
   }) : project = project.freeze();
 
   final ProjectSnapshot project;
@@ -37,8 +38,25 @@ class CloudProject {
   final bool hasPendingWrites;
   final bool isFromCache;
 
+  /// Opaque workspace session that currently holds editing control, if any.
+  final String? editorSession;
+
   /// Opaque adapter-owned position. Consumers must not interpret its content.
   final ProjectCursor? cursor;
+}
+
+/// A repository that coordinates editing between sessions of one account.
+abstract interface class ProjectEditingRepository implements ProjectRepository {
+  /// An opaque identifier unique to this workspace instance.
+  String get editingSessionId;
+
+  /// Claims editing of [id] and returns the acknowledged project.
+  ///
+  /// A new claim advances the revision without changing the project contents.
+  /// With [allowTakeover] disabled, a competing claim stays in place and the
+  /// returned project describes its holder. A missing project completes with
+  /// [ProjectConflict]. Saves require both the current claim and revision.
+  Future<CloudProject> claimEditing(String id, {required bool allowTakeover});
 }
 
 /// The workspace's persistence contract. Each instance belongs to one account.

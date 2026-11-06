@@ -27,10 +27,10 @@ class BrandConfiguration {
   });
 
   static const BrandConfiguration defaults = BrandConfiguration(
-    bannerLogoAsset: 'assets/projects_banner_logo.png',
-    compactLogoAsset: 'assets/icon/app_icon_compact.png',
+    bannerLogoAsset: 'assets/projects_banner_logo.webp',
+    compactLogoAsset: 'assets/icon/app_icon_compact.webp',
     bannerLogoAspectRatio: 1801 / 504,
-    atmosphereAsset: 'assets/img/target_bg.png',
+    atmosphereAsset: 'assets/img/target_bg.webp',
   );
 
   /// Product name used for the OS window/task title and as the logo alt text.

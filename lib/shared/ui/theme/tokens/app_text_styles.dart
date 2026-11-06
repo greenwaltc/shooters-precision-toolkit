@@ -45,11 +45,6 @@ class AppTextStyles {
   static TextStyle? headerSummaryTitle(BuildContext context) =>
       AppHeadings.h3(context);
 
-  /// Header style for the form's risk-level / detection table.
-  static TextStyle? formTableHeader(BuildContext context) => Theme.of(
-    context,
-  ).textTheme.labelMedium?.copyWith(fontWeight: AppDesign.weightBold);
-
   /// Renderer text style for non-editable factor cells in [PlutoGrid].
   static TextStyle plutoFactorCell(BuildContext context) {
     return TextStyle(

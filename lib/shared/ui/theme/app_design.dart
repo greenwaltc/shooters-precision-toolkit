@@ -147,9 +147,6 @@ class AppDesign {
 
   static const double elevationNone = 0;
 
-  /// Subtle lift applied to the app bar once content scrolls beneath it.
-  static const double appBarScrolledElevation = 1.0;
-
   /// Floating elements (dialogs, menus, snackbars, sheets).
   static const double elevationFloating = 3.0;
 
@@ -198,7 +195,6 @@ class AppDesign {
   /// name here.
   static const String? fontFamily = null;
 
-  static const FontWeight weightRegular = FontWeight.w400;
   static const FontWeight weightMedium = FontWeight.w500;
   static const FontWeight weightSemiBold = FontWeight.w600;
   static const FontWeight weightBold = FontWeight.w700;
@@ -395,7 +391,6 @@ class AppDesign {
 
   static const Duration motionFast = Duration(milliseconds: 150);
   static const Duration motionMedium = Duration(milliseconds: 250);
-  static const Duration motionSlow = Duration(milliseconds: 400);
 
   /// Default easing for transitions and reveals.
   static const Curve motionCurve = Curves.easeInOutCubic;

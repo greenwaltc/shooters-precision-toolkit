@@ -14,7 +14,7 @@ try {
   await verifyRelease(environment);
   const directory = path.join(root, `build/web-${environment}`);
   const contentTypes = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
-    '.wasm': 'application/wasm', '.png': 'image/png', '.xml': 'application/xml', '.txt': 'text/plain',
+    '.wasm': 'application/wasm', '.png': 'image/png', '.webp': 'image/webp', '.xml': 'application/xml', '.txt': 'text/plain',
     '.ttf': 'font/ttf', '.otf': 'font/otf', '.woff2': 'font/woff2', '.bin': 'application/octet-stream' };
   let localServerBytes = 0;
   const localTransfers = [];

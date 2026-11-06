@@ -9,7 +9,7 @@ import '../../saved_project.dart';
 import '../../test_design/project_form_model.dart';
 import '../models/export_options.dart';
 import 'anomr_calculator.dart';
-import 'anomr_export_service.dart';
+import 'anomr_export_service.dart' deferred as exporter;
 import 'export_chart_renderer.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
@@ -104,7 +104,11 @@ class ExportController {
         layout: ChartLayout.export,
       );
 
-      final artifact = await AnomrExportService.generate(
+      await exporter.loadLibrary();
+      if (!isActive()) {
+        return const ExportCancelled();
+      }
+      final artifact = await exporter.AnomrExportService.generate(
         options: options,
         chartImage: chartImage,
         formModel: formModel,
@@ -114,7 +118,7 @@ class ExportController {
         projectTitle: project.displayName,
       );
 
-      final defaultName = AnomrExportService.sanitizeFileName(
+      final defaultName = exporter.AnomrExportService.sanitizeFileName(
         project.displayName.isEmpty ? 'results' : project.displayName,
       );
 

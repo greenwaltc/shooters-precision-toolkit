@@ -54,9 +54,9 @@ flutter:
   assets:
     - assets/help_instructions.md
     - assets/help/test_design/en/
-    - assets/projects_banner_logo.png
-    - assets/icon/app_icon_compact.png
-    - assets/img/target_bg.png
+    - assets/projects_banner_logo.webp
+    - assets/icon/app_icon_compact.webp
+    - assets/img/target_bg.webp
 
 # Regenerate platform launcher icons after replacing assets/icon/app_icon.png:
 #   dart run flutter_launcher_icons

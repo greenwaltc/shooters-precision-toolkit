@@ -17,12 +17,9 @@ import '../features/contact/data/web3forms_contact_sender.dart';
 import '../features/contact/presentation/contact_page.dart';
 import '../features/experiments/data/firestore_project_repository.dart';
 import '../features/experiments/data/project_draft_storage.dart';
-import '../features/experiments/presentation/matrix/data_matrix_page.dart';
 import '../features/experiments/presentation/project_file_transfer.dart';
 import '../features/experiments/presentation/project_store.dart';
 import '../features/experiments/presentation/projects/project_home_page.dart';
-import '../features/experiments/presentation/results/results_page.dart';
-import '../features/experiments/presentation/test_design/project_form_page.dart';
 import '../features/experiments/presentation/widgets/project_save_status.dart';
 import '../shared/foundation/app_failure.dart';
 import '../shared/foundation/behavior_policy.dart';
@@ -51,6 +48,8 @@ import 'firebase/firebase_bootstrap.dart';
 import 'navigation/editor_resume.dart';
 import 'navigation/editor_resume_stub.dart'
     if (dart.library.js_interop) 'navigation/editor_resume_web.dart';
+import 'navigation/workspace_editor_routes.dart'
+    if (dart.library.js_interop) 'navigation/workspace_editor_routes_web.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
 // Use of this source code is governed by a proprietary license that can be
@@ -157,9 +156,7 @@ Widget _contactPage(BuildContext context) =>
 final Map<String, WidgetBuilder> _appRoutes = {
   AppRoutes.contact: _contactPage,
   AppRoutes.projects: (_) => const ProjectHomePage(),
-  AppRoutes.projectForm: (_) => const ProjectFormPage(),
-  AppRoutes.anomrMatrix: (_) => const AnomrMatrix(),
-  AppRoutes.anomrResults: (_) => const AnomrResultsPage(),
+  ...workspaceEditorRoutes,
 };
 
 /// Root widget that owns the project store and theme controller unless they

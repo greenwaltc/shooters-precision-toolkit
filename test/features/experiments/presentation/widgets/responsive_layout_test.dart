@@ -348,7 +348,7 @@ void main() {
         expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
         expect(
           tester.widget<TextField>(editor).keyboardType,
-          TextInputType.number,
+          const TextInputType.numberWithOptions(decimal: true),
         );
         expect(tester.testTextInput.isVisible, isTrue);
         expect(find.byType(BottomSheet), findsNothing);
@@ -371,6 +371,14 @@ void main() {
           tester.getRect(editor).bottom,
           lessThanOrEqualTo(size.height - keyboardHeight),
         );
+        await tester.tap(find.byTooltip('Previous Group Size'));
+        await tester.pumpAndSettle();
+        expect(manager.currentRowIdx, manager.rows.length - 2);
+        await tester.tap(find.byTooltip('Next Group Size'));
+        await tester.pumpAndSettle();
+        expect(manager.currentRowIdx, manager.rows.length - 1);
+        expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
+
         final outline = find.descendant(
           of: cell,
           matching: find.byWidgetPredicate(

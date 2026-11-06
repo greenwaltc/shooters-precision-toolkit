@@ -598,6 +598,24 @@ abstract class AppLocalizations {
   /// **'Group Size'**
   String get groupSize;
 
+  /// No description provided for @previousGroupSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Group Size'**
+  String get previousGroupSize;
+
+  /// No description provided for @nextGroupSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Group Size'**
+  String get nextGroupSize;
+
+  /// No description provided for @insertFractionSlash.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert fraction slash'**
+  String get insertFractionSlash;
+
   /// No description provided for @groupSizeValuesMustBeNumbersPleaseCorrect.
   ///
   /// In en, this message translates to:

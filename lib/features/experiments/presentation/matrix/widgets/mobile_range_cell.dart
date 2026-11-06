@@ -16,21 +16,44 @@ class MobileRangeCell extends StatefulWidget {
     required this.onFocused,
     required this.onChanged,
     required this.finishEditing,
+    this.onNext,
   });
 
+  final VoidCallback? onNext;
   final String value;
   final VoidCallback onFocused;
   final ValueChanged<String> onChanged;
   final String Function(String) finishEditing;
 
   @override
-  State<MobileRangeCell> createState() => _MobileRangeCellState();
+  State<MobileRangeCell> createState() => MobileRangeCellState();
 }
 
-class _MobileRangeCellState extends State<MobileRangeCell>
+/// Gives the matrix toolbar access to the focused editor.
+class MobileRangeCellState extends State<MobileRangeCell>
     with WidgetsBindingObserver {
   late final _controller = TextEditingController(text: widget.value);
   final _focus = FocusNode();
+
+  /// Whether this row currently owns keyboard focus.
+  bool get hasFocus => _focus.hasFocus;
+
+  /// Opens the editor for this row.
+  void requestFocus() => _focus.requestFocus();
+
+  /// Inserts a fraction separator at the selection.
+  void insertSlash() {
+    final text = _controller.text;
+    final selection = _controller.selection;
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+    final updated = text.replaceRange(start, end, '/');
+    _controller.value = TextEditingValue(
+      text: updated,
+      selection: TextSelection.collapsed(offset: start + 1),
+    );
+    widget.onChanged(updated);
+  }
 
   @override
   void initState() {
@@ -121,8 +144,13 @@ class _MobileRangeCellState extends State<MobileRangeCell>
                 child: TextField(
                   controller: _controller,
                   focusNode: _focus,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.done,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textInputAction: widget.onNext == null
+                      ? TextInputAction.done
+                      : TextInputAction.next,
+                  onEditingComplete: widget.onNext,
                   selectAllOnFocus: false,
                   onChanged: widget.onChanged,
                   onTapOutside: (_) => _focus.unfocus(),

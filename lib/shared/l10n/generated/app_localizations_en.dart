@@ -290,6 +290,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupSize => 'Group Size';
 
   @override
+  String get previousGroupSize => 'Previous Group Size';
+
+  @override
+  String get nextGroupSize => 'Next Group Size';
+
+  @override
+  String get insertFractionSlash => 'Insert fraction slash';
+
+  @override
   String get groupSizeValuesMustBeNumbersPleaseCorrect =>
       'Group size values must be numbers. Please correct any invalid cells.';
 

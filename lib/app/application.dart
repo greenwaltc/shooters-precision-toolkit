@@ -24,6 +24,7 @@ import '../features/experiments/presentation/projects/project_home_page.dart';
 import '../features/experiments/presentation/results/results_page.dart';
 import '../features/experiments/presentation/test_design/project_form_page.dart';
 import '../features/experiments/presentation/widgets/project_save_status.dart';
+import '../shared/foundation/app_failure.dart';
 import '../shared/foundation/behavior_policy.dart';
 import '../shared/foundation/clipboard_events.dart';
 import '../shared/foundation/diagnostics.dart';
@@ -47,6 +48,9 @@ import '../shared/ui/theme/theme_controller.dart';
 import '../shared/ui/workspace_exit.dart';
 import 'config/app_config.dart';
 import 'firebase/firebase_bootstrap.dart';
+import 'navigation/editor_resume.dart';
+import 'navigation/editor_resume_stub.dart'
+    if (dart.library.js_interop) 'navigation/editor_resume_web.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
 // Use of this source code is governed by a proprietary license that can be
@@ -126,6 +130,10 @@ class FirebaseApplication extends StatelessWidget {
           ),
           signedInBuilder: (_, user) => MyApp(
             key: ValueKey('${services.app.options.projectId}/${user.uid}'),
+            editorResume: editorResumeForAccount(
+              services.app.options.projectId,
+              user.uid,
+            ),
             config: services.config,
             random: Random(),
             clock: clock,
@@ -160,8 +168,10 @@ class MyApp extends StatefulWidget {
   /// Creates a workspace for one account.
   ///
   /// Supply [projectStore] or [projectRepository]. An injected store or theme
-  /// controller stays owned by its caller. The workspace disposes instances it
-  /// creates. [fileLoader] and [fileSaver] default to platform file dialogs.
+  /// controller stays owned by its caller. [editorResume] restores editing
+  /// control for the tab's last selected project after a reload. The workspace
+  /// disposes instances it creates. [fileLoader] and [fileSaver] default to
+  /// platform file dialogs.
   MyApp({
     super.key,
     required this.config,
@@ -172,6 +182,7 @@ class MyApp extends StatefulWidget {
     this.themeController,
     this.projectRepository,
     this.projectDraftStorage,
+    this.editorResume,
     this.fileLoader = const FilePickerLoader(),
     this.fileSaver = const FilePickerSaver(),
   }) {
@@ -188,6 +199,7 @@ class MyApp extends StatefulWidget {
   final ThemeController? themeController;
   final ProjectRepository? projectRepository;
   final ProjectDraftStorage? projectDraftStorage;
+  final EditorResume? editorResume;
   final FileLoader fileLoader;
   final FileSaver fileSaver;
 
@@ -199,6 +211,11 @@ class _MyAppState extends State<MyApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   late final ProjectStore _projectStore;
   late final ThemeController _themeController;
+  late final _EditorRouteObserver _editorRoutes;
+  String? _visiblePage;
+  int _pageGeneration = 0;
+  EditorLocation? _rememberedEditor;
+  late final EditorLocation? _reloadLocation;
   late final bool _ownsProjectStore;
   late final bool _ownsThemeController;
 
@@ -221,6 +238,22 @@ class _MyAppState extends State<MyApp> {
     // The store exposes startup failures through loadState while this State
     // owns disposal. Injected stores remain owned by their caller.
     unawaited(_projectStore.load());
+    _editorRoutes = _EditorRouteObserver((route) {
+      _visiblePage = route;
+      _pageGeneration++;
+      _rememberEditor();
+    });
+    _reloadLocation = widget.editorResume?.takeReloadLocation();
+    if (widget.editorResume != null) {
+      _projectStore.addListener(_rememberEditor);
+      if (_reloadLocation case final location?) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            unawaited(_restoreEditor(location));
+          }
+        });
+      }
+    }
 
     _ownsThemeController = widget.themeController == null;
     _themeController =
@@ -246,8 +279,57 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  void _rememberEditor() {
+    final id = _projectStore.selectedProject?.id;
+    final route = switch (_visiblePage) {
+      AppRoutes.projects => AppRoutes.projects,
+      AppRoutes.projectForm => AppRoutes.projectForm,
+      AppRoutes.anomrMatrix || AppRoutes.anomrResults => AppRoutes.anomrMatrix,
+      _ => null,
+    };
+    final location = id == null || route == null
+        ? null
+        : (projectId: id, route: route);
+    if (location != _rememberedEditor) {
+      _rememberedEditor = location;
+      widget.editorResume?.remember(location);
+    }
+  }
+
+  Future<void> _restoreEditor(EditorLocation location) async {
+    final id = location.projectId;
+    final pageGeneration = _pageGeneration;
+    if (!await _projectStore.loadEditorProject(id) ||
+        !mounted ||
+        _visiblePage != AppRoutes.projects ||
+        _pageGeneration != pageGeneration) {
+      return;
+    }
+    await _projectStore.selectProject(id);
+    if (!mounted || _pageGeneration != pageGeneration) {
+      return;
+    }
+    try {
+      await _projectStore.claimProjectEditing(id, allowTakeover: true);
+    } on AppFailure {
+      // Reopen read-only so the user can retry through the editor controls.
+    }
+    if (location.route == AppRoutes.projects) {
+      return;
+    }
+    final project = _projectStore.selectedProject;
+    if (!mounted || _pageGeneration != pageGeneration || project?.id != id) {
+      return;
+    }
+    final route = project!.setupComplete
+        ? location.route
+        : AppRoutes.projectForm;
+    await _navigatorKey.currentState?.pushNamed<void>(route);
+  }
+
   @override
   void dispose() {
+    _projectStore.removeListener(_rememberEditor);
     if (_ownsProjectStore) {
       _projectStore.dispose();
     }
@@ -255,6 +337,28 @@ class _MyAppState extends State<MyApp> {
       _themeController.dispose();
     }
     super.dispose();
+  }
+
+  Route<void>? _workspaceRoute(RouteSettings settings) {
+    final builder = _appRoutes[settings.name];
+    if (builder == null) {
+      return null;
+    }
+    return AppPageRoute<void>(
+      settings: settings,
+      builder: (context) {
+        final page = builder(context);
+        // Editors show status in their banners. The project list
+        // and Results do not use the floating footer status.
+        if (settings.name == AppRoutes.projects ||
+            settings.name == AppRoutes.projectForm ||
+            settings.name == AppRoutes.anomrMatrix ||
+            settings.name == AppRoutes.anomrResults) {
+          return page;
+        }
+        return ProjectWorkspaceFrame(navigatorKey: _navigatorKey, child: page);
+      },
+    );
   }
 
   /// Honors the user's saved preference only while the theme toggle is
@@ -298,7 +402,10 @@ class _MyAppState extends State<MyApp> {
           Provider<WorkspaceExit>(
             create: (_) => WorkspaceSignOut(
               flush: _projectStore.flush,
-              signOut: auth.signOut,
+              signOut: () async {
+                await auth.signOut();
+                widget.editorResume?.remember(null);
+              },
             ),
           ),
       ],
@@ -315,36 +422,37 @@ class _MyAppState extends State<MyApp> {
               darkTheme: AppTheme.dark(),
               themeMode: _resolveThemeMode(themeController),
               initialRoute: AppRoutes.projects,
+              navigatorObservers: [
+                if (widget.editorResume != null) _editorRoutes,
+              ],
               builder: (context, child) =>
                   AppBackground(child: child ?? const SizedBox.shrink()),
-              onGenerateRoute: (settings) {
-                final builder = _appRoutes[settings.name];
-                if (builder == null) {
-                  return null;
-                }
-                return AppPageRoute<void>(
-                  settings: settings,
-                  builder: (context) {
-                    final page = builder(context);
-                    // Editors show status in their banners. The project list
-                    // and Results do not use the floating footer status.
-                    if (settings.name == AppRoutes.projects ||
-                        settings.name == AppRoutes.projectForm ||
-                        settings.name == AppRoutes.anomrMatrix ||
-                        settings.name == AppRoutes.anomrResults) {
-                      return page;
-                    }
-                    return ProjectWorkspaceFrame(
-                      navigatorKey: _navigatorKey,
-                      child: page,
-                    );
-                  },
-                );
-              },
+              onGenerateInitialRoutes: _reloadLocation == null
+                  ? null
+                  : (_) => [
+                      _workspaceRoute(
+                        const RouteSettings(name: AppRoutes.projects),
+                      )!,
+                    ],
+              onGenerateRoute: _workspaceRoute,
             );
           },
         ),
       ),
     );
+  }
+}
+
+/// Tracks the visible page without letting dialogs clear an editor location.
+class _EditorRouteObserver extends NavigatorObserver {
+  _EditorRouteObserver(this.onPageChanged);
+
+  final ValueChanged<String?> onPageChanged;
+
+  @override
+  void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
+    if (topRoute is PageRoute) {
+      onPageChanged(topRoute.settings.name);
+    }
   }
 }

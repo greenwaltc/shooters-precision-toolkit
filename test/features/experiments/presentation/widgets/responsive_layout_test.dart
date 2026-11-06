@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
-import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/widgets/grid_scroll_cue.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/widgets/matrix_replicate_dividers.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/combined_line_chart.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/empty_results_state.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
@@ -12,9 +13,13 @@ import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_brand_bar.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_copyright_footer.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/product_configuration.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/scroll_cue.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/theme/app_design.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/theme/chart/chart_scale.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/theme/components/scroll_cue_style.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/theme/tokens/app_headings.dart';
 import 'package:clock/clock.dart';
+import 'package:flutter/gestures.dart' show PointerScrollEvent;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter/services.dart' show LogicalKeyboardKey, rootBundle;
@@ -50,6 +55,117 @@ const _viewports = <String, Size>{
 const _textScales = <double>[1.0, 2.0];
 
 void main() {
+  for (final (size, mobile) in [
+    (const Size(390, 844), true),
+    (const Size(1440, 620), false),
+  ]) {
+    testWidgets('matrix scrolling updates cues without rebuilding at $size', (
+      tester,
+    ) async {
+      _configureViewport(tester, size: size, textScale: 1);
+      await _pumpCompletedProject(tester, factorCount: 3);
+      await _tapText(tester, 'Bench Rest Comparison');
+      final grid = find.byType(PlutoGrid);
+      final original = tester.widget<PlutoGrid>(grid);
+      final manager = tester.state<PlutoGridState>(grid).stateManager;
+      final vertical = manager.scroll.bodyRowsVertical!;
+      final point = tester.getCenter(grid);
+      final cue = find.byWidgetPredicate(
+        (widget) => widget is ScrollCue && widget.edge == ScrollCueEdge.top,
+      );
+      final dividers = find.descendant(
+        of: find.byType(MatrixReplicateDividers),
+        matching: find.byType(CustomPaint),
+      );
+      final dividerRenderObject = tester.renderObject(dividers);
+      expect(cue, findsNothing);
+      expect(dividerRenderObject, paintsExactlyCountTimes(#drawRect, 2));
+
+      if (mobile) {
+        await tester.dragFrom(point, const Offset(0, -100));
+      } else {
+        await tester.sendEventToBinding(
+          PointerScrollEvent(
+            position: point,
+            scrollDelta: const Offset(0, 100),
+          ),
+        );
+      }
+      await tester.pumpAndSettle();
+      expect(vertical.offset, greaterThan(0));
+      expect(cue, findsOneWidget);
+      expect(tester.widget<PlutoGrid>(grid), same(original));
+      expect(tester.renderObject(dividers), same(dividerRenderObject));
+      final rowDividerTop =
+          manager.rowsTopOffset + 8 * manager.rowTotalHeight - vertical.offset;
+      expect(
+        dividerRenderObject,
+        paints
+          ..rect()
+          ..rect(
+            rect: Rect.fromLTWH(
+              0,
+              rowDividerTop,
+              tester.getSize(dividers).width,
+              AppDesign.borderFocus,
+            ),
+          ),
+      );
+
+      final icon = find.descendant(of: cue, matching: find.byType(Icon));
+      expect(tester.widget<Icon>(icon).icon, Icons.keyboard_arrow_up_rounded);
+      expect(tester.getSize(cue).height, lessThan(32));
+      final fade = find.descendant(
+        of: cue,
+        matching: find.byType(DecoratedBox),
+      );
+      final decoration =
+          tester.widget<DecoratedBox>(fade).decoration as BoxDecoration;
+      final gradient = decoration.gradient! as LinearGradient;
+      expect(gradient.stops!.length, greaterThan(3));
+      expect(gradient.colors.last.a, 0);
+
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      expect(
+        tester.renderObject(dividers),
+        paintsExactlyCountTimes(#drawRect, 1),
+      );
+      _expectNoLayoutErrors(tester, 'matrix scroll');
+    });
+  }
+
+  testWidgets('results can scroll from the chart in both directions', (
+    tester,
+  ) async {
+    _configureViewport(tester, size: const Size(390, 620), textScale: 1);
+    await _pumpCompletedProject(tester, factorCount: 4);
+    await _tapText(tester, 'Bench Rest Comparison');
+    await _tapText(tester, 'Results');
+    final chart = find.byType(CombinedLineChart);
+    final original = tester.widget<CombinedLineChart>(chart);
+    final viewport = find.ancestor(
+      of: chart,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is SingleChildScrollView &&
+            widget.scrollDirection == Axis.vertical,
+      ),
+    );
+    Offset visibleChartCenter() =>
+        tester.getRect(chart).intersect(tester.getRect(viewport)).center;
+
+    final before = tester.getTopLeft(chart);
+    await tester.dragFrom(visibleChartCenter(), const Offset(0, -100));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(chart).dy, lessThan(before.dy));
+    await tester.dragFrom(visibleChartCenter(), const Offset(-100, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(chart).dx, lessThan(before.dx));
+    expect(tester.widget<CombinedLineChart>(chart), same(original));
+    _expectNoLayoutErrors(tester, 'Results scroll');
+  });
+
   testWidgets(
     'desktop matrix keeps its viewport through saving and retry feedback',
     (tester) async {
@@ -329,6 +445,15 @@ void main() {
         await _tapText(tester, 'Bench Rest Comparison');
         final grid = find.byType(PlutoGrid);
         final manager = tester.state<PlutoGridState>(grid).stateManager;
+        final chrome = [
+          find.text(AppCopy.english.dataMatrixMessage),
+          find.text(AppCopy.english.factorRunCount(4, manager.rows.length)),
+          find.text(AppCopy.english.randomizeOrder),
+          find.text(AppCopy.english.clear),
+          find.text(AppCopy.english.export),
+          find.text(AppCopy.english.results),
+        ];
+        final cues = find.byType(ScrollCue);
         final vertical = manager.scroll.bodyRowsVertical!;
         final horizontal = manager.scroll.bodyRowsHorizontal!;
         vertical.jumpTo(vertical.position.maxScrollExtent);
@@ -343,6 +468,7 @@ void main() {
         );
         await tester.ensureVisible(editor);
         await tester.pumpAndSettle();
+        expect(cues, findsWidgets);
         await tester.tap(editor);
         await tester.pumpAndSettle();
         expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
@@ -352,12 +478,20 @@ void main() {
         );
         expect(tester.testTextInput.isVisible, isTrue);
         expect(find.byType(BottomSheet), findsNothing);
+        expect(cues, findsNothing);
+        for (final widget in chrome) {
+          expect(widget, findsOneWidget);
+        }
 
         tester.view.viewInsets = FakeViewPadding(bottom: keyboardHeight);
         addTearDown(tester.view.resetViewInsets);
         await tester.pumpAndSettle();
         expect(tester.state<PlutoGridState>(grid).stateManager, same(manager));
         expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
+        for (final widget in chrome) {
+          expect(widget, findsNothing);
+        }
+        expect(cues, findsNothing);
         // The caret handle can sit over the center of a narrow cell.
         expect(
           const [
@@ -371,13 +505,17 @@ void main() {
           tester.getRect(editor).bottom,
           lessThanOrEqualTo(size.height - keyboardHeight),
         );
-        await tester.tap(find.byTooltip('Previous Group Size'));
+        await tester.testTextInput.receiveAction(TextInputAction.previous);
         await tester.pumpAndSettle();
         expect(manager.currentRowIdx, manager.rows.length - 2);
-        await tester.tap(find.byTooltip('Next Group Size'));
+        await tester.testTextInput.receiveAction(TextInputAction.next);
         await tester.pumpAndSettle();
         expect(manager.currentRowIdx, manager.rows.length - 1);
         expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
+        expect(
+          tester.widget<TextField>(editor).textInputAction,
+          TextInputAction.done,
+        );
 
         final outline = find.descendant(
           of: cell,
@@ -414,14 +552,112 @@ void main() {
         final store = tester.widget<MyApp>(find.byType(MyApp)).projectStore!;
         expect(store.selectedProject!.matrixState['range_$storage'], '42');
         await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        for (final widget in chrome) {
+          expect(widget, findsOneWidget);
+        }
         tester.view.resetViewInsets();
         await tester.pumpAndSettle();
         expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isFalse);
         expect(outline, findsNothing);
+        expect(cues, findsWidgets);
         _expectNoLayoutErrors(tester, 'mobile matrix with keyboard');
       },
     );
   }
+
+  testWidgets('mobile keyboard stays open while the next tapped row centers', (
+    tester,
+  ) async {
+    _configureViewport(tester, size: const Size(390, 844), textScale: 1);
+    await _pumpCompletedProject(tester, factorCount: 4);
+    await _tapText(tester, 'Bench Rest Comparison');
+    final grid = find.byType(PlutoGrid);
+    final manager = tester.state<PlutoGridState>(grid).stateManager;
+    final horizontal = manager.scroll.bodyRowsHorizontal!;
+    final vertical = manager.scroll.bodyRowsVertical!;
+    horizontal.jumpTo(horizontal.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+
+    Finder cell(int row) => find.byKey(ValueKey('matrix-cell-$row-range'));
+    Finder editor(int row) =>
+        find.descendant(of: cell(row), matching: find.byType(TextField));
+    final rowViewport = find.byWidgetPredicate(
+      (widget) => widget is ListView && widget.controller == vertical,
+    );
+    const row = 6;
+    await tester.tap(cell(row));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 430);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+
+    expect(manager.currentRowIdx, row);
+    expect(
+      tester.getCenter(cell(row)).dy,
+      closeTo(tester.getCenter(rowViewport).dy, 1),
+    );
+    expect(horizontal.offset, horizontal.position.maxScrollExtent);
+    expect(
+      tester.widget<TextField>(editor(row)).textInputAction,
+      TextInputAction.next,
+    );
+
+    const tappedRow = row + 2;
+    final offsetBeforeTap = vertical.offset;
+    final tap = Offset(
+      tester.getCenter(cell(tappedRow)).dx,
+      tester.getTopLeft(cell(tappedRow)).dy + 3,
+    );
+    expect(tester.getRect(editor(tappedRow)).contains(tap), isFalse);
+    tester.testTextInput.log.clear();
+    final gesture = await tester.startGesture(tap);
+    await tester.pump();
+    expect(tester.widget<TextField>(editor(row)).focusNode!.hasFocus, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+    await gesture.up();
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(editor(tappedRow)).focusNode!.hasFocus,
+      isTrue,
+    );
+    await tester.pump();
+    await tester.pump(AppDesign.motionMedium ~/ 2);
+    expect(vertical.offset, greaterThan(offsetBeforeTap));
+    expect(
+      vertical.offset,
+      lessThan(offsetBeforeTap + 2 * manager.rowTotalHeight),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getCenter(cell(tappedRow)).dy,
+      closeTo(tester.getCenter(rowViewport).dy, 1),
+    );
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(
+      tester.testTextInput.log.where((call) => call.method == 'TextInput.hide'),
+      isEmpty,
+    );
+
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await tester.pumpAndSettle();
+    expect(manager.currentRowIdx, tappedRow + 1);
+    expect(
+      tester.getCenter(cell(tappedRow + 1)).dy,
+      closeTo(tester.getCenter(rowViewport).dy, 1),
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.numpadEnter);
+    await tester.pumpAndSettle();
+    expect(manager.currentRowIdx, tappedRow + 2);
+
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    expect(find.text(AppCopy.english.dataMatrixMessage), findsOneWidget);
+    expect(find.byType(ScrollCue), findsNothing);
+    expect(tester.state<PlutoGridState>(grid).stateManager, same(manager));
+    _expectNoLayoutErrors(tester, 'centered mobile matrix with keyboard');
+  });
 
   group('setup flow', () {
     testWidgets('mobile keyboard gives the form all remaining space', (
@@ -438,10 +674,7 @@ void main() {
         of: form,
         matching: find.byType(SingleChildScrollView),
       );
-      final cues = find.descendant(
-        of: form,
-        matching: find.byType(GridScrollCue),
-      );
+      final cues = find.descendant(of: form, matching: find.byType(ScrollCue));
       final title = find
           .descendant(of: form, matching: find.byType(TextFormField))
           .first;
@@ -449,8 +682,21 @@ void main() {
       final submit = find.descendant(of: scroll, matching: find.text('Submit'));
       expect(submit, findsOneWidget);
       expect(submit.hitTestable(), findsNothing);
+      expect(cues, findsWidgets);
+
+      final original = tester.widget<SingleChildScrollView>(scroll);
+      original.controller!.jumpTo(
+        original.controller!.position.maxScrollExtent,
+      );
+      await tester.pumpAndSettle();
+      expect(tester.widget<SingleChildScrollView>(scroll), same(original));
+      expect(submit.hitTestable(), findsOneWidget);
+      original.controller!.jumpTo(0);
+      await tester.pumpAndSettle();
 
       await tester.enterText(title, 'Keyboard test');
+      await tester.pumpAndSettle();
+      expect(cues, findsNothing);
       const keyboardHeight = 330.0;
       tester.view.viewInsets = const FakeViewPadding(bottom: keyboardHeight);
       addTearDown(tester.view.resetViewInsets);
@@ -470,7 +716,9 @@ void main() {
       _expectNoLayoutErrors(tester, 'Test Design with keyboard');
 
       tester.view.resetViewInsets();
-      await tester.pump();
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pumpAndSettle();
+      expect(cues, findsWidgets);
       await tester.ensureVisible(submit);
       await tester.pump();
       expect(submit.hitTestable(), findsOneWidget);

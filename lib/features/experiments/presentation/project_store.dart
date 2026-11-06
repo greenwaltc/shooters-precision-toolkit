@@ -673,6 +673,41 @@ class ProjectStore extends ChangeNotifier with WidgetsBindingObserver {
     return copy;
   }
 
+  /// Loads the saved project needed to restore editing after a browser reload.
+  ///
+  /// The project can be older than the loaded list. Returns false when the
+  /// workspace cannot restore it or the project no longer exists.
+  Future<bool> loadEditorProject(String id) async {
+    try {
+      await load();
+      if (_disposed || _loadError != null) {
+        return false;
+      }
+      if (_projects.containsKey(id)) {
+        return true;
+      }
+      final record = await repository
+          .watchProject(id)
+          .where(
+            (record) =>
+                record == null ||
+                (!record.isFromCache && !record.hasPendingWrites),
+          )
+          .timeout(initialLoadTimeout)
+          .first;
+      if (_disposed || record == null) {
+        return false;
+      }
+      _acceptRemote(record);
+      _notifyIfActive();
+      return true;
+    } on AppFailure {
+      return false;
+    } on TimeoutException {
+      return false;
+    }
+  }
+
   /// Selects a known project and listens for updates to it.
   ///
   /// An unknown ID or an already selected project leaves the selection

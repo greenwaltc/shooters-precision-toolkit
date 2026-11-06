@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:bramwells_precision_test_kit/app/navigation/editor_resume.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/api/project_repository.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/data_matrix_page.dart';
@@ -9,6 +10,7 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/s
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/navigation/app_routes.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +22,88 @@ import '../../../../support/matrix_test_fixture.dart';
 import '../../../../support/test_configuration.dart';
 
 void main() {
+  testWidgets('a reloaded editor claims the project from another session', (
+    tester,
+  ) async {
+    const location = (
+      projectId: 'shared-project',
+      route: AppRoutes.anomrMatrix,
+    );
+    final resume = _EditorResume(location);
+    tester.platformDispatcher.defaultRouteNameTestValue = location.route;
+    addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+    final (store, project, repository) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: true,
+      editorResume: resume,
+    );
+
+    expect(find.byType(AnomrMatrix), findsOneWidget);
+    expect(store.selectedProject!.id, project.id);
+    expect(
+      repository.remoteProject(project.id)!.editorSession,
+      'local-session',
+    );
+    expect(resume.location, location);
+    Navigator.of(tester.element(find.byType(AnomrMatrix))).pop();
+    await tester.pumpAndSettle();
+    expect(resume.location, (projectId: project.id, route: AppRoutes.projects));
+  });
+
+  testWidgets('refreshing Projects reclaims the last selected project', (
+    tester,
+  ) async {
+    const location = (projectId: 'shared-project', route: AppRoutes.projects);
+    final resume = _EditorResume(location);
+    final (store, project, repository) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: false,
+      editorResume: resume,
+    );
+
+    expect(find.text('Projects'), findsOneWidget);
+    expect(find.text('Shared project'), findsOneWidget);
+    expect(store.selectedProject!.id, project.id);
+    expect(
+      repository.remoteProject(project.id)!.editorSession,
+      'local-session',
+    );
+    expect(
+      repository.remoteProject('newer-project')!.editorSession,
+      'other-session',
+    );
+    expect(resume.location, location);
+  });
+
+  testWidgets('activating a Test Design option requests editing control', (
+    tester,
+  ) async {
+    final (store, project, _) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: false,
+    );
+    final option = find.byType(RadioListTile<ExperimentStructure>).at(1);
+    final structure = tester
+        .widget<RadioListTile<ExperimentStructure>>(option)
+        .value;
+    await tester.ensureVisible(option);
+
+    await tester.tap(option);
+    await tester.pumpAndSettle();
+    expect(store.canEditProject(project.id), isTrue);
+    expect(
+      store.selectedProject!.formModel.experimentStructure,
+      isNot(structure),
+    );
+
+    await tester.tap(option);
+    await tester.pumpAndSettle();
+    expect(store.selectedProject!.formModel.experimentStructure, structure);
+  });
+
   for (final mobile in [false, true]) {
     testWidgets(
       'tapping a read-only range takes over on ${mobile ? 'mobile' : 'desktop'}',
@@ -297,6 +381,7 @@ Future<(ProjectStore, SavedProject, _EditingRepository)> _openSharedProject(
   WidgetTester tester,
   Size size, {
   required bool setupComplete,
+  EditorResume? editorResume,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -321,6 +406,21 @@ Future<(ProjectStore, SavedProject, _EditingRepository)> _openSharedProject(
     ..publishRemoteProject(
       CloudProject(project, 2, false, editorSession: 'other-session'),
     );
+  if (editorResume != null) {
+    repository.publishRemoteProject(
+      CloudProject(
+        SavedProject(
+          id: 'newer-project',
+          createdAt: now,
+          updatedAt: now.add(const Duration(minutes: 1)),
+          formModel: ProjectFormModel(projectTitle: 'Newer project'),
+        ),
+        2,
+        false,
+        editorSession: 'other-session',
+      ),
+    );
+  }
   final store = ProjectStore(
     repository: repository,
     draftStorage: InMemoryProjectDraftStorage(),
@@ -335,11 +435,14 @@ Future<(ProjectStore, SavedProject, _EditingRepository)> _openSharedProject(
       config: testConfig(),
       random: Random(4729),
       projectStore: store,
+      editorResume: editorResume,
     ),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Shared project'));
-  await tester.pumpAndSettle();
+  if (editorResume == null) {
+    await tester.tap(find.text('Shared project'));
+    await tester.pumpAndSettle();
+  }
   return (store, project, repository);
 }
 
@@ -367,4 +470,20 @@ class _EditingRepository extends FakeProjectRepository
     publishRemoteProject(claim);
     return claim;
   }
+}
+
+class _EditorResume implements EditorResume {
+  _EditorResume(this.location);
+
+  EditorLocation? location;
+
+  @override
+  EditorLocation? takeReloadLocation() {
+    final saved = location;
+    location = null;
+    return saved;
+  }
+
+  @override
+  void remember(EditorLocation? location) => this.location = location;
 }

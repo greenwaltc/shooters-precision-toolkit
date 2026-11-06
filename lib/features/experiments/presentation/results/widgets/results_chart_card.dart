@@ -69,13 +69,16 @@ class ResultsChartCard extends StatelessWidget {
                 child: SizedBox(
                   width: width,
                   height: scale.chartHeight,
-                  child: CombinedLineChart(
-                    factorRows: factorRows,
-                    grandMean: grandMean,
-                    lowerBound: lowerBound,
-                    upperBound: upperBound,
-                    detectableDiffPercent: detectableDiffPercent,
-                    scale: scale,
+                  // Retain the chart's paint while either scroll view moves it.
+                  child: RepaintBoundary(
+                    child: CombinedLineChart(
+                      factorRows: factorRows,
+                      grandMean: grandMean,
+                      lowerBound: lowerBound,
+                      upperBound: upperBound,
+                      detectableDiffPercent: detectableDiffPercent,
+                      scale: scale,
+                    ),
                   ),
                 ),
               );

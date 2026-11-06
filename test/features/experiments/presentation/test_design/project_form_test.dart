@@ -1,11 +1,15 @@
 import 'dart:math';
 
+import 'package:bramwells_precision_test_kit/app/config/app_config.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/widgets/test_design_help_button.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/product_configuration.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/fake_project_repository.dart';
@@ -42,6 +46,70 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('8 total group sizes in 2 groups of 4'), findsOneWidget);
+  });
+
+  testWidgets('each Test Design section opens its bundled help on mobile', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(320, 568);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    final helpAssets = await tester.runAsync(() async {
+      return {
+        for (final topic in TestDesignHelpTopic.values)
+          topic.assetPath: await rootBundle.loadString(topic.assetPath),
+      };
+    });
+    await _pumpApp(
+      tester,
+      helpAssets: helpAssets!,
+      config: AppConfig.fromValues({
+        'CONFIG_SCHEMA_VERSION': '1',
+        'APP_ENV': 'dev',
+        'IMPUTE_MISSING_DATA': 'true',
+      }),
+    );
+    await _createProject(tester);
+    final twoFactors = find.text('Test how two factors influence precision');
+    await tester.ensureVisible(twoFactors);
+    await tester.tap(twoFactors);
+    await tester.pumpAndSettle();
+
+    for (final (section, example) in [
+      ('Project Name', 'Weaver vs. Isosceles at 25 yd'),
+      ('Experiment structure', 'two front rests and two rear supports'),
+      ('Factor 1', 'No rear bag'),
+      ('Factor 2', 'No rear bag'),
+      ('Risk level', '±26.1%'),
+      ('Sample size', '16 groups'),
+      ('Missing data', '0.30'),
+    ]) {
+      final button = find.byTooltip('Help for $section');
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+
+      final dialog = find.byType(AlertDialog);
+      final help = find.descendant(
+        of: dialog,
+        matching: find.byType(MarkdownBody),
+      );
+      expect(
+        find.descendant(of: dialog, matching: find.text(section)),
+        findsOneWidget,
+      );
+      expect(tester.widget<AlertDialog>(dialog).scrollable, isTrue);
+      expect(tester.widget<MarkdownBody>(help).data, contains(example));
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Close'));
+      await tester.pumpAndSettle();
+      expect(dialog, findsNothing);
+    }
   });
 
   testWidgets('home page hides theme toggle when feature flag is off', (
@@ -315,23 +383,32 @@ void main() {
   });
 }
 
-Future<ProjectStore> _pumpApp(WidgetTester tester) async {
+Future<ProjectStore> _pumpApp(
+  WidgetTester tester, {
+  AppConfig? config,
+  Map<String, String>? helpAssets,
+}) async {
+  final appConfig = config ?? testConfig();
   final store = ProjectStore(
     clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
     draftStorage: InMemoryProjectDraftStorage(),
     repository: FakeProjectRepository(),
     saveDebounce: Duration.zero,
+    featureFlags: appConfig.product.featureFlags,
   );
   addTearDown(store.dispose);
   await store.load();
+  final app = MyApp(
+    clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
+    config: appConfig,
+    random: Random(4729),
+    projectStore: store,
+  );
   await pumpConfiguredWidget(
     tester,
-    MyApp(
-      clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
-      config: testConfig(),
-      random: Random(4729),
-      projectStore: store,
-    ),
+    helpAssets == null
+        ? app
+        : DefaultAssetBundle(bundle: _HelpAssetBundle(helpAssets), child: app),
   );
   await tester.pumpAndSettle(
     const Duration(milliseconds: 100),
@@ -341,10 +418,28 @@ Future<ProjectStore> _pumpApp(WidgetTester tester) async {
   return store;
 }
 
+/// Replays the real help assets without platform I/O during dialog frames.
+class _HelpAssetBundle extends CachingAssetBundle {
+  _HelpAssetBundle(this._help);
+
+  final Map<String, String> _help;
+
+  @override
+  Future<String> loadString(String key, {bool cache = true}) async {
+    return _help[key] ?? super.loadString(key, cache: cache);
+  }
+
+  @override
+  Future<ByteData> load(String key) => rootBundle.load(key);
+}
+
 Future<void> _createProject(WidgetTester tester) async {
-  await tester.tap(
-    find.text(ProjectConfiguration.defaults.uiCopy.createProjectLabel),
+  final create = find.text(
+    ProjectConfiguration.defaults.uiCopy.createProjectLabel,
   );
+  await tester.ensureVisible(create);
+  await tester.pump();
+  await tester.tap(create);
   await tester.pumpAndSettle(
     const Duration(milliseconds: 100),
     EnginePhase.sendSemanticsUpdate,

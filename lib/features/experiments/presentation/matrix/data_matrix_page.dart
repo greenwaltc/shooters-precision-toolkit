@@ -17,6 +17,7 @@ import '../../../../shared/ui/app_copyright_footer.dart';
 import '../../../../shared/ui/app_nav_chrome.dart';
 import '../../../../shared/ui/navigation/app_routes.dart';
 import '../../../../shared/ui/product_configuration.dart';
+import '../../../../shared/ui/scroll_cue.dart';
 import '../../../../shared/ui/theme/app_design.dart';
 import '../../../../shared/ui/theme/components/matrix_grid_style.dart';
 import '../../../../shared/ui/theme/components/scroll_cue_style.dart';
@@ -36,7 +37,7 @@ import '../widgets/project_save_status.dart';
 import 'services/matrix_grid_clipboard.dart';
 import 'services/matrix_grid_data_builder.dart';
 import 'services/matrix_grid_history.dart';
-import 'widgets/grid_scroll_cue.dart';
+import 'widgets/matrix_replicate_dividers.dart';
 import 'widgets/mobile_range_cell.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
@@ -210,7 +211,8 @@ class _AnomrMatrixScaffold extends StatelessWidget {
             ),
             project: project,
             isMobile: layout.isMobile,
-            keyboardVisible: MediaQuery.viewInsetsOf(context).bottom > 0,
+            keyboardVisible:
+                layout.isMobile && MediaQuery.viewInsetsOf(context).bottom > 0,
             canEdit: context.read<ProjectStore>().canEditProject(project.id),
           ),
         ),
@@ -284,20 +286,19 @@ class AnomrMatrixGrid extends StatefulWidget {
   ///
   /// [isMobile] selects the compact interaction and layout. Set [canEdit]
   /// to false to keep browsing and copying available during a handoff.
+  /// [keyboardVisible] enables the focused mobile editing layout.
   const AnomrMatrixGrid({
     super.key,
     required this.project,
     required this.isMobile,
-    this.canEdit = true,
     this.keyboardVisible = false,
+    this.canEdit = true,
   });
 
   final SavedProject project;
   final bool isMobile;
-  final bool canEdit;
-
-  /// Whether the platform keyboard is covering the viewport.
   final bool keyboardVisible;
+  final bool canEdit;
 
   @override
   State<AnomrMatrixGrid> createState() => _AnomrMatrixGridState();
@@ -317,7 +318,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   late List<int> _defaultRunSequence;
   late List<PlutoColumnGroup> _columnGroups;
   PlutoGridStateManager? _stateManager;
-  _ScrollCueState _scrollCues = const _ScrollCueState();
+  final _scrollCues = ValueNotifier(const _ScrollCueState());
 
   bool _randomizeOrder = false;
   bool _exportingProject = false;
@@ -615,10 +616,11 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       final resized = _pendingGridResize;
       _pendingGridResize = false;
       _updateScrollCues();
-      if (resized || _columns.any((column) => column.field == 'group')) {
+      if (resized) {
         setState(() {});
       }
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   void _updateScrollCues() {
@@ -652,9 +654,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           hasVerticalOverflow && offsetVertical < maxVertical - _scrollEpsilon,
     );
 
-    if (next != _scrollCues) {
-      setState(() => _scrollCues = next);
-    }
+    _scrollCues.value = next;
   }
 
   void _detachScrollListeners() {
@@ -680,6 +680,9 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     _stateManager!.setSelectingMode(PlutoGridSelectingMode.cell);
     _gridWasEditing = manager.isEditing == true;
     _stateManager!.addListener(_handleRangeCellEditFocus);
+    if (widget.isMobile) {
+      manager.gridFocusNode.addListener(_handleMobileEditorFocusChanged);
+    }
     _attachScrollListeners();
   }
 
@@ -687,9 +690,16 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     _detachScrollListeners();
     _stateManager?.resizingChangeNotifier.removeListener(_handleGridResize);
     _stateManager?.removeListener(_handleRangeCellEditFocus);
+    _stateManager?.gridFocusNode.removeListener(
+      _handleMobileEditorFocusChanged,
+    );
     _endRangeCellEditSelectionGuard();
     _detachRangeEditSyncListener();
     _stateManager = null;
+  }
+
+  void _handleMobileEditorFocusChanged() {
+    setState(() {});
   }
 
   PlutoGridStyleConfig _plutoStyleConfig(PlutoGridStyleTheme plutoTheme) {
@@ -821,7 +831,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     required double height,
     required PlutoGridStyleTheme plutoTheme,
     required bool showScrollbars,
-    required ColorScheme scheme,
   }) {
     return SizedBox(
       width: width,
@@ -830,96 +839,70 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         clipBehavior: Clip.hardEdge,
         children: [
           Positioned.fill(
-            child: _buildPlutoGrid(
-              plutoTheme: plutoTheme,
-              showScrollbars: showScrollbars,
+            child: RepaintBoundary(
+              child: NotificationListener<ScrollMetricsNotification>(
+                onNotification: (notification) {
+                  // The grid's two scrolling axes are nested. Deeper
+                  // notifications may come from an inline text editor.
+                  if (notification.depth <= 1) {
+                    _scheduleGridUpdate();
+                  }
+                  return false;
+                },
+                child: _buildPlutoGrid(
+                  plutoTheme: plutoTheme,
+                  showScrollbars: showScrollbars,
+                ),
+              ),
             ),
           ),
           if (_stateManager case final manager?)
             Positioned.fill(
-              child: IgnorePointer(child: _replicateDividers(manager, scheme)),
+              child: MatrixReplicateDividers(
+                manager: manager,
+                showRowBoundaries: !_randomizeOrder,
+                showColumnGroups: !widget.isMobile,
+              ),
             ),
-          if (_scrollCues.showLeft)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: GridScrollCue(edge: ScrollCueEdge.left, scheme: scheme),
-            ),
-          if (_scrollCues.showRight)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              child: GridScrollCue(edge: ScrollCueEdge.right, scheme: scheme),
-            ),
-          if (_scrollCues.showTop)
-            Positioned(
-              left: 0,
-              right: 0,
-              top: _bodyRowsTopInset(plutoTheme),
-              child: GridScrollCue(edge: ScrollCueEdge.top, scheme: scheme),
-            ),
-          if (_scrollCues.showBottom)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: GridScrollCue(edge: ScrollCueEdge.bottom, scheme: scheme),
+          if (!_hasMobileEditorFocus)
+            Positioned.fill(
+              child: ValueListenableBuilder(
+                valueListenable: _scrollCues,
+                builder: (context, cues, _) => Stack(
+                  children: [
+                    if (cues.showLeft)
+                      const Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: ScrollCue(edge: ScrollCueEdge.left),
+                      ),
+                    if (cues.showRight)
+                      const Positioned(
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: ScrollCue(edge: ScrollCueEdge.right),
+                      ),
+                    if (cues.showTop)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: _bodyRowsTopInset(plutoTheme),
+                        child: const ScrollCue(edge: ScrollCueEdge.top),
+                      ),
+                    if (cues.showBottom)
+                      const Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: ScrollCue(edge: ScrollCueEdge.bottom),
+                      ),
+                  ],
+                ),
+              ),
             ),
         ],
-      ),
-    );
-  }
-
-  Widget _replicateDividers(PlutoGridStateManager manager, ColorScheme scheme) {
-    final horizontal = manager.scroll.bodyRowsHorizontal!;
-    final vertical = manager.scroll.bodyRowsVertical!;
-    final boundary = manager.columns.indexWhere(
-      (column) => column.field == 'group',
-    );
-    if (boundary < 0 || !horizontal.hasClients || !vertical.hasClients) {
-      return const SizedBox.shrink();
-    }
-    const inset = PlutoGridSettings.gridPadding;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-    final divider = ColoredBox(color: scheme.outline);
-    final dividerOffset =
-        inset +
-        manager.columns
-            .take(boundary + 1)
-            .fold<double>(0, (width, column) => width + column.width) -
-        horizontal.offset;
-    return Padding(
-      padding: const EdgeInsets.all(inset),
-      child: ClipRect(
-        child: Stack(
-          children: [
-            PositionedDirectional(
-              start: dividerOffset - inset,
-              top: widget.isMobile ? 0 : manager.columnHeight,
-              bottom: 0,
-              width: AppDesign.borderFocus,
-              child: divider,
-            ),
-            if (!_randomizeOrder)
-              for (var i = 1; i < _rows.length; i++)
-                if (i * manager.rowTotalHeight >= vertical.offset &&
-                    _rows[i - 1].cells['group']?.value !=
-                        _rows[i].cells['group']?.value)
-                  Positioned(
-                    top:
-                        manager.rowsTopOffset +
-                        i * manager.rowTotalHeight -
-                        vertical.offset,
-                    left: rtl ? null : 0,
-                    right: rtl ? 0 : null,
-                    width: _columnTotalWidth() - horizontal.offset,
-                    height: AppDesign.borderFocus,
-                    child: divider,
-                  ),
-          ],
-        ),
       ),
     );
   }
@@ -1293,6 +1276,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     FocusManager.instance.removeEarlyKeyEventHandler(_clipboardKeyHandler);
     _removeBrowserClipboard?.call();
     _detachStateManager();
+    _scrollCues.dispose();
     super.dispose();
   }
 
@@ -1422,14 +1406,17 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         widget.isMobile && widget.canEdit
             ? MobileRangeCell(
                 key: GlobalObjectKey<MobileRangeCellState>(cell.cell),
+                keyboardVisible: widget.keyboardVisible,
                 onNext: cell.rowIdx + 1 < cell.stateManager.rows.length
                     ? () => _focusMobileRange(cell.rowIdx + 1)
+                    : null,
+                onPrevious: cell.rowIdx > 0
+                    ? () => _focusMobileRange(cell.rowIdx - 1)
                     : null,
                 value: cell.cell.value?.toString() ?? '',
                 onFocused: () {
                   cell.stateManager.setKeepFocus(true, notify: false);
                   cell.stateManager.setCurrentCell(cell.cell, cell.rowIdx);
-                  setState(() {});
                 },
                 onChanged: (text) {
                   if (!RangeValueParser.parse(text).invalid) {
@@ -1473,50 +1460,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
         key.currentState?.requestFocus();
       }
     });
-  }
-
-  Widget? _mobileKeyboardActions() {
-    final manager = _stateManager;
-    final index = manager?.currentRowIdx;
-    if (!widget.isMobile ||
-        !_canWrite ||
-        !widget.keyboardVisible ||
-        manager == null ||
-        index == null) {
-      return null;
-    }
-    final key = GlobalObjectKey<MobileRangeCellState>(
-      manager.rows[index].cells['range']!,
-    );
-    if (key.currentState?.hasFocus != true) {
-      return null;
-    }
-    return TextFieldTapRegion(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          IconButton(
-            tooltip: context.l10n.previousGroupSize,
-            onPressed: index > 0 ? () => _focusMobileRange(index - 1) : null,
-            icon: const Icon(Icons.keyboard_arrow_up),
-          ),
-          IconButton(
-            tooltip: context.l10n.nextGroupSize,
-            onPressed: index + 1 < manager.rows.length
-                ? () => _focusMobileRange(index + 1)
-                : null,
-            icon: const Icon(Icons.keyboard_arrow_down),
-          ),
-          Tooltip(
-            message: context.l10n.insertFractionSlash,
-            child: TextButton(
-              onPressed: () => key.currentState?.insertSlash(),
-              child: const Text('/'),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _displayRangeCell(PlutoColumnRendererContext cell) {
@@ -1883,7 +1826,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   @override
   Widget build(BuildContext context) {
     final plutoTheme = _plutoTheme();
-    final scheme = Theme.of(context).colorScheme;
+    final focusMode = widget.keyboardVisible && _hasMobileEditorFocus;
 
     final desktop =
         AppLayoutMetrics.of(context).isDesktop &&
@@ -1932,7 +1875,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               ],
             ),
           ),
-        if (!desktop) ...[
+        if (!desktop && !focusMode) ...[
           _MatrixHeader(
             mobile: widget.isMobile,
             formModel: widget.project.formModel,
@@ -1941,43 +1884,40 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
           actions,
         ],
         ProjectEditingNotice(projectId: widget.project.id),
-        Expanded(child: _buildGridArea(plutoTheme, scheme)),
+        Expanded(child: _buildGridArea(plutoTheme)),
       ],
     );
-    final keyboardActions = _mobileKeyboardActions();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final scale = MediaQuery.textScalerOf(context).scale(1);
-              final minHeight =
-                  (widget.isMobile
-                      ? 280 + 140 * (scale - 1).clamp(0, double.infinity)
-                      : AppDesign.matrixMinBodyHeight) *
-                  scale;
-              final viewport =
-                  !widget.isMobile && constraints.maxHeight >= minHeight
-                  ? content
-                  : SingleChildScrollView(
-                      child: SizedBox(
-                        height: math.max(minHeight, constraints.maxHeight),
-                        child: content,
-                      ),
-                    );
-              return Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: _desktopMaxWidth),
-                  child: viewport,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(1);
+        final browsingMinHeight =
+            (widget.isMobile
+                ? 280 + 140 * (scale - 1).clamp(0, double.infinity)
+                : AppDesign.matrixMinBodyHeight) *
+            scale;
+        // At very short heights, keep at least a column header and a full
+        // editable row in the grid. The outer scroll view can reveal that row.
+        final minHeight = focusMode
+            ? _bodyRowsTopInset(plutoTheme) +
+                  plutoTheme.rowHeight +
+                  MatrixGridStyle.rowBorderWidth
+            : browsingMinHeight;
+        final viewport = !widget.isMobile && constraints.maxHeight >= minHeight
+            ? content
+            : SingleChildScrollView(
+                child: SizedBox(
+                  height: math.max(minHeight, constraints.maxHeight),
+                  child: content,
                 ),
               );
-            },
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _desktopMaxWidth),
+            child: viewport,
           ),
-        ),
-        ?keyboardActions,
-      ],
+        );
+      },
     );
   }
 
@@ -2055,7 +1995,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     return [for (final index in sequence) rowsByStorage[index]!];
   }
 
-  Widget _buildGridArea(PlutoGridStyleTheme plutoTheme, ColorScheme scheme) {
+  Widget _buildGridArea(PlutoGridStyleTheme plutoTheme) {
     return Align(
       alignment: Alignment.topCenter,
       child: LayoutBuilder(
@@ -2077,7 +2017,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
             height: displaySize.height,
             plutoTheme: plutoTheme,
             showScrollbars: displaySize.showScrollbars,
-            scheme: scheme,
           );
         },
       ),

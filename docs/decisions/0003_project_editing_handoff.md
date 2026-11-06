@@ -17,8 +17,16 @@ and let the new session edit it.
 The Firestore adapter assigns an opaque ID to each workspace instance. A project
 document can store that ID in the optional `editorSession` field. Opening an
 editor can claim an unowned project. Tapping a Group Size cell in a read-only
-matrix or a text field in a read-only Test Design transfers control. The
-new editor receives the server snapshot from the claim transaction.
+matrix or activating a field or option in read-only Test Design transfers
+control. The new editor receives the server snapshot from the claim transaction.
+For a Test Design option, choose it again after the handoff to apply it to the
+current design.
+
+A browser reload also transfers control of the selected project. Tab-scoped
+session storage remembers the project ID and page for that account. Results
+reopen in the Data Matrix. Reloading the Projects list transfers control of the
+last selected project and keeps the list open. A reload without a remembered
+project has no editing target.
 
 A claim advances the same revision used by conditional saves. It leaves the
 project data and its last-modified timestamp intact. A save checks the current

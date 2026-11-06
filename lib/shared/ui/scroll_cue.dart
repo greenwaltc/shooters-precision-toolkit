@@ -5,21 +5,19 @@
 
 import 'package:flutter/material.dart';
 
-import '../../../../../shared/ui/theme/components/scroll_cue_style.dart';
+import 'theme/components/scroll_cue_style.dart';
 
 /// Non-interactive edge overlay that hints more content is scrollable.
-class GridScrollCue extends StatelessWidget {
-  /// Creates a scroll hint for [edge] using the active color [scheme].
-  const GridScrollCue({super.key, required this.edge, required this.scheme});
+class ScrollCue extends StatelessWidget {
+  /// Creates a scroll hint for [edge] using the surrounding theme.
+  const ScrollCue({super.key, required this.edge});
 
   /// Edge where the cue is painted.
   final ScrollCueEdge edge;
 
-  /// Active color scheme used to harmonize the cue with the page surface.
-  final ColorScheme scheme;
-
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final isHorizontal =
         edge == ScrollCueEdge.left || edge == ScrollCueEdge.right;
 
@@ -34,14 +32,12 @@ class GridScrollCue extends StatelessWidget {
               surface: scheme.surface,
             ),
           ),
-          child: Align(
-            alignment: ScrollCueStyle.iconAlignment(edge),
-            child: Padding(
-              padding: ScrollCueStyle.iconPadding(edge),
-              child: Icon(
-                ScrollCueStyle.icon(edge),
-                size: 22,
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.85),
+          child: Center(
+            child: Icon(
+              ScrollCueStyle.icon(edge),
+              size: ScrollCueStyle.iconSize,
+              color: scheme.onSurfaceVariant.withValues(
+                alpha: ScrollCueStyle.iconOpacity,
               ),
             ),
           ),

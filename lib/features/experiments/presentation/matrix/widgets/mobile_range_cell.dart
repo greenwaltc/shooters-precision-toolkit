@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../../shared/l10n/app_copy.dart';
 import '../../../../../shared/ui/theme/app_design.dart';
@@ -10,17 +12,25 @@ import '../../../../../shared/ui/theme/tokens/app_spacing.dart';
 class MobileRangeCell extends StatefulWidget {
   /// Shows [value] and forwards edits through [onChanged]. On blur,
   /// [finishEditing] returns the committed value to display.
+  ///
+  /// [onNext] and [onPrevious] move focus to adjacent Group Size cells
+  /// when the keyboard sends the corresponding navigation action.
+  /// [keyboardVisible] centers the focused row in the grid's scroll area.
   const MobileRangeCell({
     super.key,
     required this.value,
+    required this.keyboardVisible,
     required this.onFocused,
     required this.onChanged,
     required this.finishEditing,
     this.onNext,
+    this.onPrevious,
   });
 
   final VoidCallback? onNext;
+  final VoidCallback? onPrevious;
   final String value;
+  final bool keyboardVisible;
   final VoidCallback onFocused;
   final ValueChanged<String> onChanged;
   final String Function(String) finishEditing;
@@ -29,31 +39,14 @@ class MobileRangeCell extends StatefulWidget {
   State<MobileRangeCell> createState() => MobileRangeCellState();
 }
 
-/// Gives the matrix toolbar access to the focused editor.
+/// Owns the text and focus for one inline editor.
 class MobileRangeCellState extends State<MobileRangeCell>
     with WidgetsBindingObserver {
   late final _controller = TextEditingController(text: widget.value);
   final _focus = FocusNode();
 
-  /// Whether this row currently owns keyboard focus.
-  bool get hasFocus => _focus.hasFocus;
-
   /// Opens the editor for this row.
   void requestFocus() => _focus.requestFocus();
-
-  /// Inserts a fraction separator at the selection.
-  void insertSlash() {
-    final text = _controller.text;
-    final selection = _controller.selection;
-    final start = selection.isValid ? selection.start : text.length;
-    final end = selection.isValid ? selection.end : text.length;
-    final updated = text.replaceRange(start, end, '/');
-    _controller.value = TextEditingValue(
-      text: updated,
-      selection: TextSelection.collapsed(offset: start + 1),
-    );
-    widget.onChanged(updated);
-  }
 
   @override
   void initState() {
@@ -66,6 +59,10 @@ class MobileRangeCellState extends State<MobileRangeCell>
     super.didUpdateWidget(oldWidget);
     if (!_focus.hasFocus && widget.value != oldWidget.value) {
       _controller.text = widget.value;
+    }
+    if (_focus.hasFocus &&
+        widget.keyboardVisible != oldWidget.keyboardVisible) {
+      _revealAfterLayout();
     }
   }
 
@@ -84,7 +81,7 @@ class MobileRangeCellState extends State<MobileRangeCell>
       // PlutoGrid requests focus for its own node when the grid gains focus.
       // Keep the tap's focus on the editable child instead.
       _focus.requestFocus();
-      _revealAfterLayout();
+      _revealAfterLayout(animateCenter: widget.keyboardVisible);
     } else {
       WidgetsBinding.instance.removeObserver(this);
       _controller.text = widget.finishEditing(_controller.text);
@@ -94,11 +91,42 @@ class MobileRangeCellState extends State<MobileRangeCell>
   @override
   void didChangeMetrics() => _revealAfterLayout();
 
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    // Flutter Web turns the input element's Return event into its configured
+    // text input action. Handle raw Return only on native platforms.
+    if (!kIsWeb &&
+        event is KeyDownEvent &&
+        (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.numpadEnter)) {
+      if (widget.onNext case final next?) {
+        next();
+      } else {
+        _focus.unfocus();
+      }
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.skipRemainingHandlers;
+  }
+
   /// The keyboard can resize both the page and PlutoGrid's scroll viewport.
-  /// Reveal the cell after those scrollables finish laying out at the new size.
-  void _revealAfterLayout() {
+  /// Reveal the cell after layout, then center it in the vertical row scroller
+  /// while typing. Leave the horizontal position alone once the cell is visible.
+  void _revealAfterLayout({bool animateCenter = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _focus.hasFocus) {
+      if (!mounted || !_focus.hasFocus) {
+        return;
+      }
+
+      final rows = widget.keyboardVisible
+          ? Scrollable.maybeOf(context, axis: Axis.vertical)
+          : null;
+      final cell = context.findRenderObject();
+      final animate =
+          animateCenter &&
+          rows != null &&
+          cell != null &&
+          !MediaQuery.disableAnimationsOf(context);
+      if (!animate) {
         unawaited(
           Scrollable.ensureVisible(
             context,
@@ -106,63 +134,84 @@ class MobileRangeCellState extends State<MobileRangeCell>
           ),
         );
       }
+      if (rows != null && cell != null) {
+        unawaited(
+          rows.position.ensureVisible(
+            cell,
+            alignment: 0.5,
+            duration: animate ? AppDesign.motionMedium : Duration.zero,
+            curve: Curves.easeInOut,
+          ),
+        );
+      }
     });
   }
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: context.l10n.groupSize,
-    child: SizedBox.expand(
-      child: ListenableBuilder(
-        listenable: _focus,
-        builder: (context, child) => DecoratedBox(
-          position: DecorationPosition.foreground,
-          decoration: BoxDecoration(
-            border: _focus.hasFocus
-                ? Border.all(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: AppDesign.borderFocus,
-                  )
-                : null,
+  Widget build(BuildContext context) => TextFieldTapRegion(
+    // A tap anywhere in the next editable cell must transfer focus without
+    // dismissing the current editor on pointer down.
+    groupId: MobileRangeCell,
+    child: Semantics(
+      label: context.l10n.groupSize,
+      child: SizedBox.expand(
+        child: ListenableBuilder(
+          listenable: _focus,
+          builder: (context, child) => DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: BoxDecoration(
+              border: _focus.hasFocus
+                  ? Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: AppDesign.borderFocus,
+                    )
+                  : null,
+            ),
+            child: child,
           ),
-          child: child,
-        ),
-        child: Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          // Let the usual text shortcuts run first. Unhandled keys go to the
-          // platform text input instead of being consumed by PlutoGrid.
-          onKeyEvent: (_, _) => KeyEventResult.skipRemainingHandlers,
-          child: DefaultTextEditingShortcuts(
-            // Keep the input at its natural height and center it in the cell.
-            // The surrounding area still focuses the same editor when tapped.
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _focus.requestFocus,
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focus,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textInputAction: widget.onNext == null
-                      ? TextInputAction.done
-                      : TextInputAction.next,
-                  onEditingComplete: widget.onNext,
-                  selectAllOnFocus: false,
-                  onChanged: widget.onChanged,
-                  onTapOutside: (_) => _focus.unfocus(),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlignVertical: TextAlignVertical.center,
-                  decoration: const InputDecoration(
-                    filled: false,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
+          child: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            // Let the usual text shortcuts run first. Unhandled keys go to the
+            // platform text input instead of being consumed by PlutoGrid.
+            onKeyEvent: _handleKeyEvent,
+            child: DefaultTextEditingShortcuts(
+              // Keep the input at its natural height and center it in the cell.
+              // The surrounding area still focuses the same editor when tapped.
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _focus.requestFocus,
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: FocusTraversalGroup(
+                    policy: _RangeRowTraversal(
+                      onNext: widget.onNext,
+                      onPrevious: widget.onPrevious,
+                    ),
+                    child: TextField(
+                      groupId: MobileRangeCell,
+                      controller: _controller,
+                      focusNode: _focus,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      textInputAction: widget.onNext == null
+                          ? TextInputAction.done
+                          : TextInputAction.next,
+                      selectAllOnFocus: false,
+                      onChanged: widget.onChanged,
+                      onTapOutside: (_) => _focus.unfocus(),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlignVertical: TextAlignVertical.center,
+                      decoration: const InputDecoration(
+                        filled: false,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -173,4 +222,24 @@ class MobileRangeCellState extends State<MobileRangeCell>
       ),
     ),
   );
+}
+
+/// Routes Flutter's keyboard traversal through the grid, which can mount an
+/// adjacent editor after scrolling it into view.
+class _RangeRowTraversal extends WidgetOrderTraversalPolicy {
+  _RangeRowTraversal({this.onNext, this.onPrevious});
+
+  final VoidCallback? onNext;
+  final VoidCallback? onPrevious;
+
+  @override
+  bool next(FocusNode currentNode) => _move(onNext);
+
+  @override
+  bool previous(FocusNode currentNode) => _move(onPrevious);
+
+  bool _move(VoidCallback? callback) {
+    callback?.call();
+    return callback != null;
+  }
 }

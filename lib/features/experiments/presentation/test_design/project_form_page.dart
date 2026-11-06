@@ -42,9 +42,6 @@ class ProjectFormPage extends StatelessWidget {
 
           return AppLayoutBuilder(
             builder: (context, layout) {
-              final keyboardCoversBottom =
-                  layout.isMobile &&
-                  MediaQuery.viewInsetsOf(context).bottom > 0;
               final hasLeading = AppNavChrome.canPop(context);
               final titleSpacing = AppBrandAssets.projectTitleSpacing(
                 layout,
@@ -112,7 +109,6 @@ class ProjectFormPage extends StatelessWidget {
                                 project.id,
                                 allowTakeover: true,
                               ),
-                          showScrollCues: !keyboardCoversBottom,
                           onSubmit: () => _goToMatrix(context, store),
                         ),
                       ),

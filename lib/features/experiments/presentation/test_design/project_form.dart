@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../shared/l10n/app_copy.dart';
 import '../../../../shared/ui/product_configuration.dart';
+import '../../../../shared/ui/scroll_cue.dart';
 import '../../../../shared/ui/theme/app_design.dart';
 import '../../../../shared/ui/theme/components/app_text_field_decoration.dart';
 import '../../../../shared/ui/theme/components/grouped_field_panel.dart';
@@ -13,10 +14,10 @@ import '../../../../shared/ui/theme/layout/app_viewport.dart';
 import '../../../../shared/ui/theme/tokens/app_spacing.dart';
 import '../../../../shared/ui/theme/tokens/app_text_styles.dart';
 import '../../domain/sample_size_catalog.dart';
-import '../matrix/widgets/grid_scroll_cue.dart';
 import 'controllers/factor_input_controllers.dart';
 import 'project_form_model.dart';
 import 'services/project_form_validator.dart';
+import 'widgets/test_design_help_button.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
 // Use of this source code is governed by a proprietary license that can be
@@ -28,16 +29,15 @@ class ProjectForm extends StatefulWidget {
   /// Creates the experiment-design form around [formModel].
   ///
   /// [onSubmit], when supplied, lets the parent decide what happens when the
-  /// user submits it from the bottom of the form. Set [showScrollCues] to
-  /// false while a mobile keyboard covers the bottom of the screen.
+  /// user submits it from the bottom of the form. Scroll cues are hidden while
+  /// a text field is focused in the mobile layout.
   /// Set [readOnly] to show the design without allowing changes or submission.
-  /// [onReadOnlyFieldActivate] can request editing access when a text field is
-  /// tapped or activated with Enter.
+  /// [onReadOnlyFieldActivate] can request editing access when a form control
+  /// is activated.
   const ProjectForm({
     super.key,
     required this.formModel,
     this.onSubmit,
-    this.showScrollCues = true,
     this.readOnly = false,
     this.onReadOnlyFieldActivate,
   });
@@ -48,13 +48,10 @@ class ProjectForm extends StatefulWidget {
   /// Called after validation succeeds.
   final Future<void> Function()? onSubmit;
 
-  /// Whether to show the indicators for more scrollable content.
-  final bool showScrollCues;
-
   /// Whether editing controls and submission are disabled.
   final bool readOnly;
 
-  /// Called when the user activates a text field while the form is read-only.
+  /// Called when the user activates a field or option while read-only.
   final VoidCallback? onReadOnlyFieldActivate;
 
   @override
@@ -64,6 +61,7 @@ class ProjectForm extends StatefulWidget {
 class _ProjectFormState extends State<ProjectForm> {
   final _formKey = GlobalKey<FormState>();
   final _fieldsScrollController = ScrollController();
+  final _textFieldFocusNodes = <TextEditingController, FocusNode>{};
   final projectTitleController = TextEditingController();
   late final List<FactorInputControllers> _factorControllers;
   bool _isHydratingControllers = false;
@@ -71,8 +69,8 @@ class _ProjectFormState extends State<ProjectForm> {
   /// Distance (in pixels) from an edge before a scroll cue is hidden.
   static const double _scrollCueEpsilon = 1;
 
-  bool _showTopScrollCue = false;
-  bool _showBottomScrollCue = false;
+  final _scrollCues = ValueNotifier((top: false, bottom: false));
+  bool _scrollCueUpdateScheduled = false;
 
   @override
   void initState() {
@@ -97,6 +95,10 @@ class _ProjectFormState extends State<ProjectForm> {
   @override
   void dispose() {
     _fieldsScrollController.dispose();
+    _scrollCues.dispose();
+    for (final node in _textFieldFocusNodes.values) {
+      node.dispose();
+    }
     projectTitleController.dispose();
     for (final controllers in _factorControllers) {
       controllers.dispose();
@@ -253,7 +255,10 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildScrollableForm(BuildContext context, AppLayoutMetrics layout) {
-    final scheme = Theme.of(context).colorScheme;
+    final editingText =
+        layout.isMobile &&
+        !widget.readOnly &&
+        _textFieldFocusNodes.values.any((node) => node.hasFocus);
 
     return Stack(
       children: [
@@ -282,26 +287,41 @@ class _ProjectFormState extends State<ProjectForm> {
             ),
           ),
         ),
-        if (_showTopScrollCue && widget.showScrollCues)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: GridScrollCue(edge: ScrollCueEdge.top, scheme: scheme),
-          ),
-        if (_showBottomScrollCue && widget.showScrollCues)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: GridScrollCue(edge: ScrollCueEdge.bottom, scheme: scheme),
+        if (!editingText)
+          Positioned.fill(
+            child: ValueListenableBuilder(
+              valueListenable: _scrollCues,
+              builder: (context, cues, _) => Stack(
+                children: [
+                  if (cues.top)
+                    const Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: ScrollCue(edge: ScrollCueEdge.top),
+                    ),
+                  if (cues.bottom)
+                    const Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: ScrollCue(edge: ScrollCueEdge.bottom),
+                    ),
+                ],
+              ),
+            ),
           ),
       ],
     );
   }
 
   void _scheduleScrollCueUpdate() {
+    if (_scrollCueUpdateScheduled) {
+      return;
+    }
+    _scrollCueUpdateScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollCueUpdateScheduled = false;
       if (!mounted) {
         return;
       }
@@ -312,17 +332,12 @@ class _ProjectFormState extends State<ProjectForm> {
       }
 
       final position = controller.position;
-      final showTop = position.pixels > _scrollCueEpsilon;
-      final showBottom =
-          position.pixels < position.maxScrollExtent - _scrollCueEpsilon;
-
-      if (showTop != _showTopScrollCue || showBottom != _showBottomScrollCue) {
-        setState(() {
-          _showTopScrollCue = showTop;
-          _showBottomScrollCue = showBottom;
-        });
-      }
+      _scrollCues.value = (
+        top: position.pixels > _scrollCueEpsilon,
+        bottom: position.pixels < position.maxScrollExtent - _scrollCueEpsilon,
+      );
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Widget _buildFormTitle(BuildContext context) {
@@ -359,7 +374,11 @@ class _ProjectFormState extends State<ProjectForm> {
   List<Widget> _buildSetupFields() {
     return [
       _buildProjectNameInput(),
-      SectionTitle(context.l10n.chooseTheStructureOfYourExperiment),
+      _buildSectionHeading(
+        context.l10n.chooseTheStructureOfYourExperiment,
+        context.l10n.experimentStructure,
+        TestDesignHelpTopic.structure,
+      ),
       _buildExperimentStructureOptions(),
       _buildFactorDefinitionContainer(),
     ];
@@ -367,12 +386,33 @@ class _ProjectFormState extends State<ProjectForm> {
 
   List<Widget> _buildSampleFields() {
     return [
-      SectionTitle(context.l10n.chooseYourRiskLevelChanceOfBeingWrong),
+      _buildSectionHeading(
+        context.l10n.chooseYourRiskLevelChanceOfBeingWrong,
+        context.l10n.riskLevelMessage,
+        TestDesignHelpTopic.risk,
+      ),
       _buildRiskLevelOptions(),
-      SectionTitle(context.l10n.chooseYourSampleSize),
+      _buildSectionHeading(
+        context.l10n.chooseYourSampleSize,
+        context.l10n.sampleSize,
+        TestDesignHelpTopic.sampleSize,
+      ),
       _buildSampleSizeOptions(),
       if (_canShowImputationOption()) _buildImputeMissingDataCheckbox(),
     ];
+  }
+
+  Widget _buildSectionHeading(
+    String title,
+    String section,
+    TestDesignHelpTopic topic,
+  ) {
+    return Row(
+      children: [
+        Expanded(child: Semantics(header: true, child: SectionTitle(title))),
+        TestDesignHelpButton(section: section, topic: topic),
+      ],
+    );
   }
 
   Widget _fieldColumn(List<Widget> children) {
@@ -389,30 +429,45 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildProjectNameInput() {
-    return _buildTextField(
-      controller: projectTitleController,
-      labelText: context.l10n.projectName,
-      prefixIcon: Icons.title,
-      validator: (value) => ProjectFormValidator.requiredField(
-        value,
-        context.l10n.projectNameIsRequired,
-      ),
+    final label = context.l10n.projectName;
+    return Row(
+      children: [
+        Expanded(
+          child: _buildTextField(
+            controller: projectTitleController,
+            labelText: label,
+            prefixIcon: Icons.title,
+            validator: (value) => ProjectFormValidator.requiredField(
+              value,
+              context.l10n.projectNameIsRequired,
+            ),
+          ),
+        ),
+        TestDesignHelpButton(
+          section: label,
+          topic: TestDesignHelpTopic.projectName,
+        ),
+      ],
     );
+  }
+
+  bool get _canActivateOptions =>
+      !widget.readOnly || widget.onReadOnlyFieldActivate != null;
+
+  void _changeOption<T>(T? value, ValueChanged<T> update) {
+    if (widget.readOnly) {
+      widget.onReadOnlyFieldActivate?.call();
+    } else if (value != null) {
+      setState(() => update(value));
+    }
   }
 
   Widget _buildExperimentStructureOptions() {
     return GroupedFieldPanel(
       child: RadioGroup<ExperimentStructure>(
         groupValue: widget.formModel.experimentStructure,
-        onChanged: (structure) {
-          if (structure == null || widget.readOnly) {
-            return;
-          }
-
-          setState(() {
-            widget.formModel.setExperimentStructure(structure);
-          });
-        },
+        onChanged: (structure) =>
+            _changeOption(structure, widget.formModel.setExperimentStructure),
         child: Column(
           children: ExperimentStructure.values.map((structure) {
             return RadioListTile<ExperimentStructure>(
@@ -427,7 +482,8 @@ class _ProjectFormState extends State<ProjectForm> {
                   ? VisualDensity.compact
                   : null,
               value: structure,
-              enabled: !widget.readOnly,
+              enabled: _canActivateOptions,
+              toggleable: widget.readOnly,
               title: Text(structure.label),
             );
           }).toList(),
@@ -454,16 +510,27 @@ class _ProjectFormState extends State<ProjectForm> {
 
   Widget _buildFactorFields(int index) {
     final controllers = _factorControllers[index];
+    final label = context.l10n.factorNumber(index + 1);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: AppSpacing.factorTitle,
-          child: Text(
-            context.l10n.factorNumber(index + 1),
-            style: AppTextStyles.factorLabel(context),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: AppSpacing.factorTitle,
+                child: Semantics(
+                  header: true,
+                  child: Text(label, style: AppTextStyles.factorLabel(context)),
+                ),
+              ),
+            ),
+            TestDesignHelpButton(
+              section: label,
+              topic: TestDesignHelpTopic.factorStates,
+            ),
+          ],
         ),
         _buildTextField(
           controller: controllers.factorName,
@@ -504,13 +571,8 @@ class _ProjectFormState extends State<ProjectForm> {
     return GroupedFieldPanel(
       child: RadioGroup<RiskLevel>(
         groupValue: widget.formModel.riskLevel,
-        onChanged: (level) {
-          if (level == null || widget.readOnly) {
-            return;
-          }
-
-          setState(() => widget.formModel.setRiskLevel(level));
-        },
+        onChanged: (level) =>
+            _changeOption(level, widget.formModel.setRiskLevel),
         child: Column(
           children: RiskLevel.values.map((level) {
             return RadioListTile<RiskLevel>(
@@ -525,7 +587,8 @@ class _ProjectFormState extends State<ProjectForm> {
                   ? VisualDensity.compact
                   : null,
               value: level,
-              enabled: !widget.readOnly,
+              enabled: _canActivateOptions,
+              toggleable: widget.readOnly,
               title: Text(level.label),
             );
           }).toList(),
@@ -543,13 +606,8 @@ class _ProjectFormState extends State<ProjectForm> {
     return GroupedFieldPanel(
       child: RadioGroup<SampleSizeOption>(
         groupValue: widget.formModel.sampleSizeOption,
-        onChanged: (option) {
-          if (option == null || widget.readOnly) {
-            return;
-          }
-
-          setState(() => widget.formModel.setSampleSizeOption(option));
-        },
+        onChanged: (option) =>
+            _changeOption(option, widget.formModel.setSampleSizeOption),
         child: Column(children: options.map(_buildSampleSizeOption).toList()),
       ),
     );
@@ -560,7 +618,8 @@ class _ProjectFormState extends State<ProjectForm> {
       dense: MediaQuery.sizeOf(context).width >= 1024,
       minTileHeight: 56,
       value: option,
-      enabled: !widget.readOnly,
+      enabled: _canActivateOptions,
+      toggleable: widget.readOnly,
       title: Text(option.formOptionLabel(widget.formModel.experimentStructure)),
       subtitle: Text(
         context.l10n.detectsDifference(
@@ -571,17 +630,26 @@ class _ProjectFormState extends State<ProjectForm> {
   }
 
   Widget _buildImputeMissingDataCheckbox() {
-    return CheckboxListTile(
-      value: widget.formModel.imputeMissingData,
-      title: Text(context.l10n.imputeMissingDataWithTheGrandMean),
-      controlAffinity: ListTileControlAffinity.leading,
-      onChanged: widget.readOnly
-          ? null
-          : (value) {
-              setState(() {
-                widget.formModel.setImputeMissingData(value ?? false);
-              });
-            },
+    return Row(
+      children: [
+        Expanded(
+          child: CheckboxListTile(
+            value: widget.formModel.imputeMissingData,
+            title: Text(context.l10n.imputeMissingDataWithTheGrandMean),
+            controlAffinity: ListTileControlAffinity.leading,
+            onChanged: _canActivateOptions
+                ? (value) => _changeOption(
+                    value ?? false,
+                    widget.formModel.setImputeMissingData,
+                  )
+                : null,
+          ),
+        ),
+        TestDesignHelpButton(
+          section: context.l10n.missingData,
+          topic: TestDesignHelpTopic.missingData,
+        ),
+      ],
     );
   }
 
@@ -618,6 +686,10 @@ class _ProjectFormState extends State<ProjectForm> {
         : null;
     final field = TextFormField(
       controller: controller,
+      focusNode: _textFieldFocusNodes.putIfAbsent(
+        controller,
+        () => FocusNode()..addListener(_handleTextFieldFocusChanged),
+      ),
       readOnly: widget.readOnly,
       onTap: requestEditing,
       decoration: buildAppTextFieldDecoration(
@@ -647,6 +719,10 @@ class _ProjectFormState extends State<ProjectForm> {
         child: field,
       ),
     );
+  }
+
+  void _handleTextFieldFocusChanged() {
+    setState(() {});
   }
 
   String? _validateFactorName(int index, String? value) {

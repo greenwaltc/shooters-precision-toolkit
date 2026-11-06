@@ -290,15 +290,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get groupSize => 'Group Size';
 
   @override
-  String get previousGroupSize => 'Previous Group Size';
-
-  @override
-  String get nextGroupSize => 'Next Group Size';
-
-  @override
-  String get insertFractionSlash => 'Insert fraction slash';
-
-  @override
   String get groupSizeValuesMustBeNumbersPleaseCorrect =>
       'Group size values must be numbers. Please correct any invalid cells.';
 
@@ -528,6 +519,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get help => 'Help';
+
+  @override
+  String sectionHelp(String section) {
+    return 'Help for $section';
+  }
+
+  @override
+  String get loadingSectionHelp => 'Loading help';
+
+  @override
+  String get sectionHelpLoadError =>
+      'Help for this section could not be loaded.';
+
+  @override
+  String get experimentStructure => 'Experiment structure';
+
+  @override
+  String get sampleSize => 'Sample size';
+
+  @override
+  String get missingData => 'Missing data';
 
   @override
   String get close => 'Close';

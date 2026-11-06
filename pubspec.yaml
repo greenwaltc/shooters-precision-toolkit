@@ -53,6 +53,7 @@ flutter:
 
   assets:
     - assets/help_instructions.md
+    - assets/help/test_design/en/
     - assets/projects_banner_logo.png
     - assets/icon/app_icon_compact.png
     - assets/img/target_bg.png

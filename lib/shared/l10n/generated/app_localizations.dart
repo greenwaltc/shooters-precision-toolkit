@@ -598,24 +598,6 @@ abstract class AppLocalizations {
   /// **'Group Size'**
   String get groupSize;
 
-  /// No description provided for @previousGroupSize.
-  ///
-  /// In en, this message translates to:
-  /// **'Previous Group Size'**
-  String get previousGroupSize;
-
-  /// No description provided for @nextGroupSize.
-  ///
-  /// In en, this message translates to:
-  /// **'Next Group Size'**
-  String get nextGroupSize;
-
-  /// No description provided for @insertFractionSlash.
-  ///
-  /// In en, this message translates to:
-  /// **'Insert fraction slash'**
-  String get insertFractionSlash;
-
   /// No description provided for @groupSizeValuesMustBeNumbersPleaseCorrect.
   ///
   /// In en, this message translates to:
@@ -1041,6 +1023,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Help'**
   String get help;
+
+  /// Tooltip and accessible name for a form section help button.
+  ///
+  /// In en, this message translates to:
+  /// **'Help for {section}'**
+  String sectionHelp(String section);
+
+  /// No description provided for @loadingSectionHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading help'**
+  String get loadingSectionHelp;
+
+  /// No description provided for @sectionHelpLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Help for this section could not be loaded.'**
+  String get sectionHelpLoadError;
+
+  /// No description provided for @experimentStructure.
+  ///
+  /// In en, this message translates to:
+  /// **'Experiment structure'**
+  String get experimentStructure;
+
+  /// No description provided for @sampleSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Sample size'**
+  String get sampleSize;
+
+  /// No description provided for @missingData.
+  ///
+  /// In en, this message translates to:
+  /// **'Missing data'**
+  String get missingData;
 
   /// No description provided for @close.
   ///

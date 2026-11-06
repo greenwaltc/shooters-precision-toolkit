@@ -84,9 +84,6 @@
   "runOrder": "Run Order",
   "replicate": "Replicate",
   "groupSize": "Group Size",
-  "previousGroupSize": "Previous Group Size",
-  "nextGroupSize": "Next Group Size",
-  "insertFractionSlash": "Insert fraction slash",
   "groupSizeValuesMustBeNumbersPleaseCorrect": "Group size values must be numbers. Please correct any invalid cells.",
   "pasteIsOnlyPermittedToTheGroupSize": "Paste is only permitted to the Group Size column.",
   "chooseTheStructureOfYourExperiment": "Choose the Structure of Your Experiment",
@@ -158,6 +155,18 @@
   "clear": "Clear",
   "randomizeOrder": "Randomize order?",
   "help": "Help",
+  "sectionHelp": "Help for {section}",
+  "@sectionHelp": {
+    "description": "Tooltip and accessible name for a form section help button.",
+    "placeholders": {
+      "section": { "type": "String" }
+    }
+  },
+  "loadingSectionHelp": "Loading help",
+  "sectionHelpLoadError": "Help for this section could not be loaded.",
+  "experimentStructure": "Experiment structure",
+  "sampleSize": "Sample size",
+  "missingData": "Missing data",
   "close": "Close",
   "errorLoadingMarkdown": "Error loading markdown",
   "unableToOpenThisLink": "Unable to open this link.",

@@ -256,9 +256,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get testDesign => 'Test Design';
 
   @override
-  String get enterGroupSize => 'Enter Group Size';
-
-  @override
   String get runOrder => 'Run Order';
 
   @override
@@ -266,9 +263,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get groupSize => 'Group Size';
-
-  @override
-  String get enterGroupSizeMessage => 'Enter group size';
 
   @override
   String get groupSizeValuesMustBeNumbersPleaseCorrect =>

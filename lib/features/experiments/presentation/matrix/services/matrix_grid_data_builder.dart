@@ -99,7 +99,7 @@ class MatrixGridDataBuilder {
     return int.tryParse(value?.toString() ?? '');
   }
 
-  /// Human-readable fallback for unnamed factors in mobile range entry.
+  /// Human-readable matrix column label for a factor.
   static String factorLabel(FactorDefinition factor, int index) {
     final name = factor.name.trim();
     return name.isEmpty ? AppCopy.english.factorNumber(index + 1) : name;

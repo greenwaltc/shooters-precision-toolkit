@@ -538,12 +538,6 @@ abstract class AppLocalizations {
   /// **'Test Design'**
   String get testDesign;
 
-  /// No description provided for @enterGroupSize.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter Group Size'**
-  String get enterGroupSize;
-
   /// No description provided for @runOrder.
   ///
   /// In en, this message translates to:
@@ -561,12 +555,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Group Size'**
   String get groupSize;
-
-  /// No description provided for @enterGroupSizeMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter group size'**
-  String get enterGroupSizeMessage;
 
   /// No description provided for @groupSizeValuesMustBeNumbersPleaseCorrect.
   ///

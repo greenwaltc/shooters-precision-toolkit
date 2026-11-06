@@ -134,7 +134,7 @@ infra/
     variables.tf
     outputs.tf
     prod.tfvars
-    imports.tf.example       # Verify production resources before activating
+    imports.tf               # Existing production apps, database, and rules release
     auth-settings.md
     .terraform.lock.hcl
 lib/

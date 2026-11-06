@@ -33,7 +33,7 @@ infra/
     variables.tf
     outputs.tf
     prod.tfvars
-    imports.tf.example
+    imports.tf
     auth-settings.md
 ```
 
@@ -93,7 +93,7 @@ terraform -chdir=infra/environments/dev import -var-file=dev.tfvars module.fireb
 terraform -chdir=infra/environments/dev import -var-file=dev.tfvars module.firebase.google_firebaserules_release.firestore projects/bramwellsprecisiontestkitdev/releases/cloud.firestore
 ```
 
-Run only imports for confirmed existing resources; inspect existing field overrides before adopting or replacing them. The production import template includes the known project and Hosting resource addresses, and directions for app/database/rules imports. Fill/verify that template before making it an active `.tf` file.
+Run imports for confirmed existing resources and inspect field overrides before adopting or replacing them. The production root declares imports for Firebase enablement, the Hosting site, the app registrations used by the production build, the default database, and the Firestore rules release. Review the import IDs and check the local state before applying a plan from another checkout.
 
 Only after reviewing the plan, apply that exact saved plan:
 

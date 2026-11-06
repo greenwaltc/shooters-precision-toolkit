@@ -58,7 +58,7 @@ task infra:show
 task infra:apply
 ```
 
-Repeat with `ENV=prod` after independent review. The current production plan also contains the previously pending Firestore ruleset/release replacement from step 9; review that separately before applying. Saved plans and state are private and ignored by Git. Do not apply only a targeted subset as a routine release process.
+Repeat with `ENV=prod` after independent review. Check whether the plan also changes the Firestore rules release before applying. Keep saved plans and state private and out of Git. Review the full environment plan for routine releases.
 
 ## Publish a dev preview or live release
 

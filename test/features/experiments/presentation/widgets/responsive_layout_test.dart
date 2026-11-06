@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
-import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/range_entry_sheet.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/matrix/widgets/grid_scroll_cue.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/empty_results_state.dart';
@@ -18,7 +17,7 @@ import 'package:bramwells_precision_test_kit/shared/ui/theme/tokens/app_headings
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show LogicalKeyboardKey, rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pluto_grid/pluto_grid.dart';
 
@@ -29,19 +28,6 @@ import '../../../../support/test_configuration.dart';
 // Use of this source code is governed by a proprietary license that can be
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
-
-/// A worst-case cell context: four factors with long state names.
-const _fourFactorEntry = RangeEntryContext(
-  rowIndex: 16,
-  replicateIndex: 4,
-  initialValue: '0.482',
-  factorStates: [
-    FactorStateEntry(factorName: 'Primer brand', state: 'Standard'),
-    FactorStateEntry(factorName: 'Powder charge', state: 'Reduced'),
-    FactorStateEntry(factorName: 'Seating depth', state: 'Off the lands'),
-    FactorStateEntry(factorName: 'Neck tension', state: 'Two thousandths'),
-  ],
-);
 
 /// Viewports spanning the range of devices the app ships on.
 const _viewports = <String, Size>{
@@ -296,6 +282,105 @@ void main() {
     }
   }
 
+  for (final (size, keyboardHeight, textScale) in [
+    (const Size(390, 844), 430.0, 1.0),
+    (const Size(844, 390), 220.0, 1.0),
+    (const Size(320, 568), 310.0, 2.0),
+  ]) {
+    testWidgets(
+      'bottom mobile matrix cell stays visible while editing at $size',
+      (tester) async {
+        _configureViewport(tester, size: size, textScale: textScale);
+        await _pumpCompletedProject(tester, factorCount: 4);
+        await _tapText(tester, 'Bench Rest Comparison');
+        final grid = find.byType(PlutoGrid);
+        final manager = tester.state<PlutoGridState>(grid).stateManager;
+        final vertical = manager.scroll.bodyRowsVertical!;
+        final horizontal = manager.scroll.bodyRowsHorizontal!;
+        vertical.jumpTo(vertical.position.maxScrollExtent);
+        horizontal.jumpTo(horizontal.position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        final cell = find.byKey(
+          ValueKey('matrix-cell-${manager.rows.length - 1}-range'),
+        );
+        final editor = find.descendant(
+          of: cell,
+          matching: find.byType(TextField),
+        );
+        await tester.ensureVisible(editor);
+        await tester.pumpAndSettle();
+        await tester.tap(editor);
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
+        expect(
+          tester.widget<TextField>(editor).keyboardType,
+          TextInputType.number,
+        );
+        expect(tester.testTextInput.isVisible, isTrue);
+        expect(find.byType(BottomSheet), findsNothing);
+
+        tester.view.viewInsets = FakeViewPadding(bottom: keyboardHeight);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpAndSettle();
+        expect(tester.state<PlutoGridState>(grid).stateManager, same(manager));
+        expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
+        // The caret handle can sit over the center of a narrow cell.
+        expect(
+          const [
+            Alignment.center,
+            Alignment(-0.75, 0),
+            Alignment(0.75, 0),
+          ].any((point) => editor.hitTestable(at: point).evaluate().isNotEmpty),
+          isTrue,
+        );
+        expect(
+          tester.getRect(editor).bottom,
+          lessThanOrEqualTo(size.height - keyboardHeight),
+        );
+        final outline = find.descendant(
+          of: cell,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DecoratedBox &&
+                widget.position == DecorationPosition.foreground &&
+                widget.decoration is BoxDecoration &&
+                (widget.decoration as BoxDecoration).border != null,
+          ),
+        );
+        expect(outline, findsOneWidget);
+        expect(tester.getRect(outline), tester.getRect(cell));
+
+        final handled = await tester.sendKeyDownEvent(
+          LogicalKeyboardKey.digit4,
+          character: '4',
+        );
+        await tester.sendKeyUpEvent(LogicalKeyboardKey.digit4);
+        expect(
+          handled,
+          isFalse,
+          reason: 'The keypad digit must reach text input.',
+        );
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: '42',
+            selection: TextSelection.collapsed(offset: 2),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(manager.rows.last.cells['range']!.value, '42');
+        final storage = manager.rows.last.cells['storage']!.value;
+        final store = tester.widget<MyApp>(find.byType(MyApp)).projectStore!;
+        expect(store.selectedProject!.matrixState['range_$storage'], '42');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        tester.view.resetViewInsets();
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isFalse);
+        expect(outline, findsNothing);
+        _expectNoLayoutErrors(tester, 'mobile matrix with keyboard');
+      },
+    );
+  }
+
   group('setup flow', () {
     testWidgets('mobile keyboard gives the form all remaining space', (
       tester,
@@ -501,79 +586,6 @@ void main() {
 
       expect(find.text('Export Results'), findsOneWidget);
       _expectNoLayoutErrors(tester, 'export dialog');
-    });
-
-    // The mobile cell-entry sheet is the one surface the grid opens on touch
-    // devices, and a four-factor design puts four state columns inside it.
-    for (final entry in _viewports.entries) {
-      testWidgets('${entry.key}: range entry sheet lays out', (
-        WidgetTester tester,
-      ) async {
-        _configureViewport(tester, size: entry.value, textScale: 2.0);
-
-        await pumpConfiguredWidget(
-          tester,
-          MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => TextButton(
-                  onPressed: () =>
-                      showRangeEntrySheet(context, entry: _fourFactorEntry),
-                  child: const Text('open'),
-                ),
-              ),
-            ),
-          ),
-        );
-
-        await tester.tap(find.text('open'));
-        await tester.pumpAndSettle(
-          const Duration(milliseconds: 100),
-          EnginePhase.sendSemanticsUpdate,
-          const Duration(seconds: 5),
-        );
-
-        expect(find.text('Enter Group Size'), findsOneWidget);
-        _expectNoLayoutErrors(tester, '${entry.key} — range entry sheet');
-      });
-    }
-
-    // The sheet auto-focuses its text field, so the keyboard is up whenever it
-    // is on screen. Landscape leaves very little room once it appears.
-    testWidgets('range entry sheet lays out behind an open keyboard', (
-      WidgetTester tester,
-    ) async {
-      _configureViewport(tester, size: const Size(844, 390), textScale: 2.0);
-      tester.view.viewInsets = const FakeViewPadding(bottom: 220);
-      addTearDown(tester.view.resetViewInsets);
-
-      await pumpConfiguredWidget(
-        tester,
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () =>
-                    showRangeEntrySheet(context, entry: _fourFactorEntry),
-                child: const Text('open'),
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('open'));
-      await tester.pumpAndSettle(
-        const Duration(milliseconds: 100),
-        EnginePhase.sendSemanticsUpdate,
-        const Duration(seconds: 5),
-      );
-
-      _expectNoLayoutErrors(tester, 'range entry sheet with keyboard');
     });
 
     testWidgets('delete confirmation lays out on a small phone', (

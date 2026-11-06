@@ -32,11 +32,11 @@ import '../test_design/project_form_model.dart';
 import '../widgets/no_selected_project_page.dart';
 import '../widgets/project_save_status.dart';
 import '../widgets/workspace_footer.dart';
-import 'range_entry_sheet.dart';
 import 'services/matrix_grid_clipboard.dart';
 import 'services/matrix_grid_data_builder.dart';
 import 'services/matrix_grid_history.dart';
 import 'widgets/grid_scroll_cue.dart';
+import 'widgets/mobile_range_cell.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
 // Use of this source code is governed by a proprietary license that can be
@@ -204,15 +204,17 @@ class _AnomrMatrixScaffold extends StatelessWidget {
                   : AppDesign.matrixMinBodyHeight) *
               textScale;
           if (!constraints.hasBoundedHeight ||
-              constraints.maxHeight >= minHeight) {
+              (!layout.isMobile && constraints.maxHeight >= minHeight)) {
             return content;
           }
 
-          // Short viewports (small phones, landscape, heavy magnification)
-          // cannot fit the grid plus its surrounding controls, so let the page
-          // scroll instead of squeezing the grid to nothing.
+          // Keep the grid under the same scrollable on mobile when the keyboard
+          // shrinks the viewport. Reparenting it would dispose the focused cell.
           return SingleChildScrollView(
-            child: SizedBox(height: minHeight, child: content),
+            child: SizedBox(
+              height: math.max(minHeight, constraints.maxHeight),
+              child: content,
+            ),
           );
         },
       ),
@@ -1059,7 +1061,16 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   bool get _acceptsGridClipboard =>
       mounted &&
       _stateManager?.hasFocus == true &&
+      !_hasMobileEditorFocus &&
       ModalRoute.of(context)?.isCurrent == true;
+
+  bool get _hasMobileEditorFocus {
+    final focus = _stateManager?.gridFocusNode;
+    return widget.isMobile &&
+        focus != null &&
+        focus.hasFocus &&
+        !focus.hasPrimaryFocus;
+  }
 
   MatrixGridPasteValuesAction _pasteAction() => MatrixGridPasteValuesAction(
     history: _history,
@@ -1267,6 +1278,7 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       type: PlutoColumnType.text(),
       readOnly: widget.isMobile,
       enableEditingMode: !widget.isMobile,
+      cellPadding: widget.isMobile ? EdgeInsets.zero : null,
       enableColumnDrag: false,
       enableContextMenu: false,
       enableDropToResize: true,
@@ -1274,7 +1286,24 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
       renderer: (cell) => _mouseSelectionCell(
         cell,
         widget.isMobile
-            ? _mobileRangeCellRenderer(cell)
+            ? MobileRangeCell(
+                value: cell.cell.value?.toString() ?? '',
+                onFocused: () {
+                  cell.stateManager.setKeepFocus(true, notify: false);
+                  cell.stateManager.setCurrentCell(cell.cell, cell.rowIdx);
+                },
+                onChanged: (text) {
+                  if (!RangeValueParser.parse(text).invalid) {
+                    _applyRangeValue(rowIdx: cell.rowIdx, value: text);
+                  }
+                },
+                finishEditing: (text) {
+                  if (RangeValueParser.parse(text).invalid) {
+                    _showInvalidRangeValueMessage();
+                  }
+                  return cell.cell.value?.toString() ?? '';
+                },
+              )
             : Align(
                 alignment: AlignmentDirectional.centerStart.resolve(
                   Directionality.of(context),
@@ -1288,71 +1317,6 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
               ),
       ),
     );
-  }
-
-  Widget _mobileRangeCellRenderer(PlutoColumnRendererContext rendererContext) {
-    final value = rendererContext.cell.value?.toString() ?? '';
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _openRangeEntrySheet(rendererContext),
-        child: Container(
-          alignment: AlignmentDirectional.centerStart.resolve(
-            Directionality.of(context),
-          ),
-          padding: AppSpacing.plutoFactorCell,
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium,
-            softWrap: false,
-            overflow: TextOverflow.fade,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openRangeEntrySheet(
-    PlutoColumnRendererContext rendererContext,
-  ) async {
-    _stateManager?.setEditing(false);
-    FocusManager.instance.primaryFocus?.unfocus();
-
-    final formModel = context.read<ProjectFormModel>();
-    final row = rendererContext.row;
-    final factorStates = <FactorStateEntry>[
-      for (var i = 0; i < formModel.factorDefinitions.length; i++)
-        FactorStateEntry(
-          factorName: MatrixGridDataBuilder.factorLabel(
-            formModel.factorDefinitions[i],
-            i,
-          ),
-          state: row.cells['factor_$i']?.value?.toString() ?? '',
-        ),
-    ];
-
-    final result = await showRangeEntrySheet(
-      context,
-      entry: RangeEntryContext(
-        rowIndex:
-            MatrixGridDataBuilder.cellIntValue(row.cells['row']) ??
-            rendererContext.rowIdx + 1,
-        replicateIndex:
-            MatrixGridDataBuilder.cellIntValue(row.cells['group']) ??
-            rendererContext.rowIdx + 1,
-        factorStates: factorStates,
-        initialValue: rendererContext.cell.value?.toString(),
-        showReplicate:
-            formModel.experimentStructure !=
-            ExperimentStructure.simpleABComparison,
-      ),
-    );
-
-    if (!mounted || result == null) {
-      return;
-    }
-
-    _applyRangeValue(rowIdx: rendererContext.rowIdx, value: result);
   }
 
   void _applyRangeValueForHistory(
@@ -1382,7 +1346,8 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     // While the user is actively typing into a cell (uncommitted edits), let
     // Flutter's built-in EditableText undo/redo handle the keystroke so the
     // in-cell text history works. We must not consume the event in that case.
-    if (matrixUndoShouldDeferToTextField(_stateManager)) {
+    if (_hasMobileEditorFocus ||
+        matrixUndoShouldDeferToTextField(_stateManager)) {
       return false;
     }
 

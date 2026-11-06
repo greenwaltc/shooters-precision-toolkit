@@ -74,13 +74,17 @@ void main() {
         await tester.ensureVisible(cell);
         await tester.tap(cell);
         await tester.pump();
+        final Finder editor;
         if (mobile) {
           await settle(tester);
+          editor = find.descendant(of: cell, matching: find.byType(TextField));
+          expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
         } else {
           await tester.tap(cell);
           await tester.pump();
+          editor = find.byType(TextField).last;
         }
-        await tester.enterText(find.byType(TextField).last, '1.25');
+        await tester.enterText(editor, '1.25');
         await tester.testTextInput.receiveAction(TextInputAction.done);
         await settle(tester);
       }

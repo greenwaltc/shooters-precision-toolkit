@@ -32,11 +32,11 @@ class AppCopyrightFooter extends StatelessWidget {
     message: noticeText,
     excludeFromSemantics: true,
     child: Align(
-      alignment: AlignmentDirectional.centerStart,
+      alignment: Alignment.center,
       heightFactor: 1,
       child: FittedBox(
         fit: BoxFit.scaleDown,
-        alignment: AlignmentDirectional.centerStart,
+        alignment: Alignment.center,
         child: Text(
           noticeText,
           maxLines: 1,

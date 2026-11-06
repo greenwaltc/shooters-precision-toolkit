@@ -20,6 +20,8 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/t
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/shared/foundation/app_failure.dart';
 import 'package:bramwells_precision_test_kit/shared/foundation/json_object.dart';
+import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/app_copyright_footer.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/workspace_exit.dart';
 import 'package:clock/clock.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -302,6 +304,27 @@ void main() {
     expect(find.byType(AuthPage), findsOneWidget);
     expect(find.byType(ProjectHomePage), findsNothing);
     expect(find.textContaining('Unable to start the app'), findsNothing);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+    for (final width in [560.0, 320.0]) {
+      tester.view.physicalSize = Size(width, 740);
+      await tester.pumpAndSettle(
+        const Duration(milliseconds: 100),
+        EnginePhase.sendSemanticsUpdate,
+        const Duration(seconds: 5),
+      );
+      final warning = find.ancestor(
+        of: find.text(AppCopy.english.emulatorModeWarning),
+        matching: find.byType(SafeArea),
+      );
+      final footer = find.byType(AppCopyrightFooter);
+      expect(
+        tester.getTopLeft(warning).dy,
+        closeTo(tester.getBottomLeft(footer).dy, 0.1),
+      );
+      expect(tester.getBottomLeft(warning).dy, closeTo(740, 0.1));
+    }
     await pumpConfiguredWidget(tester, const SizedBox.shrink());
   }, timeout: const Timeout(Duration(minutes: 2)));
 

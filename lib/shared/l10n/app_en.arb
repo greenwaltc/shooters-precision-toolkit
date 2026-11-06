@@ -27,6 +27,7 @@
   "signIn": "Sign in",
   "verificationEmailRequested": "Verification email requested.",
   "sendingVerificationEmail": "Sending verification email…",
+  "emulatorModeWarning": "Running in emulator mode. Do not use with production credentials.",
   "sendVerificationEmail": "Send verification email",
   "notVerifiedYetOpenTheEmailLinkAnd": "Not verified yet. Open the email link and try again.",
   "iHaveVerifiedMyEmail": "I have verified my email",

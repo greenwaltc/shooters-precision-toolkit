@@ -111,22 +111,33 @@ class _MobileRangeCellState extends State<MobileRangeCell>
           // platform text input instead of being consumed by PlutoGrid.
           onKeyEvent: (_, _) => KeyEventResult.skipRemainingHandlers,
           child: DefaultTextEditingShortcuts(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focus,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.done,
-              selectAllOnFocus: false,
-              onChanged: widget.onChanged,
-              onTapOutside: (_) => _focus.unfocus(),
-              style: Theme.of(context).textTheme.bodyMedium,
-              textAlignVertical: TextAlignVertical.center,
-              decoration: const InputDecoration(
-                filled: false,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            // Keep the input at its natural height and center it in the cell.
+            // The surrounding area still focuses the same editor when tapped.
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _focus.requestFocus,
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focus,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.done,
+                  selectAllOnFocus: false,
+                  onChanged: widget.onChanged,
+                  onTapOutside: (_) => _focus.unfocus(),
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: const InputDecoration(
+                    filled: false,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

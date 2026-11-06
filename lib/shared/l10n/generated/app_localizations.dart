@@ -256,6 +256,12 @@ abstract class AppLocalizations {
   /// **'Sending verification email…'**
   String get sendingVerificationEmail;
 
+  /// No description provided for @emulatorModeWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running in emulator mode. Do not use with production credentials.'**
+  String get emulatorModeWarning;
+
   /// No description provided for @sendVerificationEmail.
   ///
   /// In en, this message translates to:

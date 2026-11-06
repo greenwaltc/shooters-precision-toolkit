@@ -187,16 +187,7 @@ class _AnomrMatrixScaffold extends StatelessWidget {
       bottom: false,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final content = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!layout.isMobile &&
-                  (!layout.isDesktop ||
-                      MediaQuery.textScalerOf(context).scale(1) > 1.3))
-                _MatrixHeader(layout: layout, formModel: formModel),
-              Expanded(child: _buildGrid(context, layout, formModel)),
-            ],
-          );
+          final content = _buildGrid(context, layout, formModel);
 
           final textScale = MediaQuery.textScalerOf(context).scale(1);
           final minHeight =
@@ -265,78 +256,47 @@ class _AnomrMatrixScaffold extends StatelessWidget {
 
 class _MatrixHeader extends StatelessWidget {
   const _MatrixHeader({
-    required this.layout,
+    required this.mobile,
     required this.formModel,
-    this.trailing,
+    required this.trailing,
   });
 
-  final AppLayoutMetrics layout;
+  final bool mobile;
   final ProjectFormModel formModel;
-  final Widget? trailing;
+  final Widget trailing;
 
   @override
   Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        layout.isMobile ? 0 : 24,
-        layout.isMobile ? AppSpacing.md : 12,
-        layout.isMobile ? 0 : 24,
-        layout.isMobile ? AppSpacing.sm : AppSpacing.lg,
-      ),
-      child: Align(
-        alignment: AlignmentDirectional.centerStart.resolve(
-          Directionality.of(context),
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: layout.matrixHeaderMaxWidth),
-          child: _buildTitle(context),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTitle(BuildContext context) {
-    if (!layout.isMobile) {
-      return Wrap(
-        spacing: AppSpacing.xl,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      padding: const EdgeInsets.only(top: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            AppCopy.english.dataMatrixMessage,
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            spacing: AppSpacing.md,
+            children: [
+              Expanded(
+                flex: 4,
+                child: Text(
+                  AppCopy.english.dataMatrixMessage,
+                  style: textTheme.titleLarge,
+                ),
+              ),
+              Expanded(flex: 6, child: trailing),
+            ],
           ),
           Text(
-            formModel.experimentStructure.label,
-            style: Theme.of(context).textTheme.bodyMedium,
+            mobile
+                ? AppCopy.english.factorRunCount(
+                    formModel.experimentStructure.factorCount,
+                    formModel.sampleSizeOption.totalSamples,
+                  )
+                : formModel.experimentStructure.label,
+            style: mobile ? textTheme.bodySmall : textTheme.bodyMedium,
           ),
         ],
-      );
-    }
-    final count = formModel.experimentStructure.factorCount;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              flex: 4,
-              child: Text(
-                AppCopy.english.dataMatrixMessage,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            if (trailing != null) Expanded(flex: 6, child: trailing!),
-          ],
-        ),
-        Text(
-          AppCopy.english.factorRunCount(
-            count,
-            formModel.sampleSizeOption.totalSamples,
-          ),
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1447,19 +1407,21 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
   }
 
   Widget _displayRangeCell(PlutoColumnRendererContext cell) {
-    final value = Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Padding(
-        padding: widget.isMobile
-            ? const EdgeInsets.symmetric(horizontal: AppSpacing.md)
-            : EdgeInsets.zero,
-        child: Text(
-          cell.cell.value?.toString() ?? '',
-          style: widget.isMobile
-              ? Theme.of(context).textTheme.bodyMedium
-              : cell.stateManager.configuration.style.cellTextStyle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+    final value = SizedBox.expand(
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Padding(
+          padding: widget.isMobile
+              ? const EdgeInsets.symmetric(horizontal: AppSpacing.md)
+              : EdgeInsets.zero,
+          child: Text(
+            cell.cell.value?.toString() ?? '',
+            style: widget.isMobile
+                ? Theme.of(context).textTheme.bodyMedium
+                : cell.stateManager.configuration.style.cellTextStyle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ),
     );
@@ -1813,91 +1775,63 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
     final desktop =
         AppLayoutMetrics.of(context).isDesktop &&
         MediaQuery.textScalerOf(context).scale(1) <= 1.3;
-    final nonMobile = !widget.isMobile;
     final actions = _MatrixActions(
-      compact: widget.isMobile,
+      compact: !desktop,
       onShowResults: _stateManager == null ? null : () => _showResults(context),
       onExportProject: _stateManager == null || _exportingProject
           ? null
           : _exportProject,
       onClearRanges: widget.canEdit ? _clearRanges : null,
     );
-    final content = AppLayoutBuilder(
-      builder: (context, layout) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (desktop)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppCopy.english.dataMatrixMessage,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          widget.project.formModel.experimentStructure.label,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.xl),
-                  _RandomizeOrderToggle(
-                    value: _randomizeOrder,
-                    compact: true,
-                    onChanged: _stateManager == null || !widget.canEdit
-                        ? null
-                        : _onRandomizeToggled,
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  actions,
-                ],
-              ),
-            ),
-          if (nonMobile && !desktop)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: AppSpacing.xl,
-                runSpacing: AppSpacing.md,
-                children: [
-                  actions,
-                  _RandomizeOrderToggle(
-                    value: _randomizeOrder,
-                    onChanged: _stateManager == null || !widget.canEdit
-                        ? null
-                        : _onRandomizeToggled,
-                    compact: true,
-                  ),
-                ],
-              ),
-            ),
-          if (widget.isMobile)
-            _MatrixHeader(
-              layout: layout,
-              formModel: widget.project.formModel,
-              trailing: _RandomizeOrderToggle(
-                value: _randomizeOrder,
-                compact: true,
-                onChanged: _stateManager == null || !widget.canEdit
-                    ? null
-                    : _onRandomizeToggled,
-              ),
-            ),
-          ProjectEditingNotice(projectId: widget.project.id),
-          Expanded(child: _buildGridArea(plutoTheme, scheme)),
-          if (widget.isMobile) actions,
-        ],
-      ),
+    final randomizeOrder = _RandomizeOrderToggle(
+      value: _randomizeOrder,
+      onChanged: _stateManager == null || !widget.canEdit
+          ? null
+          : _onRandomizeToggled,
     );
-    if (!nonMobile) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (desktop)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppCopy.english.dataMatrixMessage,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Text(
+                        widget.project.formModel.experimentStructure.label,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xl),
+                randomizeOrder,
+                const SizedBox(width: AppSpacing.lg),
+                actions,
+              ],
+            ),
+          ),
+        if (!desktop) ...[
+          _MatrixHeader(
+            mobile: widget.isMobile,
+            formModel: widget.project.formModel,
+            trailing: randomizeOrder,
+          ),
+          actions,
+        ],
+        ProjectEditingNotice(projectId: widget.project.id),
+        Expanded(child: _buildGridArea(plutoTheme, scheme)),
+      ],
+    );
+    if (widget.isMobile) {
       return content;
     }
     // Give the toolbar and grid the same centered bounds on wide windows.
@@ -2015,39 +1949,27 @@ class _AnomrMatrixGridState extends State<AnomrMatrixGrid> {
 }
 
 class _RandomizeOrderToggle extends StatelessWidget {
-  const _RandomizeOrderToggle({
-    required this.value,
-    required this.onChanged,
-    this.compact = false,
-  });
-
-  final bool compact;
+  const _RandomizeOrderToggle({required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool>? onChanged;
 
   @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: EdgeInsets.only(bottom: compact ? 0 : AppSpacing.md),
-      child: Row(
-        mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Flexible(
-            child: Text(
-              AppCopy.english.randomizeOrder,
-              style: textTheme.bodyMedium,
-              textAlign: TextAlign.end,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Switch(value: value, onChanged: onChanged),
-        ],
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    mainAxisAlignment: MainAxisAlignment.end,
+    spacing: AppSpacing.md,
+    children: [
+      Flexible(
+        child: Text(
+          AppCopy.english.randomizeOrder,
+          style: Theme.of(context).textTheme.bodyMedium,
+          textAlign: TextAlign.end,
+        ),
       ),
-    );
-  }
+      Switch(value: value, onChanged: onChanged),
+    ],
+  );
 }
 
 ButtonStyle _clearButtonStyle(ColorScheme scheme) => OutlinedButton.styleFrom(

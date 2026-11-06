@@ -48,6 +48,14 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(grid().rows.first.cells['range']!.value, '9.75');
+        final savedValue = find.descendant(
+          of: cell,
+          matching: find.text('9.75'),
+        );
+        expect(
+          tester.getCenter(savedValue).dy,
+          closeTo(tester.getCenter(cell).dy, 1),
+        );
         await tester.ensureVisible(cell);
         await tester.tap(cell);
         await tester.pumpAndSettle();
@@ -61,13 +69,27 @@ void main() {
         expect(notice, findsNothing);
         expect(grid().rows.first.cells['range']!.value, '9.75');
         if (mobile) {
-          await tester.tap(cell);
+          final bounds = tester.getRect(cell);
+          await tester.tapAt(Offset(bounds.center.dx, bounds.top + 2));
           await tester.pump();
         }
         final editor = mobile
             ? find.descendant(of: cell, matching: find.byType(TextField))
             : find.byType(TextField);
         expect(tester.widget<TextField>(editor).controller!.text, '9.75');
+        expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
+        final editable = tester
+            .state<EditableTextState>(
+              find.descendant(of: editor, matching: find.byType(EditableText)),
+            )
+            .renderEditable;
+        final caret = editable.getLocalRectForCaret(
+          const TextPosition(offset: 0),
+        );
+        expect(
+          editable.localToGlobal(caret.center).dy,
+          closeTo(tester.getCenter(matrixCell(0, 'row')).dy, 1),
+        );
         await tester.enterText(editor, '10');
         await tester.pumpAndSettle();
         expect(store.selectedProject!.matrixState['range_0'], '10');

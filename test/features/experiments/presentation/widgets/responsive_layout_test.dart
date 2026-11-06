@@ -171,6 +171,8 @@ void main() {
               tester.getCenter(find.byType(Switch)).dy,
               closeTo(tester.getCenter(results).dy, 1),
             );
+          } else {
+            _expectCompactMatrixActions(tester, tester.getRect(grid));
           }
           expect(
             manager.configuration.style.rowHeight,
@@ -268,34 +270,7 @@ void main() {
           await _tapText(tester, 'Bench Rest Comparison');
           final grid = find.byType(PlutoGrid);
           final gridBounds = tester.getRect(grid);
-          final clear = find.ancestor(
-            of: find.text('Clear'),
-            matching: find.byWidgetPredicate(
-              (widget) => widget is OutlinedButton,
-            ),
-          );
-          final results = find.ancestor(
-            of: find.text('Results'),
-            matching: find.byWidgetPredicate(
-              (widget) => widget is FilledButton,
-            ),
-          );
-          final clearBounds = tester.getRect(clear);
-          final resultsBounds = tester.getRect(results);
-          expect(clearBounds.center.dy, closeTo(resultsBounds.center.dy, 1));
-          expect(clearBounds.left, closeTo(gridBounds.left, 1));
-          expect(resultsBounds.right, closeTo(gridBounds.right, 1));
-          expect(clearBounds.right, lessThan(resultsBounds.left));
-          expect(clearBounds.height, greaterThanOrEqualTo(48));
-          expect(resultsBounds.height, greaterThanOrEqualTo(48));
-          expect(
-            tester.getTopRight(find.byType(Switch)).dx,
-            closeTo(gridBounds.right, 1),
-          );
-          expect(
-            tester.getCenter(find.text('Data matrix')).dy,
-            closeTo(tester.getCenter(find.byType(Switch)).dy, 1),
-          );
+          _expectCompactMatrixActions(tester, gridBounds);
           expect(find.text('Yes'), findsNothing);
           expect(find.text('No'), findsNothing);
           final credit = find.text(AppCopyrightFooter.noticeText);
@@ -816,6 +791,27 @@ Future<void> _pumpApp(WidgetTester tester) async {
 
 /// Boots the app with one fully configured project whose matrix cells are
 /// already populated, so the results page can be reached in a single tap.
+void _expectCompactMatrixActions(WidgetTester tester, Rect gridBounds) {
+  final clear = tester.getRect(find.widgetWithText(OutlinedButton, 'Clear'));
+  final export = tester.getRect(find.widgetWithText(OutlinedButton, 'Export'));
+  final results = tester.getRect(find.widgetWithText(FilledButton, 'Results'));
+  final toggle = tester.getRect(find.byType(Switch));
+  final title = tester.getRect(find.text('Data matrix'));
+
+  expect(clear.center.dy, closeTo(export.center.dy, 1));
+  expect(export.center.dy, closeTo(results.center.dy, 1));
+  expect(clear.left, closeTo(gridBounds.left, 1));
+  expect(results.right, closeTo(gridBounds.right, 1));
+  expect(clear.right, lessThan(export.left));
+  expect(export.right, lessThan(results.left));
+  expect(clear.height, greaterThanOrEqualTo(48));
+  expect(results.height, greaterThanOrEqualTo(48));
+  expect(toggle.right, closeTo(gridBounds.right, 1));
+  expect(title.center.dy, closeTo(toggle.center.dy, 1));
+  expect(clear.top, greaterThanOrEqualTo(max(title.bottom, toggle.bottom)));
+  expect(results.bottom, lessThanOrEqualTo(gridBounds.top));
+}
+
 Future<void> _pumpCompletedProject(
   WidgetTester tester, {
   int factorCount = 1,

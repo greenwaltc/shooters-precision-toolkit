@@ -3,11 +3,8 @@
 // found in the LICENSE file at the root of this project.
 // Unauthorized use or reproduction of this source code is prohibited.
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../emulator_presentation.dart';
 import '../tokens/app_spacing.dart';
 
 /// Text scaling and viewport spacing policies shared by app layouts.
@@ -27,13 +24,6 @@ class AppViewport {
   /// Text can grow to the platform's largest accessibility scale. Dense
   /// surfaces scroll/reflow rather than shrinking the user's preference.
   static const double maxTextScaleFactor = double.infinity;
-
-  /// The Auth emulator adds a DOM banner outside Flutter. Its message wraps
-  /// to two lines on phones; reserve that space for auth and workspace routes.
-  static double emulatorBannerInset(BuildContext context) =>
-      kIsWeb && context.read<EmulatorPresentation>().enabled
-      ? (MediaQuery.sizeOf(context).width < 600 ? 40 : 20)
-      : 0;
 
   /// Applies a supported text scaler to [mediaQuery].
   ///

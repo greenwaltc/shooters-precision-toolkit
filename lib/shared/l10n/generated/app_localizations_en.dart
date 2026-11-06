@@ -97,6 +97,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendingVerificationEmail => 'Sending verification email…';
 
   @override
+  String get emulatorModeWarning =>
+      'Running in emulator mode. Do not use with production credentials.';
+
+  @override
   String get sendVerificationEmail => 'Send verification email';
 
   @override

@@ -1,0 +1,197 @@
+name: Web validation jobs
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      checkout_ref:
+        type: string
+        required: true
+      schema_base:
+        type: string
+        default: ''
+permissions:
+  contents: read
+
+jobs:
+  repository:
+    name: Repository and tooling
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref }}
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - name: Validate workflow definitions
+        run: |
+          curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz -o "$RUNNER_TEMP/actionlint.tar.gz"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+      - run: node scripts/check_repository.mjs
+      - name: Verify portable project file schema
+        env:
+          PROJECT_SCHEMA_BASE: ${{ inputs.schema_base }}
+        run: |
+          if [ -n "$PROJECT_SCHEMA_BASE" ]; then
+            git fetch --no-tags --depth=1 origin "$PROJECT_SCHEMA_BASE"
+            node scripts/project_file_schema.mjs --base "$PROJECT_SCHEMA_BASE"
+          else
+            node scripts/project_file_schema.mjs
+          fi
+      - run: node scripts/check_architecture.mjs
+      - run: node --test scripts/tests/*_test.mjs
+
+  flutter:
+    name: Flutter analysis, tests and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref }}
+      - uses: ./.github/actions/setup-flutter
+      - run: node scripts/check_generated.mjs --tracked
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver
+      - run: flutter analyze --no-pub --fatal-infos --fatal-warnings
+      - run: flutter test --no-pub --coverage --test-randomize-ordering-seed=4729
+      - run: node scripts/check_coverage.mjs
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: test-evidence
+          path: |
+            coverage/lcov.info
+            build/coverage-report.json
+          retention-days: 7
+
+  browser:
+    name: Browser (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [clipboard, desktop, mobile]
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref }}
+      - uses: ./.github/actions/setup-flutter
+      - name: Verify browser clipboard
+        if: matrix.suite == 'clipboard'
+        run: flutter test --no-pub --platform chrome test/browser/matrix_browser_clipboard_test.dart
+      - name: Install matching browser test driver
+        if: matrix.suite != 'clipboard'
+        run: |
+          CHROME_VERSION=$(google-chrome --product-version)
+          if command -v chromedriver >/dev/null && [ "$(chromedriver --version | cut -d ' ' -f 2)" = "$CHROME_VERSION" ]; then
+            echo "CHROMEDRIVER=$(command -v chromedriver)" >> "$GITHUB_ENV"
+          else
+            DRIVER=$(npx --yes @puppeteer/browsers@3.2.6 install "chromedriver@$CHROME_VERSION" --path build/browser | tail -n 1)
+            echo "CHROMEDRIVER=${DRIVER#* }" >> "$GITHUB_ENV"
+          fi
+      - name: Verify assembled browser journey
+        if: matrix.suite != 'clipboard'
+        env:
+          BROWSER_DIMENSION: ${{ matrix.suite == 'mobile' && '390x844' || '1600x1024' }}
+        run: node scripts/run_web_integration.mjs
+      - uses: actions/upload-artifact@v7.0.2
+        if: always() && matrix.suite != 'clipboard'
+        with:
+          name: browser-evidence-${{ matrix.suite }}
+          path: build/test-results
+          retention-days: 7
+
+  rules:
+    name: Firestore rules and dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref }}
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: security-tests/package-lock.json
+      - uses: actions/setup-java@v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: ./.github/actions/cache-firebase
+      - run: npm --prefix security-tests ci --ignore-scripts
+      - run: npm --prefix security-tests audit --audit-level=high
+      - run: node scripts/run_rules_tests.mjs
+
+  firebase:
+    name: Firebase SDK contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref }}
+      - uses: ./.github/actions/setup-flutter
+        with:
+          npm-cache: 'true'
+      - uses: actions/setup-java@v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: ./.github/actions/cache-firebase
+      - name: Verify Firebase SDK contracts on isolated emulators
+        run: >-
+          sh scripts/firebase_emulators.sh emulators:exec
+          --config firebase.emulators.json --only auth,firestore
+          --project demo-bramwellsprecisiontestkit
+          'node scripts/flutter.mjs local test --no-pub --platform chrome test/emulators/firebase_emulators_test.dart'
+
+  web:
+    name: Build and verify web release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.checkout_ref }}
+      - uses: ./.github/actions/setup-flutter
+        with:
+          npm-cache: 'true'
+      - name: Build release artifact
+        env:
+          APP_PROFILE: ${{ inputs.environment }}
+        run: node scripts/build_web.mjs "$APP_PROFILE"
+      - name: Verify Hosting routes and headers
+        env:
+          APP_PROFILE: ${{ inputs.environment }}
+        run: node scripts/run_hosting_test.mjs "$APP_PROFILE"
+      - name: Check cold-load traffic budget
+        env:
+          APP_PROFILE: ${{ inputs.environment }}
+        run: node scripts/measure_web.mjs "$APP_PROFILE"
+      - uses: actions/upload-artifact@v7.0.2
+        if: github.event.repository.private
+        with:
+          name: private-symbols-${{ inputs.environment }}
+          path: build/private-symbols/${{ inputs.environment }}
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: web-${{ inputs.environment }}
+          path: build/web-${{ inputs.environment }}
+          retention-days: 2
+          if-no-files-found: error
+          compression-level: 1
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: ${{ inputs.environment }}-transfer-report
+          path: build/web-transfer-${{ inputs.environment }}.json
+          retention-days: 2

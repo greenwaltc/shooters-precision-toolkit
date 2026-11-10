@@ -10,88 +10,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  checks:
+    uses: ./.github/workflows/web-ci.yml
+    with:
+      environment: dev
+      checkout_ref: ${{ github.head_ref == 'dev' && github.base_ref == 'main' && github.event.pull_request.head.sha || github.sha }}
+      schema_base: ${{ github.event.pull_request.base.sha }}
+
+  # Keep the required branch-protection check stable. Any failed, skipped or
+  # cancelled validation prevents deployment of the independently built artifact.
   validate:
+    if: always()
+    needs: checks
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          # Dev live reflects the pushed dev commit; other PRs test the merge ref.
-          ref: ${{ github.head_ref == 'dev' && github.base_ref == 'main' && github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: '3.47.9'
-      - run: flutter pub get --enforce-lockfile
-      - name: Generate Dart localizations from the checked-out ARB
-        run: flutter gen-l10n
-      - run: node scripts/check_repository.mjs
-      - name: Verify portable project file schema version
-        run: node scripts/project_file_schema.mjs --base "$PROJECT_SCHEMA_BASE"
+      - name: Require every validation job to pass
         env:
-          PROJECT_SCHEMA_BASE: ${{ github.event.pull_request.base.sha }}
-      - run: node scripts/check_architecture.mjs
-      - run: dart format --output=none --set-exit-if-changed lib test integration_test test_driver
-      - run: flutter analyze --fatal-infos --fatal-warnings
-      - run: flutter test --coverage --test-randomize-ordering-seed=4729
-      - run: node scripts/check_coverage.mjs
-      - run: node --test scripts/tests/*_test.mjs
-      - run: flutter test --platform chrome test/browser/matrix_browser_clipboard_test.dart
-      - name: Install matching browser test driver
-        run: |
-          CHROME_VERSION=$(google-chrome --product-version)
-          DRIVER=$(npx --yes @puppeteer/browsers@3.2.6 install "chromedriver@$CHROME_VERSION" --path build/browser | tail -n 1)
-          echo "CHROMEDRIVER=${DRIVER#* }" >> "$GITHUB_ENV"
-      - run: node scripts/run_web_integration.mjs
-      - run: node scripts/run_web_integration.mjs
-        env:
-          BROWSER_DIMENSION: '390x844'
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - run: npm --prefix security-tests ci --ignore-scripts
-      - run: npm --prefix security-tests audit --audit-level=high
-      - run: node scripts/run_rules_tests.mjs
-      - name: Verify Firebase SDK contracts on isolated emulators
-        run: >-
-          sh scripts/firebase_emulators.sh emulators:exec
-          --config firebase.emulators.json --only auth,firestore
-          --project demo-bramwellsprecisiontestkit
-          'node scripts/flutter.mjs local test --platform chrome test/emulators/firebase_emulators_test.dart'
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-evidence
-          path: |
-            coverage/lcov.info
-            build/coverage-report.json
-            build/test-results
-          retention-days: 7
-      - run: node scripts/build_web.mjs dev
-      - run: node scripts/run_hosting_test.mjs dev
-      - run: node scripts/measure_web.mjs dev
-      - uses: actions/upload-artifact@v4
-        if: github.event.repository.private
-        with:
-          name: private-symbols-dev
-          path: build/private-symbols/dev
-          retention-days: 30
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: web-dev
-          path: build/web-dev
-          retention-days: 2
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dev-transfer-report
-          path: build/web-transfer-dev.json
-          retention-days: 2
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$CHECKS_RESULT" = success
 
   deploy:
     needs: validate
@@ -102,13 +39,14 @@ jobs:
       checks: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.head_ref == 'dev' && github.base_ref == 'main' && github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '22'
-      - uses: actions/download-artifact@v4
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: web-dev
           path: build/web-dev
@@ -128,7 +66,7 @@ jobs:
       - run: cp firebase.dev.json firebase.json
       - name: Deploy dev live
         if: ${{ github.head_ref == 'dev' && github.base_ref == 'main' }}
-        uses: FirebaseExtended/action-hosting-deploy@v0
+        uses: FirebaseExtended/action-hosting-deploy@v0.11.0
         with:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV }}
           channelId: live
@@ -136,7 +74,7 @@ jobs:
       # Other same-repository PRs get isolated files with dev Auth/Firestore.
       - name: Deploy PR preview
         if: ${{ github.head_ref != 'dev' || github.base_ref != 'main' }}
-        uses: FirebaseExtended/action-hosting-deploy@v0
+        uses: FirebaseExtended/action-hosting-deploy@v0.11.0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV }}

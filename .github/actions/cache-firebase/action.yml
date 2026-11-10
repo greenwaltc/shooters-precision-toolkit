@@ -1,0 +1,9 @@
+name: Cache Firebase emulator downloads
+description: Reuse emulator artifacts while letting Firebase verify the requested version.
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v6.1.0
+      with:
+        path: ~/.cache/firebase/emulators
+        key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('security-tests/package-lock.json') }}-v1

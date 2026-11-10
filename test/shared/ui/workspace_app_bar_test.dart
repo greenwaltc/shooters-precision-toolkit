@@ -8,6 +8,7 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/p
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/results_view.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_back_button.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_brand_bar.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/theme/tokens/app_headings.dart';
@@ -88,7 +89,7 @@ void main() {
       expect(find.byType(ContactPage), findsOneWidget);
       expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
-        find.textContaining('Engineered by Cameron Greenwalt'),
+        find.textContaining(AppCopy.english.copyrightCredit),
         findsWidgets,
       );
       expect(find.textContaining('denton@'), findsNothing);
@@ -115,7 +116,7 @@ void main() {
       expect(find.byType(ContactPage), findsOneWidget);
       expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
-        find.textContaining('Engineered by Cameron Greenwalt'),
+        find.textContaining(AppCopy.english.copyrightCredit),
         findsWidgets,
       );
       expect(find.textContaining('denton@'), findsNothing);
@@ -136,7 +137,7 @@ void main() {
       expect(find.byType(ContactPage), findsOneWidget);
       expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
-        find.textContaining('Engineered by Cameron Greenwalt'),
+        find.textContaining(AppCopy.english.copyrightCredit),
         findsWidgets,
       );
       expect(find.textContaining('denton@'), findsNothing);
@@ -170,7 +171,7 @@ void main() {
       expect(find.byType(ContactPage), findsOneWidget);
       expect(tester.getSize(find.byType(AppBrandTitleLogo)).height, logoHeight);
       expect(
-        find.textContaining('Engineered by Cameron Greenwalt'),
+        find.textContaining(AppCopy.english.copyrightCredit),
         findsWidgets,
       );
       expect(find.textContaining('denton@'), findsNothing);

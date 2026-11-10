@@ -9,6 +9,9 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get stayLoggedIn => 'Stay logged in';
+
+  @override
   String get contact => 'Contact';
 
   @override
@@ -674,7 +677,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyrightCredit =>
-      '© 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt';
+      '© 2026 Denton M. Bramwell. All rights reserved. Web app by Cameron Greenwalt';
 
   @override
   String get cloneProjectAction => 'Clone project';

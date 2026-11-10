@@ -4,7 +4,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart' show appFlavor;
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/auth/api/auth_session_policy.dart';
+import '../../features/auth/data/firebase_auth_session_policy.dart';
 import '../config/app_config.dart';
 import 'auth_emulator_hint_stub.dart'
     if (dart.library.js_interop) 'auth_emulator_hint_web.dart';
@@ -21,10 +24,12 @@ class FirebaseServices {
     required this.auth,
     required this.db,
     required this.config,
+    required this.sessions,
   });
   final AppConfig config;
   final FirebaseApp app;
   final FirebaseAuth auth;
+  final AuthSessionPolicy sessions;
   final FirebaseFirestore db;
 }
 
@@ -98,7 +103,19 @@ Future<FirebaseServices> bootstrapFirebase({AppConfig? config}) async {
     await connectAuthToEmulator(auth, emulatorHost, settings.authEmulatorPort);
     db.useFirestoreEmulator(emulatorHost, settings.firestoreEmulatorPort);
   }
-  return FirebaseServices(app: app, auth: auth, db: db, config: settings);
+  final sessions = FirebaseAuthSessionPolicy(
+    auth: auth,
+    preferencesLoader: SharedPreferences.getInstance,
+    isWeb: kIsWeb,
+  );
+  await sessions.restore();
+  return FirebaseServices(
+    app: app,
+    auth: auth,
+    db: db,
+    config: settings,
+    sessions: sessions,
+  );
 }
 
 /// Reapply the emulator connection even if a web hot restart left a stale hint.

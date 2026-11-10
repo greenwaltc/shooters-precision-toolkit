@@ -1,5 +1,6 @@
 {
   "@@locale": "en",
+  "stayLoggedIn": "Stay logged in",
   "contact": "Contact",
   "contactDentonBramwell": "Contact Us",
   "contactUnavailable": "The contact form is unavailable in this build.",

@@ -8,10 +8,13 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/r
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/empty_results_state.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/app_back_button.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_brand_bar.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_copyright_footer.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/navigation/app_routes.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/product_configuration.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/scroll_cue.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/theme/app_design.dart';
@@ -791,6 +794,61 @@ void main() {
   });
 
   group('matrix and results', () {
+    for (final systemBack in [false, true]) {
+      for (final existingDesign in [false, true]) {
+        testWidgets(
+          'results back opens Test Design, system=$systemBack existing=$existingDesign',
+          (tester) async {
+            _configureViewport(
+              tester,
+              size: const Size(390, 844),
+              textScale: 1,
+            );
+            await _pumpCompletedProject(tester);
+            // Include the setup route when exercising a new-project stack.
+            if (existingDesign) {
+              final navigator = tester.state<NavigatorState>(
+                find.byType(Navigator).last,
+              );
+              unawaited(navigator.pushNamed(AppRoutes.projectForm));
+              await tester.pumpAndSettle();
+              unawaited(navigator.pushNamed(AppRoutes.anomrMatrix));
+              await tester.pumpAndSettle();
+            } else {
+              await _tapText(tester, 'Bench Rest Comparison');
+            }
+            final matrix = tester
+                .state<PlutoGridState>(find.byType(PlutoGrid))
+                .stateManager;
+            final values = matrix.rows
+                .map((row) => row.cells['range']!.value)
+                .toList();
+            await _tapText(tester, 'Results');
+            if (systemBack) {
+              final navigator = tester.state<NavigatorState>(
+                find.byType(Navigator).last,
+              );
+              await navigator.maybePop();
+            } else {
+              await tester.tap(find.byType(AppBackButton));
+            }
+            await tester.pumpAndSettle();
+            expect(find.byType(ProjectFormPage), findsOneWidget);
+            expect(find.text('Bench Rest Comparison'), findsWidgets);
+            // Submitting returns to a fresh matrix with all measurements intact.
+            await _tapText(tester, 'Submit');
+            final restored = tester
+                .state<PlutoGridState>(find.byType(PlutoGrid))
+                .stateManager;
+            expect(
+              restored.rows.map((row) => row.cells['range']!.value),
+              values,
+            );
+            _expectNoLayoutErrors(tester, 'Results back to Test Design');
+          },
+        );
+      }
+    }
     for (final entry in _viewports.entries) {
       for (final factorCount in <int>[1, 4]) {
         final label = '${entry.key} @ 2.0x, $factorCount-factor';

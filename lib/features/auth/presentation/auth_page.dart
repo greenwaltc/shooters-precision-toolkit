@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../shared/foundation/behavior_policy.dart';
@@ -42,6 +43,7 @@ class _AuthPageState extends State<AuthPage> {
   final _confirmation = TextEditingController();
 
   bool _registering = false;
+  bool _staySignedIn = true;
   bool _busy = false;
   String? _message;
   DateTime? _nextPasswordResetAt;
@@ -141,13 +143,17 @@ class _AuthPageState extends State<AuthPage> {
     final email = _email.text.trim();
     final password = _password.text;
     final registering = _registering;
+    final staySignedIn = _staySignedIn;
 
     await _run((service) async {
       if (registering) {
-        await service.register(email, password);
+        await service.register(email, password, staySignedIn: staySignedIn);
       } else {
-        await service.signIn(email, password);
+        await service.signIn(email, password, staySignedIn: staySignedIn);
       }
+      // The auth gate may already have disposed this page. Commit only after
+      // authentication succeeds so failed submissions never prompt to save.
+      TextInput.finishAutofillContext();
       return null;
     });
   }
@@ -246,146 +252,177 @@ class _AuthPageState extends State<AuthPage> {
         padding: const EdgeInsets.all(AppSpacing.xxxl),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
-          child: Form(
-            key: _form,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  widget.verification
-                      ? AppCopy.english.verifyYourEmail
-                      : _registering
-                      ? AppCopy.english.createAnAccount
-                      : AppCopy.english.signIn,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: AppSpacing.xxxl),
-
-                if (widget.verification) ...[
+          child: AutofillGroup(
+            key: ValueKey(_registering),
+            onDisposeAction: AutofillContextAction.cancel,
+            child: Form(
+              key: _form,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   Text(
-                    AppCopy.english.verifyAddress(
-                      user?.email ?? AppCopy.english.emailAddressFallback,
-                    ),
+                    widget.verification
+                        ? AppCopy.english.verifyYourEmail
+                        : _registering
+                        ? AppCopy.english.createAnAccount
+                        : AppCopy.english.signIn,
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  _verificationButton(service),
-                  OutlinedButton(
-                    onPressed: _busy
-                        ? null
-                        : () => _run((service) async {
-                            final verified = await service
-                                .refreshVerification();
-                            return verified
-                                ? null
-                                : AppCopy
-                                      .english
-                                      .notVerifiedYetOpenTheEmailLinkAnd;
-                          }),
-                    child: Text(AppCopy.english.iHaveVerifiedMyEmail),
-                  ),
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () => _run((service) async {
-                            await service.signOut();
-                            return null;
-                          }),
-                    child: Text(AppCopy.english.useADifferentAccount),
-                  ),
-                ] else ...[
-                  TextFormField(
-                    controller: _email,
-                    enabled: !_busy,
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                    decoration: InputDecoration(
-                      labelText: AppCopy.english.email,
-                    ),
-                    validator: _validateEmail,
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  TextFormField(
-                    controller: _password,
-                    enabled: !_busy,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: AppCopy.english.password,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return AppCopy.english.enterYourPassword;
-                      }
-                      return null;
-                    },
-                  ),
-                  if (_registering) ...[
-                    const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.xxxl),
+
+                  if (widget.verification) ...[
                     Text(
-                      AppCopy
-                          .english
-                          .passwordRequirementsMustBeAtLeast10Characters,
+                      AppCopy.english.verifyAddress(
+                        user?.email ?? AppCopy.english.emailAddressFallback,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    _verificationButton(service),
+                    OutlinedButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _run((service) async {
+                              final verified = await service
+                                  .refreshVerification();
+                              return verified
+                                  ? null
+                                  : AppCopy
+                                        .english
+                                        .notVerifiedYetOpenTheEmailLinkAnd;
+                            }),
+                      child: Text(AppCopy.english.iHaveVerifiedMyEmail),
+                    ),
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _run((service) async {
+                              await service.signOut();
+                              return null;
+                            }),
+                      child: Text(AppCopy.english.useADifferentAccount),
+                    ),
+                  ] else ...[
+                    TextFormField(
+                      controller: _email,
+                      enabled: !_busy,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [
+                        AutofillHints.username,
+                        AutofillHints.email,
+                      ],
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
+                      decoration: InputDecoration(
+                        labelText: AppCopy.english.email,
+                      ),
+                      validator: _validateEmail,
                     ),
                     const SizedBox(height: AppSpacing.xl),
                     TextFormField(
-                      controller: _confirmation,
+                      controller: _password,
                       enabled: !_busy,
                       obscureText: true,
+                      autofillHints: [
+                        _registering
+                            ? AutofillHints.newPassword
+                            : AutofillHints.password,
+                      ],
+                      textInputAction: _registering
+                          ? TextInputAction.next
+                          : TextInputAction.done,
+                      onFieldSubmitted: _registering ? null : (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: AppCopy.english.confirmPassword,
+                        labelText: AppCopy.english.password,
                       ),
-                      validator: (value) => value != _password.text
-                          ? AppCopy.english.thePasswordsDoNotMatch
-                          : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return AppCopy.english.enterYourPassword;
+                        }
+                        return null;
+                      },
                     ),
-                  ],
-                  const SizedBox(height: AppSpacing.xxxl),
-                  FilledButton(
-                    onPressed: _busy ? null : _submit,
-                    child: Text(
-                      _registering
-                          ? AppCopy.english.createAccount
-                          : AppCopy.english.signIn,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () {
-                            setState(() {
-                              _registering = !_registering;
-                              _message = null;
-                              _password.clear();
-                              _confirmation.clear();
-                            });
-                          },
-                    child: Text(
-                      _registering
-                          ? AppCopy.english.alreadyHaveAnAccountSignIn
-                          : AppCopy.english.createAnAccount,
-                    ),
-                  ),
-                  if (!_registering)
-                    TextButton(
-                      onPressed: _busy || _emailWait > 0
+                    if (_registering) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        AppCopy
+                            .english
+                            .passwordRequirementsMustBeAtLeast10Characters,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      TextFormField(
+                        controller: _confirmation,
+                        autofillHints: const [AutofillHints.newPassword],
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        enabled: !_busy,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: AppCopy.english.confirmPassword,
+                        ),
+                        validator: (value) => value != _password.text
+                            ? AppCopy.english.thePasswordsDoNotMatch
+                            : null,
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.xxxl),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(context.l10n.stayLoggedIn),
+                      value: _staySignedIn,
+                      onChanged: _busy
                           ? null
-                          : _resetPassword,
+                          : (value) =>
+                                setState(() => _staySignedIn = value ?? false),
+                    ),
+                    FilledButton(
+                      onPressed: _busy ? null : _submit,
                       child: Text(
-                        _emailWait > 0
-                            ? AppCopy.english.requestAnotherEmailSeconds(
-                                _emailWait,
-                              )
-                            : AppCopy.english.forgotPassword,
+                        _registering
+                            ? AppCopy.english.createAccount
+                            : AppCopy.english.signIn,
                       ),
                     ),
-                ],
+                    TextButton(
+                      onPressed: _busy
+                          ? null
+                          : () {
+                              setState(() {
+                                _registering = !_registering;
+                                _message = null;
+                                _password.clear();
+                                _confirmation.clear();
+                              });
+                            },
+                      child: Text(
+                        _registering
+                            ? AppCopy.english.alreadyHaveAnAccountSignIn
+                            : AppCopy.english.createAnAccount,
+                      ),
+                    ),
+                    if (!_registering)
+                      TextButton(
+                        onPressed: _busy || _emailWait > 0
+                            ? null
+                            : _resetPassword,
+                        child: Text(
+                          _emailWait > 0
+                              ? AppCopy.english.requestAnotherEmailSeconds(
+                                  _emailWait,
+                                )
+                              : AppCopy.english.forgotPassword,
+                        ),
+                      ),
+                  ],
 
-                if (_busy) const LinearProgressIndicator(),
-                if (_message != null) ...[
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(_message!),
+                  if (_busy) const LinearProgressIndicator(),
+                  if (_message != null) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(_message!),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

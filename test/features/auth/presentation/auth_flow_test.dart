@@ -9,7 +9,7 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/t
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show MethodCall, rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,6 +18,65 @@ import '../../../support/fake_project_repository.dart';
 import '../../../support/test_configuration.dart';
 
 void main() {
+  for (final stay in [false, true]) {
+    testWidgets('login offers autofill and submits stay logged in = $stay', (
+      tester,
+    ) async {
+      final auth = FakeAuth();
+      auth.users['alice@example.test'] = FakeAuthUser(
+        uid: 'alice',
+        email: 'alice@example.test',
+        verified: true,
+      );
+      await _pumpApp(tester, auth);
+      final inputs = tester
+          .widgetList<EditableText>(find.byType(EditableText))
+          .toList();
+      expect(inputs[0].autofillHints, contains(AutofillHints.username));
+      expect(inputs[1].autofillHints, contains(AutofillHints.password));
+      expect(
+        tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
+        isTrue,
+      );
+      if (!stay) await _tap(tester, find.text('Stay logged in'));
+      tester.testTextInput.log.clear();
+      await _signIn(tester, 'alice@example.test');
+      expect(auth.sessions.staySignedIn, stay);
+      expect(find.byType(ProjectHomePage), findsOneWidget);
+      expect(
+        tester.testTextInput.log,
+        contains(
+          isA<MethodCall>()
+              .having(
+                (call) => call.method,
+                'method',
+                'TextInput.finishAutofillContext',
+              )
+              .having((call) => call.arguments, 'save', true),
+        ),
+      );
+    });
+  }
+
+  testWidgets('failed login does not commit credentials to autofill', (
+    tester,
+  ) async {
+    final auth = FakeAuth();
+    await _pumpApp(tester, auth);
+    tester.testTextInput.log.clear();
+    await _signIn(tester, 'missing@example.test');
+    expect(find.text('Unable to sign in with those details.'), findsOneWidget);
+    expect(
+      tester.testTextInput.log.where(
+        (call) =>
+            call.method == 'TextInput.finishAutofillContext' &&
+            call.arguments == true,
+      ),
+      isEmpty,
+    );
+    expect(find.byType(AuthPage), findsOneWidget);
+  });
+
   testWidgets('cloud-only sessions do not restore persisted offline drafts', (
     tester,
   ) async {

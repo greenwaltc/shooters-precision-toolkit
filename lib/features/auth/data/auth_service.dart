@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../../shared/foundation/app_failure.dart';
 import '../../../shared/foundation/diagnostics.dart';
 import '../api/auth_repository.dart';
+import '../api/auth_session_policy.dart';
 
 /// A Firebase implementation of the app's account operations.
 ///
@@ -21,6 +22,7 @@ class AuthService implements AuthRepository {
     required this.returnOrigin,
     required this.emailCooldown,
     required this.clock,
+    required this.sessions,
     this.diagnostics = const NoopDiagnostics(),
   });
   final Uri returnOrigin;
@@ -29,6 +31,7 @@ class AuthService implements AuthRepository {
   @override
   final Clock clock;
   final FirebaseAuth auth;
+  final AuthSessionPolicy sessions;
   final Diagnostics diagnostics;
   Future<void>? _pendingRegistration;
   final _verificationRetryTimes = <String, DateTime>{};
@@ -92,8 +95,15 @@ class AuthService implements AuthRepository {
   }
 
   @override
-  Future<void> register(String email, String password) async {
-    final request = _guard(() => _register(email, password));
+  Future<void> register(
+    String email,
+    String password, {
+    bool staySignedIn = true,
+  }) async {
+    final request = _guard(() async {
+      await sessions.configure(staySignedIn: staySignedIn);
+      await _register(email, password);
+    });
     _pendingRegistration = request;
     try {
       await request;
@@ -105,8 +115,14 @@ class AuthService implements AuthRepository {
   }
 
   @override
-  Future<void> signIn(String email, String password) =>
-      _guard(() => _signIn(email, password));
+  Future<void> signIn(
+    String email,
+    String password, {
+    bool staySignedIn = true,
+  }) => _guard(() async {
+    await sessions.configure(staySignedIn: staySignedIn);
+    await _signIn(email, password);
+  });
   @override
   Future<void> sendVerification() => _guard(_sendVerification);
   @override

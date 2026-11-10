@@ -44,6 +44,7 @@ void main() {
     });
     final auth = AuthService(
       fake,
+      sessions: fake.sessions,
       returnOrigin: Uri.parse('http://127.0.0.1:7357'),
       emailCooldown: const Duration(seconds: 60),
       clock: const Clock(),
@@ -105,12 +106,14 @@ void main() {
       );
       final firstAdapter = AuthService(
         first,
+        sessions: first.sessions,
         returnOrigin: Uri.parse('http://127.0.0.1:7357'),
         emailCooldown: const Duration(seconds: 60),
         clock: const Clock(),
       );
       final secondAdapter = AuthService(
         second,
+        sessions: second.sessions,
         returnOrigin: Uri.parse('http://127.0.0.1:7357'),
         emailCooldown: const Duration(seconds: 60),
         clock: const Clock(),

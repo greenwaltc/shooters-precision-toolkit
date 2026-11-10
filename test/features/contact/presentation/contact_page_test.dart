@@ -74,6 +74,7 @@ void main() {
           services: FirebaseServices(
             app: services.app,
             auth: services.auth,
+            sessions: services.sessions,
             db: services.db,
             config: AppConfig.fromValues({
               'CONFIG_SCHEMA_VERSION': AppConfig.schemaVersion,

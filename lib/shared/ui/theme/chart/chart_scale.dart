@@ -176,6 +176,15 @@ class ChartScale {
   double get legendRunSpacing => isCompact ? 8 : 10;
 
   // Conclusion row
+  /// Conclusion text has a readable mobile floor independent of chart ticks.
+  double get conclusionBodyFontSize => isCompact ? 14 : axisLabelFontSize;
+
+  /// Factor headings remain distinct from measurements on small screens.
+  double get conclusionTitleFontSize => isCompact ? 16 : stateLabelFontSize + 1;
+
+  /// Assessment labels remain readable even when the plot is scaled down.
+  double get conclusionStatusFontSize => isCompact ? 14 : axisLabelFontSize + 1;
+
   /// The gap between the factor marker and its conclusion text.
   double get conclusionRowFactorGap => 10;
 

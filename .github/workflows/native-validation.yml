@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/native-validation.yml'
+      - '.github/actions/**'
       - 'android/**'
       - 'ios/**'
       - 'macos/**'
@@ -23,22 +24,20 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      GRADLE_OPTS: -Dorg.gradle.caching=true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup-flutter
+      - uses: actions/setup-java@v6.2.0
         with:
           distribution: temurin
           java-version: '21'
-      - uses: subosito/flutter-action@v2
+      - uses: gradle/actions/setup-gradle@v6.4.1
         with:
-          channel: stable
-          flutter-version: '3.47.9'
-      - run: flutter pub get --enforce-lockfile
-      - name: Generate Dart localizations from the checked-out ARB
-        run: flutter gen-l10n
+          # Writes remain scoped to this PR; forks cannot replace main's cache.
+          cache-read-only: false
+      # Keep flavors together: prod reuses dev's compiled native dependencies.
       - run: node scripts/flutter.mjs dev build apk --debug --flavor dev --no-pub
       - run: node scripts/flutter.mjs prod build apk --debug --flavor prod --no-pub
 
@@ -49,25 +48,41 @@ jobs:
       fail-fast: false
       matrix:
         environment: [dev, prod]
+        platform: [ios, macos]
     env:
       APP_PROFILE: ${{ matrix.environment }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/setup-flutter
+      - name: Identify Xcode toolchain
+        id: xcode
+        run: |
+          xcodebuild -version
+          echo "hash=$(xcodebuild -version | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - name: Restore CocoaPods and incremental native compilation
+        uses: actions/cache@v6.1.0
         with:
-          node-version: '22'
-      - uses: subosito/flutter-action@v2
+          path: |
+            ~/Library/Caches/CocoaPods
+            ${{ matrix.platform }}/Pods
+            build/${{ matrix.platform == 'ios' && 'ios' || 'macos-unsigned' }}
+          key: apple-${{ runner.os }}-${{ runner.arch }}-${{ matrix.platform }}-${{ matrix.environment }}-${{ steps.xcode.outputs.hash }}-${{ hashFiles('config/toolchain.json', 'pubspec.lock', 'ios/Podfile.lock', 'macos/Podfile.lock') }}-v2
+          restore-keys: |
+            apple-${{ runner.os }}-${{ runner.arch }}-${{ matrix.platform }}-${{ matrix.environment }}-${{ steps.xcode.outputs.hash }}-${{ hashFiles('config/toolchain.json', 'pubspec.lock', 'ios/Podfile.lock', 'macos/Podfile.lock') }}-
+      - name: Restore iOS Xcode compilation state
+        if: matrix.platform == 'ios'
+        uses: actions/cache@v6.1.0
         with:
-          channel: stable
-          flutter-version: '3.47.9'
-      - run: xcodebuild -version
-      - run: flutter pub get --enforce-lockfile
-      - name: Generate Dart localizations from the checked-out ARB
-        run: flutter gen-l10n
+          # Flutter sets BUILD_DIR but leaves Xcode's intermediates here.
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ios-derived-${{ runner.os }}-${{ runner.arch }}-${{ matrix.environment }}-${{ steps.xcode.outputs.hash }}-${{ hashFiles('config/toolchain.json', 'pubspec.lock', 'ios/Podfile.lock') }}-v1
       - run: node scripts/check_native_config.mjs
-      - run: node scripts/flutter.mjs "$APP_PROFILE" build ios --simulator --debug --no-codesign --flavor "$APP_PROFILE" --no-pub
-      - run: node scripts/flutter.mjs "$APP_PROFILE" build macos --debug --config-only --flavor "$APP_PROFILE" --no-pub
-      - run: >-
+      - if: matrix.platform == 'ios'
+        run: node scripts/flutter.mjs "$APP_PROFILE" build ios --simulator --debug --no-codesign --flavor "$APP_PROFILE" --no-pub
+      - if: matrix.platform == 'macos'
+        run: node scripts/flutter.mjs "$APP_PROFILE" build macos --debug --config-only --flavor "$APP_PROFILE" --no-pub
+      - if: matrix.platform == 'macos'
+        run: >-
           xcodebuild -quiet -workspace macos/Runner.xcworkspace
           -scheme "$APP_PROFILE" -configuration "Debug-$APP_PROFILE"
           -derivedDataPath build/macos-unsigned CODE_SIGNING_ALLOWED=NO build

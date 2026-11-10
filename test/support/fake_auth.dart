@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:bramwells_precision_test_kit/app/firebase/firebase_bootstrap.dart';
+import 'package:bramwells_precision_test_kit/features/auth/api/auth_session_policy.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -27,6 +28,7 @@ class FakeAuth extends Fake implements FirebaseAuth {
   int newUserVerificationFailures = 0;
   Future<void>? newUserVerificationBarrier;
   final passwordResetRequests = <String>[];
+  final sessions = FakeAuthSessionPolicy();
 
   @override
   final FirebaseApp app = _App();
@@ -36,6 +38,7 @@ class FakeAuth extends Fake implements FirebaseAuth {
     app: app,
     auth: this,
     db: _Firestore(),
+    sessions: sessions,
   );
 
   @override
@@ -177,6 +180,8 @@ class FakeTokenResult extends Fake implements IdTokenResult {
 
 class _App extends Fake implements FirebaseApp {
   @override
+  String get name => '[DEFAULT]';
+  @override
   FirebaseOptions get options => const FirebaseOptions(
     apiKey: 'test-only',
     appId: 'test-only',
@@ -186,3 +191,16 @@ class _App extends Fake implements FirebaseApp {
 }
 
 class _Firestore extends Fake implements FirebaseFirestore {}
+
+class FakeAuthSessionPolicy implements AuthSessionPolicy {
+  bool? staySignedIn;
+  Object? failure;
+  Completer<void>? pending;
+
+  @override
+  Future<void> configure({required bool staySignedIn}) async {
+    if (failure case final error?) throw error;
+    await pending?.future;
+    this.staySignedIn = staySignedIn;
+  }
+}

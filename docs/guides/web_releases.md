@@ -78,6 +78,9 @@ Previews isolate Hosting files, while all dev previews connect to dev Auth/Fires
 
 ## Configure GitHub once
 
+See [CI execution and caches](../verification/ci_workflows.md) for parallel jobs,
+cache isolation, and the production validation-only command.
+
 1. In the [repository environment settings](https://github.com/greenwaltc/shooters-precision-toolkit/settings/environments), create **production**. Add a required reviewer and restrict deployment branches to **main**. A workflow environment name alone does not create protection rules. Configure a second reviewer if you enable Prevent self-review; otherwise a solo maintainer cannot approve their own release.
 2. Protect `main` with a ruleset/branch rule requiring PRs and the **Firebase dev Hosting / validate** check (select the actual check after its first run). Require review as appropriate for your team. If a required check refers to the former workflow name, update it to the current check.
 3. Keep the existing dev-only GitHub secret `FIREBASE_SERVICE_ACCOUNT_BRAMWELLSPRECISIONTESTKITDEV` for dev live and previews. Put the production key in the production environment as `FIREBASE_SERVICE_ACCOUNT_BRAMWELLS_PRECISION_TEST_KIT` and remove its repository-level copy after verifying the environment secret. Do not commit keys. Short-lived credentials are the separate step 15.

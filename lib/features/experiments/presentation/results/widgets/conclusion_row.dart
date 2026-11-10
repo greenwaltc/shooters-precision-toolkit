@@ -139,22 +139,22 @@ class ConclusionRow extends StatelessWidget {
       color: color,
       icon: icon,
       scale: scale.scale,
-      iconSize: scale.stateLabelFontSize + 4,
-      fontSize: scale.axisLabelFontSize + 1,
+      iconSize: scale.conclusionStatusFontSize + 4,
+      fontSize: scale.conclusionStatusFontSize,
     );
   }
 
   TextStyle? _titleStyle(TextTheme textTheme) {
     return textTheme.titleSmall?.copyWith(
       fontWeight: FontWeight.w700,
-      fontSize: scale.stateLabelFontSize + 1,
+      fontSize: scale.conclusionTitleFontSize,
     );
   }
 
   TextStyle? _stateStyle(TextTheme textTheme, ColorScheme scheme) {
     return textTheme.bodySmall?.copyWith(
       color: scheme.onSurfaceVariant,
-      fontSize: scale.axisLabelFontSize,
+      fontSize: scale.conclusionBodyFontSize,
     );
   }
 

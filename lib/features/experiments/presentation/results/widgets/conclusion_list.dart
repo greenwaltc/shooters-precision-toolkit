@@ -38,7 +38,7 @@ class ConclusionList extends StatelessWidget {
           context.l10n.perFactorRisk(riskLevel.label),
           style: textTheme.labelLarge?.copyWith(
             color: scheme.onSurfaceVariant,
-            fontSize: scale.axisLabelFontSize + 1,
+            fontSize: scale.conclusionStatusFontSize,
           ),
         ),
         const SizedBox(height: AppSpacing.md),

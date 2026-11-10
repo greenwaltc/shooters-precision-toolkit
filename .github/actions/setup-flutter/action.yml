@@ -1,0 +1,34 @@
+name: Prepare Flutter development tools
+description: Restore the pinned SDK and locked dependencies on Linux or macOS.
+inputs:
+  npm-cache:
+    description: Cache npm downloads for jobs that use Firebase or npm tooling.
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - id: toolchain
+      shell: bash
+      run: |
+        python3 - <<'PYTHON' >> "$GITHUB_OUTPUT"
+        import json
+        with open('config/toolchain.json') as file:
+            tools = json.load(file)
+        print(f"flutter={tools['flutter']}")
+        print(f"node={tools['nodeMajor']}")
+        PYTHON
+    - uses: actions/setup-node@v7.1.0
+      with:
+        node-version: ${{ steps.toolchain.outputs.node }}
+        package-manager-cache: false
+        cache: ${{ inputs.npm-cache == 'true' && 'npm' || '' }}
+        cache-dependency-path: security-tests/package-lock.json
+    - uses: subosito/flutter-action@v2.23.0
+      with:
+        channel: stable
+        flutter-version: ${{ steps.toolchain.outputs.flutter }}
+        cache: true
+    - shell: bash
+      run: flutter pub get --enforce-lockfile
+    - shell: bash
+      run: flutter gen-l10n

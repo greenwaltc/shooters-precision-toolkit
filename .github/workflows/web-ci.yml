@@ -175,7 +175,24 @@ jobs:
       - name: Check cold-load traffic budget
         env:
           APP_PROFILE: ${{ inputs.environment }}
-        run: node scripts/measure_web.mjs "$APP_PROFILE"
+        run: |
+          set +e
+          node scripts/measure_web.mjs "$APP_PROFILE" > "$RUNNER_TEMP/web-measure.log" 2>&1
+          measure_status=$?
+          set -e
+          cat "$RUNNER_TEMP/web-measure.log"
+          if [ "$measure_status" -ne 0 ]; then
+            python3 - <<'PYTHON'
+          import os
+          from pathlib import Path
+          text = Path(os.environ['RUNNER_TEMP'], 'web-measure.log').read_text()
+          if len(text) > 4000:
+              text = text[:2000] + '\n...\n' + text[-1800:]
+          text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          print(f'::error title=Web cold-load check::{text}')
+          PYTHON
+          fi
+          exit "$measure_status"
       - uses: actions/upload-artifact@v7.0.2
         if: github.event.repository.private
         with:
@@ -191,6 +208,7 @@ jobs:
           if-no-files-found: error
           compression-level: 1
       - uses: actions/upload-artifact@v7.0.2
+        if: always()
         with:
           name: ${{ inputs.environment }}-transfer-report
           path: build/web-transfer-${{ inputs.environment }}.json

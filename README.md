@@ -30,6 +30,14 @@ before refreshing or closing the app. The shipped profiles use the light theme.
 The theme toggle and missing-data imputation are controlled by
 [build configuration](docs/guides/app_configuration.md).
 
+### Sign-in convenience
+
+The sign-in form supports browser and platform password managers. **Stay logged
+in** is enabled by default. Turn it off to keep web sign-in within the tab session
+or end a native sign-in on the next app launch. Explicit sign-out ends either
+session. Password-manager prompts and session restoration depend on platform
+settings. [Session policy](docs/decisions/0004_auth_session_persistence.md)
+
 ### Portable project files
 
 Select **Export** in the Data Matrix to save the test design, measurements, and

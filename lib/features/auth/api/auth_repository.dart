@@ -75,12 +75,23 @@ abstract interface class AuthRepository {
   ///
   /// If sending the email fails after registration, the account can still exist
   /// and be signed in.
-  Future<void> register(String email, String password);
+  /// [staySignedIn] follows the same session policy as [signIn].
+  Future<void> register(
+    String email,
+    String password, {
+    bool staySignedIn = true,
+  });
 
   /// Signs in using [email] and [password].
   ///
   /// Rejected credentials complete the future with an [AuthFailure].
-  Future<void> signIn(String email, String password);
+  /// With [staySignedIn] (the default), Firebase may restore the session after
+  /// restart. Otherwise it lasts for the browser tab or native process only.
+  Future<void> signIn(
+    String email,
+    String password, {
+    bool staySignedIn = true,
+  });
 
   /// Requests a verification email for the current account.
   ///

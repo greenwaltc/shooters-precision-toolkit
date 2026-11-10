@@ -94,6 +94,12 @@ abstract class AppLocalizations {
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[Locale('en')];
 
+  /// No description provided for @stayLoggedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay logged in'**
+  String get stayLoggedIn;
+
   /// No description provided for @contact.
   ///
   /// In en, this message translates to:
@@ -1225,7 +1231,7 @@ abstract class AppLocalizations {
   /// No description provided for @copyrightCredit.
   ///
   /// In en, this message translates to:
-  /// **'© 2026 Denton M. Bramwell. All rights reserved. Engineered by Cameron Greenwalt'**
+  /// **'© 2026 Denton M. Bramwell. All rights reserved. Web app by Cameron Greenwalt'**
   String get copyrightCredit;
 
   /// No description provided for @cloneProjectAction.

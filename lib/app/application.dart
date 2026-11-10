@@ -106,6 +106,7 @@ class FirebaseApplication extends StatelessWidget {
       Provider<AuthRepository>(
         create: (_) => AuthService(
           services.auth,
+          sessions: services.sessions,
           returnOrigin: services.config.publicOrigin,
           emailCooldown: services.config.emailCooldown,
           clock: clock,

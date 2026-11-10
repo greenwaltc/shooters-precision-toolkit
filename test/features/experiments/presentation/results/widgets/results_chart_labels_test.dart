@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:bramwells_precision_test_kit/features/experiments/api/factor_stats.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/models/effect_status.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/models/factor_row.dart';
+import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/conclusion_row.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/results_chart_card.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
@@ -84,6 +85,23 @@ void main() {
         expect(find.text('AVG. 2-SHOT GROUP SIZE'), findsOneWidget);
         expect(find.text('$first: 1.2345'), findsOneWidget);
         expect(find.text('$second: 2.3456'), findsOneWidget);
+        final conclusion = find.byType(ConclusionRow);
+        final meanLabel = find.descendant(
+          of: conclusion,
+          matching: find.text('$first: 1.2345'),
+        );
+        expect(
+          tester.widget<Text>(meanLabel).style!.fontSize,
+          greaterThanOrEqualTo(14),
+        );
+        final title = find.descendant(
+          of: conclusion,
+          matching: find.text(row.displayName),
+        );
+        expect(
+          tester.widget<Text>(title).style!.fontSize,
+          greaterThanOrEqualTo(16),
+        );
         final rotation = tester.widget<Transform>(
           find
               .ancestor(of: find.text(second), matching: find.byType(Transform))

@@ -344,6 +344,7 @@ void main() {
     final services = emulatorServices;
     final auth = AuthService(
       services.auth,
+      sessions: services.sessions,
       returnOrigin: Uri.parse('http://127.0.0.1:7357'),
       emailCooldown: const Duration(seconds: 60),
       clock: const Clock(),
@@ -574,6 +575,7 @@ void main() {
       final services = emulatorServices;
       final auth = AuthService(
         services.auth,
+        sessions: services.sessions,
         returnOrigin: Uri.parse('http://127.0.0.1:7357'),
         emailCooldown: const Duration(seconds: 60),
         clock: const Clock(),
@@ -824,6 +826,7 @@ Future<void> _registerVerified(
 ) async {
   final auth = AuthService(
     services.auth,
+    sessions: services.sessions,
     returnOrigin: Uri.parse('http://127.0.0.1:7357'),
     emailCooldown: const Duration(seconds: 60),
     clock: const Clock(),

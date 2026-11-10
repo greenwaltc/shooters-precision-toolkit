@@ -22,7 +22,7 @@ void main() {
       final auth = FakeAuth(initialUser: user);
       final policy = FirebaseAuthSessionPolicy(
         auth: auth,
-        preferences: preferences,
+        preferencesLoader: () async => preferences,
         isWeb: false,
       );
       await policy.configure(staySignedIn: stay);
@@ -31,7 +31,7 @@ void main() {
       // New policy instance represents the next process, before AuthGate runs.
       await FirebaseAuthSessionPolicy(
         auth: auth,
-        preferences: preferences,
+        preferencesLoader: () async => preferences,
         isWeb: false,
       ).restore();
       expect(auth.currentUser, stay ? same(user) : isNull);
@@ -40,19 +40,19 @@ void main() {
     test(
       'web uses Firebase ${stay ? "local" : "session"} persistence',
       () async {
-        SharedPreferences.setMockInitialValues({});
-        final preferences = await SharedPreferences.getInstance();
         final auth = _WebAuth();
-        await FirebaseAuthSessionPolicy(
+        final policy = FirebaseAuthSessionPolicy(
           auth: auth,
-          preferences: preferences,
+          preferencesLoader: () =>
+              throw StateError('Web must not load native preferences.'),
           isWeb: true,
-        ).configure(staySignedIn: stay);
+        );
+        await policy.restore();
+        await policy.configure(staySignedIn: stay);
         expect(
           auth.persistence,
           stay ? Persistence.LOCAL : Persistence.SESSION,
         );
-        expect(preferences.getKeys(), isEmpty);
       },
     );
   }
@@ -65,7 +65,7 @@ void main() {
       final auth = FakeAuth(initialUser: user);
       await FirebaseAuthSessionPolicy(
         auth: auth,
-        preferences: await SharedPreferences.getInstance(),
+        preferencesLoader: SharedPreferences.getInstance,
         isWeb: false,
       ).restore();
       expect(auth.currentUser, same(user));
@@ -78,7 +78,8 @@ void main() {
       () async {
         final policy = FirebaseAuthSessionPolicy(
           auth: FakeAuth(),
-          preferences: _FailingPreferences(throwsPlatformError),
+          preferencesLoader: () async =>
+              _FailingPreferences(throwsPlatformError),
           isWeb: false,
         );
         await expectLater(
@@ -105,7 +106,7 @@ void main() {
     );
     await FirebaseAuthSessionPolicy(
       auth: auth,
-      preferences: await SharedPreferences.getInstance(),
+      preferencesLoader: SharedPreferences.getInstance,
       isWeb: false,
     ).restore();
     expect(auth.currentUser, isNull);

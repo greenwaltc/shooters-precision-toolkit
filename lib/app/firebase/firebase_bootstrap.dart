@@ -105,7 +105,7 @@ Future<FirebaseServices> bootstrapFirebase({AppConfig? config}) async {
   }
   final sessions = FirebaseAuthSessionPolicy(
     auth: auth,
-    preferences: await SharedPreferences.getInstance(),
+    preferencesLoader: SharedPreferences.getInstance,
     isWeb: kIsWeb,
   );
   await sessions.restore();

@@ -12,14 +12,17 @@ import '../api/auth_session_policy.dart';
 /// caller owns the injected Firebase client and preferences.
 final class FirebaseAuthSessionPolicy implements AuthSessionPolicy {
   /// Scopes the preference to this Firebase application and backend.
+  ///
+  /// [preferencesLoader] is used only on native targets. Web session policy
+  /// relies entirely on Firebase and does not initialize native preferences.
   FirebaseAuthSessionPolicy({
     required this.auth,
-    required this.preferences,
+    required this.preferencesLoader,
     required this.isWeb,
   });
 
   final FirebaseAuth auth;
-  final SharedPreferences preferences;
+  final Future<SharedPreferences> Function() preferencesLoader;
   final bool isWeb;
 
   String get _key =>
@@ -31,6 +34,7 @@ final class FirebaseAuthSessionPolicy implements AuthSessionPolicy {
   /// preference values fail closed. Web restoration is owned by Firebase.
   Future<void> restore() async {
     if (isWeb) return;
+    final preferences = await preferencesLoader();
     final saved = preferences.get(_key);
     if (saved != null && saved != true) {
       await auth.signOut();
@@ -45,6 +49,7 @@ final class FirebaseAuthSessionPolicy implements AuthSessionPolicy {
       );
     } else {
       try {
+        final preferences = await preferencesLoader();
         if (!await preferences.setBool(_key, staySignedIn)) {
           throw const AuthFailure(
             AuthFailureCode.unavailable,

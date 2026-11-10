@@ -24,6 +24,8 @@ jobs:
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      GRADLE_OPTS: -Dorg.gradle.caching=true
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: ./.github/actions/setup-flutter
@@ -64,9 +66,16 @@ jobs:
             ~/Library/Caches/CocoaPods
             ${{ matrix.platform }}/Pods
             build/${{ matrix.platform == 'ios' && 'ios' || 'macos-unsigned' }}
-          key: apple-${{ runner.os }}-${{ runner.arch }}-${{ matrix.platform }}-${{ matrix.environment }}-${{ steps.xcode.outputs.hash }}-${{ hashFiles('config/toolchain.json', 'pubspec.lock', 'ios/Podfile.lock', 'macos/Podfile.lock') }}-${{ github.sha }}
+          key: apple-${{ runner.os }}-${{ runner.arch }}-${{ matrix.platform }}-${{ matrix.environment }}-${{ steps.xcode.outputs.hash }}-${{ hashFiles('config/toolchain.json', 'pubspec.lock', 'ios/Podfile.lock', 'macos/Podfile.lock') }}-v2
           restore-keys: |
             apple-${{ runner.os }}-${{ runner.arch }}-${{ matrix.platform }}-${{ matrix.environment }}-${{ steps.xcode.outputs.hash }}-${{ hashFiles('config/toolchain.json', 'pubspec.lock', 'ios/Podfile.lock', 'macos/Podfile.lock') }}-
+      - name: Restore iOS Xcode compilation state
+        if: matrix.platform == 'ios'
+        uses: actions/cache@v6.1.0
+        with:
+          # Flutter sets BUILD_DIR but leaves Xcode's intermediates here.
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: ios-derived-${{ runner.os }}-${{ runner.arch }}-${{ matrix.environment }}-${{ steps.xcode.outputs.hash }}-${{ hashFiles('config/toolchain.json', 'pubspec.lock', 'ios/Podfile.lock') }}-v1
       - run: node scripts/check_native_config.mjs
       - if: matrix.platform == 'ios'
         run: node scripts/flutter.mjs "$APP_PROFILE" build ios --simulator --debug --no-codesign --flavor "$APP_PROFILE" --no-pub

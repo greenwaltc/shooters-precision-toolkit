@@ -19,7 +19,8 @@ remain in the entry workflows.
 - iOS and macOS build independently for dev and prod (four Apple jobs).
 - Android keeps both flavors together because the second build reuses the
   first build's native compilation. Gradle's action caches dependencies and build
-  state and verifies Gradle wrapper checksums.
+  state and verifies Gradle wrapper checksums. The Android job enables Gradle's
+  local task-output cache so unchanged compilation work can be reused.
 - The shared Flutter action reads pinned SDK/Node versions from
   `config/toolchain.json`, caches Flutter and locked pub packages, and still runs
   enforced dependency resolution and localization generation on each runner.
@@ -27,10 +28,12 @@ remain in the entry workflows.
   selecting and verifying its requested emulator version on every run; caches
   never determine which version to execute.
 - Apple caches include CocoaPods downloads, the selected platform's Pods, and
-  incremental native build outputs. Keys isolate OS/architecture, platform,
-  flavor, full Xcode version, Flutter/toolchain and dependency lockfiles. An exact
-  commit match is preferred, with restoration from the same dependency/toolchain
-  prefix for subsequent commits. Builds always execute, including on cache hits.
+  incremental native build outputs, including Xcode's default iOS derived-data
+  location. Keys isolate OS/architecture, platform, flavor, full Xcode version,
+  Flutter/toolchain and dependency lockfiles. They remain stable across application
+  commits to avoid re-uploading gigabytes of unchanged native dependencies.
+  Builds always execute and compilers re-check current application inputs,
+  including on cache hits.
 - GitHub scopes PR caches to the PR ref, preventing fork PRs from replacing
   default-branch caches. All validation jobs have read-only repository access.
 - Artifact names are distinct across parallel jobs. Coverage and browser logs are

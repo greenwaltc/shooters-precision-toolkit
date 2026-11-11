@@ -34,12 +34,12 @@ class ChartReferenceLines {
     );
     final boundColor = scheme.error;
 
-    final percentLabel = context.decimal(
+    final percentLabel = context.resultNumber(
       detectableDiffPercent * 100,
       places: 0,
     );
     final boundsCollapsed = (upperBound - lowerBound).abs() < 0.0000001;
-    String formatYValue(double value) => context.decimal(value);
+    String formatYValue(double value) => context.resultNumber(value);
 
     return ExtraLinesData(
       horizontalLines: [

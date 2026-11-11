@@ -73,7 +73,9 @@ void main() {
           await tester.pump();
           expect(
             find.bySemanticsLabel(
-              RegExp(r'Results chart\. Grand mean 1\.7900'),
+              RegExp(
+                r'Results chart\. Grand mean 1\.79\. Risk interval 1 to 3\.',
+              ),
             ),
             findsOneWidget,
           );

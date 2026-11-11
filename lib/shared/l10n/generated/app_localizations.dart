@@ -487,7 +487,7 @@ abstract class AppLocalizations {
   /// No description provided for @projectEditingElsewhere.
   ///
   /// In en, this message translates to:
-  /// **'Editing is active in another session. Save any changes there before editing here.'**
+  /// **'Editing moved to another session. Select a field to edit here.'**
   String get projectEditingElsewhere;
 
   /// No description provided for @projectEditingReadOnly.

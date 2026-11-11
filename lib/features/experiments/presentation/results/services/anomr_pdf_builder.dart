@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pluto_grid/pluto_grid.dart';
 
 import '../../../../../shared/l10n/app_copy.dart';
+import '../../../../../shared/l10n/result_number.dart';
 import '../../../../../shared/ui/theme/pdf/pdf_styles.dart';
 import '../../matrix/services/matrix_grid_data_builder.dart';
 import '../../test_design/project_form_model.dart';
@@ -80,7 +81,9 @@ class AnomrPdfBuilder {
           _statBlock(AppCopy.english.riskLevel, riskLevel.label),
           _statBlock(
             AppCopy.english.detectableDifferenceMessage,
-            SampleSizeLabels.formatFraction(detectableDiffPercent),
+            AppCopy.english.percentBand(
+              formatResultNumber(detectableDiffPercent * 100, places: 1),
+            ),
           ),
         ],
       ),
@@ -165,7 +168,7 @@ class AnomrPdfBuilder {
     if (value.isNaN || !value.isFinite) {
       return '—';
     }
-    return value.toStringAsFixed(4);
+    return formatResultNumber(value);
   }
 
   /// Rows in stable storage-index order so PDF matrix tables are identical

@@ -83,9 +83,9 @@ jobs:
         with:
           ref: ${{ inputs.checkout_ref }}
       - uses: ./.github/actions/setup-flutter
-      - name: Verify browser clipboard
+      - name: Verify browser clipboard and desktop entry
         if: matrix.suite == 'clipboard'
-        run: flutter test --no-pub --platform chrome test/browser/matrix_browser_clipboard_test.dart
+        run: flutter test --no-pub --platform chrome test/browser/matrix_browser_clipboard_test.dart test/features/experiments/presentation/matrix/desktop_entry_test.dart
       - name: Install matching browser test driver
         if: matrix.suite != 'clipboard'
         run: |

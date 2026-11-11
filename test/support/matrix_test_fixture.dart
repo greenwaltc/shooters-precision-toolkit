@@ -16,6 +16,7 @@ import 'test_configuration.dart';
 Future<(ProjectStore, PlutoGridStateManager)> pumpMatrixFixture(
   WidgetTester tester, {
   Duration saveDebounce = Duration.zero,
+  FakeProjectRepository? repository,
 }) async {
   rootBundle.clear();
   tester.view.devicePixelRatio = 1;
@@ -25,7 +26,7 @@ Future<(ProjectStore, PlutoGridStateManager)> pumpMatrixFixture(
   final store = ProjectStore(
     clock: Clock.fixed(DateTime.utc(2026, 11, 4)),
     draftStorage: InMemoryProjectDraftStorage(),
-    repository: FakeProjectRepository(),
+    repository: repository ?? FakeProjectRepository(),
     saveDebounce: saveDebounce,
   );
   addTearDown(store.dispose);

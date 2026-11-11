@@ -34,14 +34,15 @@ class HeaderSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final difference = context.l10n.percentBand(
+      context.resultNumber(detectableDiffPercent * 100, places: 1),
+    );
 
     if (AppLayoutMetrics.of(context).isMobile) {
       final parameters = <String, String>{
-        context.l10n.grandMeanMessage: context.decimal(grandMean),
+        context.l10n.grandMeanMessage: context.resultNumber(grandMean),
         context.l10n.riskLevelMessage: riskLevel.label,
-        context.l10n.detectableDifference: SampleSizeLabels.formatFraction(
-          detectableDiffPercent,
-        ),
+        context.l10n.detectableDifference: difference,
       };
       return OutlinedSurfaceCard(
         variant: OutlinedSurfaceVariant.tinted,
@@ -101,7 +102,7 @@ class HeaderSummary extends StatelessWidget {
                   Expanded(
                     child: StatTile(
                       label: context.l10n.grandMean,
-                      value: context.decimal(grandMean),
+                      value: context.resultNumber(grandMean),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.lg),
@@ -115,9 +116,7 @@ class HeaderSummary extends StatelessWidget {
                   Expanded(
                     child: StatTile(
                       label: context.l10n.detectableDifferenceMessage,
-                      value: SampleSizeLabels.formatFraction(
-                        detectableDiffPercent,
-                      ),
+                      value: difference,
                     ),
                   ),
                 ],
@@ -152,12 +151,12 @@ class HeaderSummary extends StatelessWidget {
               final stats = [
                 StatTile(
                   label: context.l10n.grandMean,
-                  value: context.decimal(grandMean),
+                  value: context.resultNumber(grandMean),
                 ),
                 StatTile(label: context.l10n.riskLevel, value: riskLevel.label),
                 StatTile(
                   label: context.l10n.detectableDifferenceMessage,
-                  value: SampleSizeLabels.formatFraction(detectableDiffPercent),
+                  value: difference,
                 ),
               ];
               if (layout.useStackedActions) {

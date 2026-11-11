@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import 'generated/app_localizations.dart';
 import 'generated/app_localizations_en.dart';
+import 'result_number.dart';
 
 export 'generated/app_localizations.dart';
 
@@ -16,6 +17,13 @@ abstract final class AppCopy {
 extension LocalizedPresentation on BuildContext {
   /// The translations available to this widget.
   AppLocalizations get l10n => AppLocalizations.of(this);
+
+  /// Formats a result with at most [places] decimals and no trailing zeros.
+  String resultNumber(num value, {int places = 4}) => formatResultNumber(
+    value,
+    locale: Localizations.localeOf(this).toLanguageTag(),
+    places: places,
+  );
 
   /// Formats [value] using the active locale and the requested number of
   /// decimal places.

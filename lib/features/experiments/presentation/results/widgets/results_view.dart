@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../../../../shared/foundation/diagnostics.dart';
 import '../../../../../shared/foundation/file_saver.dart';
 import '../../../../../shared/l10n/app_copy.dart';
-import '../../../../../shared/ui/app_back_button.dart';
 import '../../../../../shared/ui/app_bar_actions.dart';
 import '../../../../../shared/ui/app_brand_bar.dart';
 import '../../../../../shared/ui/app_copyright_footer.dart';
@@ -47,7 +46,6 @@ class ResultsView extends StatefulWidget {
 
 class _ResultsViewState extends State<ResultsView> {
   bool _isExporting = false;
-  bool _leaving = false;
 
   @override
   Widget build(BuildContext context) {
@@ -95,70 +93,30 @@ class _ResultsViewState extends State<ResultsView> {
           titleMaxWidth: actionsMetrics.titleMaxWidth,
         );
 
-        return PopScope(
-          canPop: false,
-          onPopInvokedWithResult: (didPop, _) async {
-            if (!didPop) await _goToTestDesign(context, store, stateManager);
-          },
-          child: Scaffold(
-            appBar: _ResultsAppBar(
-              label: label,
-              layout: layout,
-              hasLeading: hasLeading,
-              titleSpacing: titleSpacing,
-              actionItems: actionItems,
-              titleMetrics: titleMetrics,
-              onBack: () => _goToTestDesign(context, store, stateManager),
-            ),
-            body: previewSummary.hasEnoughData
-                ? _ResultsBody(
+        return Scaffold(
+          appBar: _ResultsAppBar(
+            label: label,
+            layout: layout,
+            hasLeading: hasLeading,
+            titleSpacing: titleSpacing,
+            actionItems: actionItems,
+            titleMetrics: titleMetrics,
+          ),
+          body: previewSummary.hasEnoughData
+              ? _ResultsBody(
+                  formModel: formModel,
+                  stateManager: stateManager,
+                  isExporting: _isExporting,
+                  onExportPressed: () => _onExportPressed(
                     formModel: formModel,
                     stateManager: stateManager,
-                    isExporting: _isExporting,
-                    onExportPressed: () => _onExportPressed(
-                      formModel: formModel,
-                      stateManager: stateManager,
-                    ),
-                  )
-                : const SafeArea(bottom: false, child: EmptyResultsState()),
-            bottomNavigationBar: const AppCopyrightFooter(),
-          ),
+                  ),
+                )
+              : const SafeArea(bottom: false, child: EmptyResultsState()),
+          bottomNavigationBar: const AppCopyrightFooter(),
         );
       },
     );
-  }
-
-  Future<void> _goToTestDesign(
-    BuildContext context,
-    ProjectStore store,
-    PlutoGridStateManager stateManager,
-  ) async {
-    if (_leaving) return;
-    _leaving = true;
-    try {
-      final project = store.selectedProject;
-      if (project != null && store.canEditProject(project.id)) {
-        if (MatrixGridDataBuilder.syncMatrixStateFromGrid(
-          project: project,
-          manager: stateManager,
-        )) {
-          store.markProjectChanged(project.id);
-        }
-      }
-      await store.persistSelectedProject();
-      if (!context.mounted) return;
-      final navigator = Navigator.of(context);
-      var foundDesign = false;
-      navigator.popUntil((route) {
-        foundDesign = route.settings.name == AppRoutes.projectForm;
-        return foundDesign || route.isFirst;
-      });
-      if (!foundDesign) {
-        await navigator.pushNamed(AppRoutes.projectForm);
-      }
-    } finally {
-      _leaving = false;
-    }
   }
 
   Future<void> _goHome(
@@ -257,7 +215,6 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.titleSpacing,
     required this.actionItems,
     required this.titleMetrics,
-    required this.onBack,
   });
 
   final String label;
@@ -266,7 +223,6 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double titleSpacing;
   final List<AppBarActionItem> actionItems;
   final AppBrandTitleMetrics titleMetrics;
-  final VoidCallback onBack;
 
   @override
   Size get preferredSize => Size.fromHeight(titleMetrics.toolbarHeight);
@@ -277,7 +233,7 @@ class _ResultsAppBar extends StatelessWidget implements PreferredSizeWidget {
       toolbarHeight: titleMetrics.toolbarHeight,
       titleSpacing: titleSpacing,
       automaticallyImplyLeading: false,
-      leading: hasLeading ? AppBackButton(onPressed: onBack) : null,
+      leading: AppNavChrome.backLeading(context),
       title: AppBrandTitle(
         label: label,
         metrics: titleMetrics,

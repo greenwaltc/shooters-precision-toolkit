@@ -229,7 +229,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get projectEditingElsewhere =>
-      'Editing is active in another session. Save any changes there before editing here.';
+      'Editing moved to another session. Select a field to edit here.';
 
   @override
   String get projectEditingReadOnly => 'This project is open for viewing.';

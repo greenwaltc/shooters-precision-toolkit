@@ -49,7 +49,7 @@ class ChartYAxis {
           return Padding(
             padding: scale.yTickPadding,
             child: Text(
-              context.decimal(value, places: 2),
+              context.resultNumber(value, places: 2),
               style: textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
                 fontSize: scale.axisLabelFontSize,

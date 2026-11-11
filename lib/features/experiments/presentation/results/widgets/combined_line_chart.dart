@@ -45,9 +45,9 @@ class CombinedLineChart extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) => Semantics(
         label: context.l10n.chartDescription(
-          context.decimal(grandMean),
-          context.decimal(lowerBound),
-          context.decimal(upperBound),
+          context.resultNumber(grandMean),
+          context.resultNumber(lowerBound),
+          context.resultNumber(upperBound),
         ),
         child: ExcludeSemantics(
           child: LineChart(
@@ -145,11 +145,11 @@ class CombinedLineChart extends StatelessWidget {
         getTooltipItems: (spots) => spots.map((spot) {
           final match = locator.nearestFactor(spot.x);
           final label = match == null
-              ? context.decimal(spot.y)
+              ? context.resultNumber(spot.y)
               : context.l10n.chartTooltip(
                   match.displayName,
                   locator.stateLabelNearest(spot.x, match),
-                  context.decimal(spot.y),
+                  context.resultNumber(spot.y),
                 );
           return LineTooltipItem(
             label,

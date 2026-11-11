@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:bramwells_precision_test_kit/app/navigation/editor_resume.dart';
@@ -9,6 +10,7 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/p
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/saved_project.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/shared/foundation/app_failure.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/navigation/app_routes.dart';
 import 'package:clock/clock.dart';
@@ -22,6 +24,129 @@ import '../../../../support/matrix_test_fixture.dart';
 import '../../../../support/test_configuration.dart';
 
 void main() {
+  testWidgets('opening a project on this device transfers editing control', (
+    tester,
+  ) async {
+    final (store, project, repository) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: true,
+      displaceAfterOpening: false,
+    );
+    expect(store.canEditProject(project.id), isTrue);
+    expect(find.text(AppCopy.english.projectEditingElsewhere), findsNothing);
+    expect(
+      repository.remoteProject(project.id)!.editorSession,
+      'local-session',
+    );
+    expect(store.selectedProject!.matrixState['range_0'], '9.5');
+    expect(
+      repository.remoteProject(project.id)!.project.updatedAt,
+      project.updatedAt,
+    );
+  });
+
+  testWidgets('a displaced idle page does not reclaim control on its own', (
+    tester,
+  ) async {
+    final (store, project, repository) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: true,
+    );
+    await tester.pump(const Duration(minutes: 30));
+    expect(store.canEditProject(project.id), isFalse);
+    expect(
+      repository.remoteProject(project.id)!.editorSession,
+      'other-session',
+    );
+    expect(find.text(AppCopy.english.projectEditingElsewhere), findsOneWidget);
+  });
+
+  testWidgets('failed project-open handoff shows feedback and permits retry', (
+    tester,
+  ) async {
+    final (store, project, repository) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: true,
+      displaceAfterOpening: false,
+      claimFailure: const AppFailure(FailureKind.unavailable),
+    );
+    expect(store.canEditProject(project.id), isFalse);
+    expect(
+      find.text(AppCopy.english.projectEditingHandoffFailed),
+      findsOneWidget,
+    );
+    repository.claimFailure = null;
+    await tester.tap(matrixCell(0, 'range'));
+    await tester.pumpAndSettle();
+    expect(store.canEditProject(project.id), isTrue);
+  });
+
+  testWidgets(
+    'displacement preserves a draft and reopening cannot overwrite it',
+    (tester) async {
+      final (store, project, repository) = await _openSharedProject(
+        tester,
+        const Size(1440, 900),
+        setupComplete: true,
+        displaceAfterOpening: false,
+      );
+      final current = repository.remoteProject(project.id)!;
+      store.selectedProject!.matrixState['range_0'] = '12.5';
+      store.markProjectChanged(project.id);
+      repository.publishRemoteProject(
+        CloudProject(
+          current.project,
+          current.revision + 1,
+          false,
+          editorSession: 'other-session',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(store.canEditProject(project.id), isFalse);
+      expect(store.selectedProject!.matrixState['range_0'], '12.5');
+      expect(
+        await store.claimProjectEditing(project.id, allowTakeover: true),
+        isFalse,
+      );
+      expect(store.selectedProject!.matrixState['range_0'], '12.5');
+      expect(
+        repository.remoteProject(project.id)!.project.matrixState['range_0'],
+        '9.5',
+      );
+    },
+  );
+
+  testWidgets('repeated project opens await one handoff and open one editor', (
+    tester,
+  ) async {
+    final (_, project, repository) = await _openSharedProject(
+      tester,
+      const Size(1440, 900),
+      setupComplete: true,
+    );
+    Navigator.of(tester.element(find.byType(AnomrMatrix))).pop();
+    await tester.pumpAndSettle();
+    final handoff = Completer<void>();
+    repository.claimBarrier = handoff.future;
+    await tester.tap(find.text('Shared project'));
+    await tester.tap(find.text('Shared project'));
+    await tester.pump();
+    expect(find.byType(AnomrMatrix), findsNothing);
+    handoff.complete();
+    await tester.pumpAndSettle();
+    expect(
+      repository.remoteProject(project.id)!.editorSession,
+      'local-session',
+    );
+    Navigator.of(tester.element(find.byType(AnomrMatrix))).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(AnomrMatrix), findsNothing);
+    expect(find.text('Shared project'), findsOneWidget);
+  });
+
   testWidgets('a reloaded editor claims the project from another session', (
     tester,
   ) async {
@@ -125,7 +250,7 @@ void main() {
             SavedProject.fromJson(
               project.toJson()..['matrixState'] = {'range_0': '9.75'},
             ),
-            3,
+            repository.remoteProject(project.id)!.revision + 1,
             false,
             editorSession: 'other-session',
           ),
@@ -382,6 +507,8 @@ Future<(ProjectStore, SavedProject, _EditingRepository)> _openSharedProject(
   Size size, {
   required bool setupComplete,
   EditorResume? editorResume,
+  bool displaceAfterOpening = true,
+  AppFailure? claimFailure,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -403,6 +530,7 @@ Future<(ProjectStore, SavedProject, _EditingRepository)> _openSharedProject(
     matrixState: {'range_0': '9.5'},
   );
   final repository = _EditingRepository()
+    ..claimFailure = claimFailure
     ..publishRemoteProject(
       CloudProject(project, 2, false, editorSession: 'other-session'),
     );
@@ -442,12 +570,26 @@ Future<(ProjectStore, SavedProject, _EditingRepository)> _openSharedProject(
   if (editorResume == null) {
     await tester.tap(find.text('Shared project'));
     await tester.pumpAndSettle();
+    if (displaceAfterOpening) {
+      final current = repository.remoteProject(project.id)!;
+      repository.publishRemoteProject(
+        CloudProject(
+          current.project,
+          current.revision + 1,
+          false,
+          editorSession: 'other-session',
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
   }
   return (store, project, repository);
 }
 
 class _EditingRepository extends FakeProjectRepository
     implements ProjectEditingRepository {
+  AppFailure? claimFailure;
+  Future<void>? claimBarrier;
   @override
   String get editingSessionId => 'local-session';
 
@@ -456,6 +598,8 @@ class _EditingRepository extends FakeProjectRepository
     String id, {
     required bool allowTakeover,
   }) async {
+    await claimBarrier;
+    if (claimFailure case final failure?) throw failure;
     final current = remoteProject(id)!;
     if (current.editorSession == editingSessionId ||
         (current.editorSession != null && !allowTakeover)) {

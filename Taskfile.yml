@@ -44,9 +44,9 @@ tasks:
       - node --test scripts/tests/*_test.mjs
 
   test:browser:
-    desc: Verify native browser clipboard events
+    desc: Verify browser clipboard events and desktop Enter entry
     cmds:
-      - flutter test --platform chrome test/browser/matrix_browser_clipboard_test.dart
+      - flutter test --platform chrome test/browser/matrix_browser_clipboard_test.dart test/features/experiments/presentation/matrix/desktop_entry_test.dart
 
   test:integration:web:
     desc: Run the assembled project journey with ChromeDriver (set CHROMEDRIVER)

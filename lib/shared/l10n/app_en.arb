@@ -65,7 +65,7 @@
   "unsavedChanges": "Unsaved changes",
   "saving": "Saving…",
   "saveConflictYourDraftIsKept": "Save conflict. Your draft is kept.",
-  "projectEditingElsewhere": "Editing is active in another session. Save any changes there before editing here.",
+  "projectEditingElsewhere": "Editing moved to another session. Select a field to edit here.",
   "projectEditingReadOnly": "This project is open for viewing.",
   "projectEditingStarting": "Opening for editing…",
   "projectEditingHandoffFailed": "Could not start editing. Check your connection and try again.",

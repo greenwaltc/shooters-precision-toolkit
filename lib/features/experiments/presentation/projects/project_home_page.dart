@@ -20,6 +20,7 @@ import '../project_file_transfer.dart';
 import '../project_store.dart';
 import '../saved_project.dart';
 import '../widgets/confirm_delete_project_dialog.dart';
+import '../widgets/project_editing_notice.dart';
 
 // Copyright (c) 2026 Denton M. Bramwell. All rights reserved.
 // Use of this source code is governed by a proprietary license that can be
@@ -38,6 +39,7 @@ class ProjectHomePage extends StatefulWidget {
 class _ProjectHomePageState extends State<ProjectHomePage> {
   final _cloningProjects = <String>{};
   bool _importing = false;
+  bool _openingProject = false;
 
   @override
   Widget build(BuildContext context) {
@@ -241,6 +243,7 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
                       project: project,
                       cloning: _cloningProjects.contains(project.id),
                       onClone: () => _cloneProject(store, project),
+                      onOpen: () => _openProject(store, project),
                     );
                   },
                 ),
@@ -361,6 +364,35 @@ class _ProjectHomePageState extends State<ProjectHomePage> {
     }
   }
 
+  Future<void> _openProject(ProjectStore store, SavedProject project) async {
+    if (_openingProject) return;
+    _openingProject = true;
+    try {
+      final navigator = Navigator.of(context);
+
+      await store.persistSelectedProject();
+      await store.selectProject(project.id);
+      if (!mounted) {
+        return;
+      }
+      // Opening a project is an explicit request to work here. Closed or idle
+      // sessions must not reserve editing indefinitely on another device.
+      await ProjectEditingNotice.request(
+        context,
+        project.id,
+        allowTakeover: true,
+      );
+      if (!mounted || store.selectedProject?.id != project.id) return;
+      await navigator.pushNamed(
+        AppRoutes.destinationForProject(
+          setupComplete: store.selectedProject!.setupComplete,
+        ),
+      );
+    } finally {
+      _openingProject = false;
+    }
+  }
+
   /// Clones this row's project without changing the current route or selection.
   Future<void> _cloneProject(ProjectStore store, SavedProject project) async {
     if (_cloningProjects.contains(project.id)) return;
@@ -397,11 +429,13 @@ class _ProjectListTile extends StatelessWidget {
     required this.project,
     required this.cloning,
     required this.onClone,
+    required this.onOpen,
   });
 
   final SavedProject project;
   final bool cloning;
   final VoidCallback onClone;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -473,22 +507,8 @@ class _ProjectListTile extends StatelessWidget {
             Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
           ],
         ),
-        onTap: () => _openProject(context),
+        onTap: onOpen,
       ),
-    );
-  }
-
-  Future<void> _openProject(BuildContext context) async {
-    final store = context.read<ProjectStore>();
-    final navigator = Navigator.of(context);
-
-    await store.persistSelectedProject();
-    await store.selectProject(project.id);
-    if (!context.mounted) {
-      return;
-    }
-    await navigator.pushNamed(
-      AppRoutes.destinationForProject(setupComplete: project.setupComplete),
     );
   }
 

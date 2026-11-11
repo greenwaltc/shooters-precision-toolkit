@@ -115,7 +115,7 @@ class ConclusionRow extends StatelessWidget {
           context.l10n.stateMean(
             row.firstLabel,
             row.stats.hasFirst
-                ? context.decimal(row.stats.firstMean)
+                ? context.resultNumber(row.stats.firstMean)
                 : context.l10n.noData,
           ),
           style: _stateStyle(textTheme, scheme),
@@ -124,7 +124,7 @@ class ConclusionRow extends StatelessWidget {
           context.l10n.stateMean(
             row.secondLabel,
             row.stats.hasSecond
-                ? context.decimal(row.stats.secondMean)
+                ? context.resultNumber(row.stats.secondMean)
                 : context.l10n.noData,
           ),
           style: _stateStyle(textTheme, scheme),

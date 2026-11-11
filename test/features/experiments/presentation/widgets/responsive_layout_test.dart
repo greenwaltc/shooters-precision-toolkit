@@ -8,7 +8,6 @@ import 'package:bramwells_precision_test_kit/features/experiments/presentation/r
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/results/widgets/empty_results_state.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_model.dart';
-import 'package:bramwells_precision_test_kit/features/experiments/presentation/test_design/project_form_page.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
 import 'package:bramwells_precision_test_kit/shared/l10n/app_copy.dart';
 import 'package:bramwells_precision_test_kit/shared/ui/app_back_button.dart';
@@ -797,7 +796,7 @@ void main() {
     for (final systemBack in [false, true]) {
       for (final existingDesign in [false, true]) {
         testWidgets(
-          'results back opens Test Design, system=$systemBack existing=$existingDesign',
+          'results back restores Data Matrix, system=$systemBack existing=$existingDesign',
           (tester) async {
             _configureViewport(
               tester,
@@ -833,18 +832,17 @@ void main() {
               await tester.tap(find.byType(AppBackButton));
             }
             await tester.pumpAndSettle();
-            expect(find.byType(ProjectFormPage), findsOneWidget);
+            expect(find.byType(PlutoGrid), findsOneWidget);
             expect(find.text('Bench Rest Comparison'), findsWidgets);
-            // Submitting returns to a fresh matrix with all measurements intact.
-            await _tapText(tester, 'Submit');
             final restored = tester
                 .state<PlutoGridState>(find.byType(PlutoGrid))
                 .stateManager;
+            expect(restored, same(matrix));
             expect(
               restored.rows.map((row) => row.cells['range']!.value),
               values,
             );
-            _expectNoLayoutErrors(tester, 'Results back to Test Design');
+            _expectNoLayoutErrors(tester, 'Results back to Data Matrix');
           },
         );
       }

@@ -4,6 +4,7 @@
 - Date: 2026-11-05
 - Owner: Application maintainers
 - Related standard: [Architecture](../standards/architecture_standards.md)
+- Opening/retention policy superseded by [ADR 0005](0005_editing_control_retention.md).
 
 ## Context
 

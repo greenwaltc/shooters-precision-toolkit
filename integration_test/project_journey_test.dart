@@ -4,9 +4,11 @@ import 'package:bramwells_precision_test_kit/features/experiments/data/ephemeral
 import 'package:bramwells_precision_test_kit/features/experiments/data/project_draft_storage.dart';
 import 'package:bramwells_precision_test_kit/features/experiments/presentation/project_store.dart';
 import 'package:bramwells_precision_test_kit/main.dart';
+import 'package:bramwells_precision_test_kit/shared/ui/app_back_button.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -71,21 +73,29 @@ void main() {
           tester.view.physicalSize.width / tester.view.devicePixelRatio < 720;
       for (var row = 0; row < 8; row++) {
         final cell = find.byKey(ValueKey('matrix-cell-$row-range'));
-        await tester.ensureVisible(cell);
-        await tester.tap(cell);
-        await tester.pump();
+        if (mobile || row == 0) {
+          await tester.ensureVisible(cell);
+          await tester.tap(cell);
+          await tester.pump();
+        }
         final Finder editor;
         if (mobile) {
           await settle(tester);
           editor = find.descendant(of: cell, matching: find.byType(TextField));
           expect(tester.widget<TextField>(editor).focusNode!.hasFocus, isTrue);
         } else {
-          await tester.tap(cell);
-          await tester.pump();
+          if (row == 0) {
+            await tester.tap(cell);
+            await tester.pump();
+          }
           editor = find.byType(TextField).last;
         }
         await tester.enterText(editor, '1.25');
-        await tester.testTextInput.receiveAction(TextInputAction.done);
+        if (mobile) {
+          await tester.testTextInput.receiveAction(TextInputAction.done);
+        } else {
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        }
         await settle(tester);
       }
       await tester.ensureVisible(find.text('Results'));
@@ -95,10 +105,14 @@ void main() {
         find.textContaining(RegExp('grand mean', caseSensitive: false)),
         findsWidgets,
       );
-      expect(find.textContaining('1.2500'), findsWidgets);
+      expect(find.textContaining('1.25'), findsWidgets);
+      expect(find.textContaining('1.2500'), findsNothing);
       if (kIsWeb) {
         await binding.takeScreenshot('journey-results');
       }
+      await tester.tap(find.byType(AppBackButton));
+      await settle(tester);
+      expect(find.text('Data matrix'), findsOneWidget);
       await store.saveSelectedProject();
       await pumpConfiguredWidget(tester, const SizedBox.shrink());
       final restored = ProjectStore(

@@ -33,7 +33,8 @@ try {
   }
   const flutter = spawn('flutter', ['drive', '--driver=test_driver/integration_test.dart',
     '--target=integration_test/project_journey_test.dart', '-d', 'web-server',
-    `--driver-port=${port}`, '--headless', `--browser-dimension=${size}`], { stdio: 'inherit' });
+    '--no-web-resources-cdn', `--driver-port=${port}`, '--headless',
+    `--browser-dimension=${size}`], { stdio: 'inherit' });
   const status = await new Promise((resolve, reject) => {
     flutter.on('error', reject);
     flutter.on('exit', (code) => resolve(code ?? 1));

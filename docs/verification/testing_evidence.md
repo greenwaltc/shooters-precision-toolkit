@@ -10,7 +10,7 @@ application journey uses the SDK's `integration_test` runner.
 `task check` verifies generated localization, architecture boundaries, repository
 hygiene, formatting, strict analysis, seed **4729** randomized unit/widget tests,
 source-inclusive coverage, and release-tool tests. `task test:browser` exercises native browser
-copy/paste events. `task local:test` exercises real Auth/Firestore SDK contracts
+copy/paste events and desktop Enter entry across a delayed autosave. `task local:test` exercises real Auth/Firestore SDK contracts
 against running **demo** emulators and never clears interactive emulator data.
 `task rules:test` installs its own locked npm dependencies and runs a disposable
 Firestore emulator on distinct loopback ports. `task web:hosting:test` checks the
@@ -31,7 +31,8 @@ npx --yes @puppeteer/browsers@3.2.6 install chromedriver@<your-Chrome-version> -
 CHROMEDRIVER=/absolute/path/printed/by/the/installer/chromedriver task test:integration:web
 ```
 
-The command selects an unused local driver port, launches a fresh headless browser,
+The command bundles Flutter web resources to avoid a runtime CDN dependency,
+selects an unused local driver port, launches a fresh headless browser,
 runs the real Flutter application with isolated volatile data, and stops its
 driver. Logs are under `build/test-results`. This proves assembled UI/wiring; the
 separate emulator suite proves actual backend compatibility. Neither uses a cloud
